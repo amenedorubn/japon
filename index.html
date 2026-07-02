@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Nuestro viaje a Japón</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='white'/%3E%3Ccircle cx='50' cy='50' r='27' fill='%23BC002D'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Ccircle cx='90' cy='90' r='86' fill='white'/%3E%3Ccircle cx='90' cy='90' r='49' fill='%23BC002D'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+
+  :root{
+    --cream:#F5F1E8;
+    --cream-2:#EDE7D8;
+    --surface:#FFFDF8;
+    --ink:#22201C;
+    --ink-soft:#6B6152;
+    --indigo:#223A5E;
+    --indigo-2:#1A2C46;
+    --accent:#C1440E;
+    --danger:#9C3A2E;
+    --moss:#5C7048;
+    --teal:#3E7C59;
+    --gold:#B8860B;
+    --line:#DED5C2;
+    --radius-l:20px;
+    --radius-m:14px;
+    --radius-s:10px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--cream);}
+  body{font-family:'Zen Kaku Gothic New', sans-serif; color:var(--ink);}
+  h1,h2,h3,.display{font-family:'Shippori Mincho', serif; font-weight:700; letter-spacing:.01em;}
+  a{color:inherit;} button{font-family:inherit;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+
+  .blur{background:rgba(245,241,232,.85); -webkit-backdrop-filter:saturate(160%) blur(18px); backdrop-filter:saturate(160%) blur(18px);}
+
+  /* ============ MAP ============ */
+  #map{position:fixed; inset:0; z-index:0;}
+  .leaflet-control-attribution{font-size:9px !important; opacity:.6;}
+
+  /* ============ TOP BAR ============ */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:40;
+    padding: calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:8px; min-width:0;}
+  .brand .mark{font-size:19px; flex:0 0 auto;}
+  .trip-title{font-size:16.5px; font-weight:700; margin:0; outline:none; color:var(--indigo-2);
+    max-width:52vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .trip-title:focus{text-decoration:underline;}
+  .topbar-actions{display:flex; gap:8px;}
+  .icon-btn{
+    width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line);
+    background:var(--surface); color:var(--indigo); font-size:14px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .icon-btn:active{background:var(--cream-2);}
+
+  /* ============ CHIP ROWS over map ============ */
+  .chip-row{
+    position:fixed; left:0; right:0; z-index:35;
+    display:flex; gap:8px; overflow-x:auto; padding:6px 14px;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .chip-row::-webkit-scrollbar{display:none;}
+  #dayChipRow{top: calc(env(safe-area-inset-top,0px) + 54px);}
+  #flightToggleRow{top: calc(env(safe-area-inset-top,0px) + 96px);}
+
+  .pill{
+    flex:0 0 auto; padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:700;
+    background:rgba(255,253,248,.9); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    border:1px solid var(--line); color:var(--ink); cursor:pointer; box-shadow:0 2px 6px rgba(34,32,28,.08);
+    white-space:nowrap;
+  }
+  .pill.active{background:var(--indigo); color:#fff; border-color:var(--indigo);}
+  .pill.flight{border-color:var(--gold); color:var(--gold); background:rgba(255,253,248,.92);}
+  .pill.flight.active{background:var(--gold); color:#fff; border-color:var(--gold);}
+
+  /* ============ FAB ============ */
+  .fab{
+    position:fixed; right:18px; z-index:36;
+    bottom: calc(env(safe-area-inset-bottom,0px) + 88px);
+    width:54px; height:54px; border-radius:50%; background:var(--accent); color:#fff;
+    font-size:26px; border:none; box-shadow:0 6px 18px rgba(193,68,14,.45);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .fab:active{transform:scale(.94);}
+
+  /* ============ TAB BAR ============ */
+  .tabbar{position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex;
+    border-top:1px solid var(--line); padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);}
+  .tabbar button{flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:var(--ink-soft); font-size:10.5px; font-weight:700; padding:4px 0; cursor:pointer;}
+  .tabbar button .ti{font-size:21px; line-height:1;}
+  .tabbar button.active{color:var(--accent);}
+
+  /* ============ PANELS ============ */
+  .panel{
+    position:fixed; left:0; right:0; z-index:20; background:var(--cream);
+    top:0; bottom: calc(56px + env(safe-area-inset-bottom,0px));
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding: calc(env(safe-area-inset-top,0px) + 64px) 14px 30px;
+    display:none;
+  }
+  .panel.active{display:block;}
+  .large-title{font-size:30px; margin:4px 0 16px; color:var(--indigo-2);}
+
+  .group-label{font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin:20px 4px 6px; font-family:'Zen Kaku Gothic New';}
+  .group{background:var(--surface); border-radius:var(--radius-m); overflow:hidden; box-shadow:0 1px 3px rgba(34,32,28,.06); border:1px solid var(--line);}
+  .row{display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid var(--line); background:var(--surface);}
+  .row:last-child{border-bottom:none;}
+  .row-tap{cursor:pointer;}
+  .row-tap:active{background:var(--cream-2);}
+  .row .dot{width:30px; height:30px; border-radius:9px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff;}
+  .row .main{flex:1; min-width:0;}
+  .row .main h4{margin:0; font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink);}
+  .row .main .sub{font-size:12px; color:var(--ink-soft); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .row .time{font-size:12px; font-weight:700; color:var(--indigo); flex:0 0 auto;}
+  .row .chev{color:#B9AF9C; font-size:16px; flex:0 0 auto;}
+  .row .step-btns{display:flex; gap:4px; flex:0 0 auto;}
+  .row .step-btns button{width:26px; height:26px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); font-size:12px; cursor:pointer;}
+  .row .step-btns button:disabled{opacity:.3;}
+  .itinerary-stop{user-select:none; cursor:grab; touch-action:pan-y;}
+  .itinerary-stop:active{cursor:grabbing;}
+  .itinerary-stop.dragging{opacity:.42; transform:scale(.99);}
+  .itinerary-stop.drop-target{box-shadow:inset 0 2px 0 var(--accent);}
+  .itinerary-dropzone.drag-over{outline:2px dashed var(--accent); outline-offset:-4px; background:rgba(193,68,14,.04);}
+  .drag-ghost{position:fixed; left:0; top:0; z-index:90; pointer-events:none; transform:translate(-9999px,-9999px);
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-m); box-shadow:0 10px 24px rgba(34,32,28,.28);
+    padding:10px 14px; font-weight:700; color:var(--indigo-2); max-width:78vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+  .empty{text-align:center; color:var(--ink-soft); padding:44px 20px; background:var(--surface); border:1px dashed var(--line); border-radius:var(--radius-m); font-size:14px;}
+  .empty .big{font-size:30px; display:block; margin-bottom:8px;}
+
+  .inline-form{display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+  .inline-form input{flex:1; min-width:150px;}
+  input[type=text], input[type=date]{font-family:inherit; font-size:14.5px; padding:10px 12px; border-radius:var(--radius-s); border:1px solid var(--line); background:#fff; color:var(--ink); width:100%;}
+  input:focus{outline:2px solid var(--indigo); outline-offset:1px;}
+  .btn-ios{padding:10px 16px; border-radius:var(--radius-s); border:none; background:var(--accent); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; white-space:nowrap;}
+  .btn-ios:active{opacity:.8;}
+  .btn-ios.small{padding:8px 12px; font-size:12.5px;}
+
+  .day-card{margin-bottom:20px;}
+  .day-card-head{display:flex; align-items:center; gap:9px; margin:0 4px 8px;}
+  .day-stamp{width:27px; height:27px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; flex:0 0 auto; font-family:'Shippori Mincho',serif;}
+  .day-stamp.flight{background:var(--gold);}
+  .day-card-head h3{margin:0; font-size:15px; font-weight:700; color:var(--indigo-2);}
+  .day-card-head .date{font-size:11.5px; color:var(--ink-soft); font-weight:500;}
+  .day-card-head .del{margin-left:auto; background:none; border:none; color:var(--danger); font-size:12px; font-weight:700; cursor:pointer;}
+
+  /* ============ BOTTOM SHEETS ============ */
+  .sheet-backdrop{position:fixed; inset:0; background:rgba(34,32,28,.4); z-index:50; opacity:0; pointer-events:none; transition:opacity .25s ease;}
+  .sheet-backdrop.open{opacity:1; pointer-events:auto;}
+  .bottom-sheet{position:fixed; left:0; right:0; bottom:0; z-index:60; background:var(--surface);
+    border-radius:22px 22px 0 0; box-shadow:0 -8px 30px rgba(34,32,28,.25);
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
+    padding: 8px 18px calc(env(safe-area-inset-bottom,0px) + 20px); max-height:72vh; overflow-y:auto;}
+  .bottom-sheet.open{transform:translateY(0);}
+  .grabber{width:36px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 14px;}
+  .sheet-cat{display:inline-flex; align-items:center; gap:6px; padding:4px 11px 4px 8px; border-radius:999px; font-size:11.5px; font-weight:700; color:#fff; margin-bottom:10px;}
+  .sheet-title{font-size:20px; margin:0 0 6px; color:var(--indigo-2);}
+  .sheet-notes{font-size:13.5px; color:var(--ink-soft); line-height:1.45; margin:0 0 14px; font-family:'Zen Kaku Gothic New';}
+  .sheet-day-picker{margin-bottom:14px;}
+  .sheet-day-picker label{font-size:11.5px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:4px;}
+  select{font-family:inherit; font-size:14.5px; padding:10px 12px; border-radius:var(--radius-s); border:1px solid var(--line); background:#fff; color:var(--ink); width:100%;}
+  .sheet-actions{display:flex; gap:9px; margin-top:6px;}
+  .sheet-actions .btn-ios{flex:1; text-align:center;}
+  .sheet-actions .btn-ios.secondary{background:var(--cream-2); color:var(--ink);}
+  .sheet-actions .btn-ios.danger{background:rgba(156,58,46,.12); color:var(--danger);}
+  .video-btn{display:inline-flex; align-items:center; gap:6px; font-weight:700; color:var(--accent); text-decoration:none; font-size:14px; margin-bottom:14px;}
+  .flight-legs{display:flex; flex-direction:column; gap:10px; margin-bottom:6px;}
+  .flight-leg{background:var(--cream-2); border-radius:var(--radius-s); padding:11px 13px;}
+  .flight-leg .route{font-weight:700; font-size:14.5px; color:var(--indigo-2); margin-bottom:3px;}
+  .flight-leg .meta{font-size:12px; color:var(--ink-soft);}
+
+  /* ============ FORM SHEET ============ */
+  .form-sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; background:var(--cream);
+    border-radius:22px 22px 0 0; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
+    max-height:94vh; overflow-y:auto; box-shadow:0 -8px 30px rgba(34,32,28,.3);}
+  .form-sheet.open{transform:translateY(0);}
+  .form-topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--cream); z-index:2;}
+  .form-topbar button{background:none; border:none; font-size:15px; cursor:pointer; font-weight:600;}
+  .form-topbar .cancel{color:var(--ink-soft);}
+  .form-topbar .save{color:var(--accent); font-weight:700;}
+  .form-topbar h2{margin:0; font-size:15px; color:var(--indigo-2);}
+  .form-body{padding:16px 14px 40px;}
+  .field-label{font-size:12px; font-weight:700; color:var(--ink-soft); margin:16px 4px 6px; text-transform:uppercase; letter-spacing:.03em;}
+  .field-group{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-m); padding:2px 14px;}
+  .field-group .row{padding:11px 0; border-bottom:1px solid var(--line); gap:8px; background:none;}
+  .field-group .row:last-child{border-bottom:none;}
+  .field-group input, .field-group select, .field-group textarea{border:none; padding:0; font-size:14.5px; background:none; width:100%;}
+  .field-group input:focus, .field-group textarea:focus{outline:none;}
+  textarea{font-family:inherit; resize:vertical; min-height:56px; font-size:14.5px;}
+
+  .search-row{display:flex; gap:8px;}
+  .search-row input{flex:1;}
+  #searchResults{margin-top:8px;}
+  #searchResults .group{margin-bottom:2px;}
+  .search-hint{font-size:11.5px; color:var(--ink-soft); margin:8px 4px 0;}
+  #miniMap{height:200px; border-radius:var(--radius-m); margin-top:10px; border:1px solid var(--line);}
+  .pin-status{font-size:12px; font-weight:600; margin-top:8px;}
+  .pin-status.ok{color:var(--teal);}
+  .pin-status.pending{color:var(--accent);}
+
+  .cat-picker{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 4px;}
+  .cat-opt{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:14px; border:2px solid var(--line); background:#fff; cursor:pointer;}
+  .cat-opt .dot{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff;}
+  .cat-opt span{font-size:10px; font-weight:700; color:var(--ink-soft); white-space:nowrap;}
+  .cat-opt.selected{border-color:var(--accent); background:rgba(193,68,14,.06);}
+
+  .note-toast{position:fixed; left:14px; right:14px; z-index:80; top: calc(env(safe-area-inset-top,0px) + 96px);
+    font-size:12px; color:#fff; background:rgba(34,32,28,.9); padding:9px 14px; border-radius:12px; text-align:center;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:opacity .3s ease;}
+
+  input[type=file]{display:none;}
+
+  .leaflet-popup-content-wrapper{border-radius:12px; font-family:'Zen Kaku Gothic New',sans-serif;}
+  .popup-title{font-weight:700; font-size:13.5px; margin:0; color:var(--indigo-2);}
+  .popup-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header class="topbar blur">
+  <div class="brand">
+    <span class="mark">⛩️</span>
+    <h1 class="trip-title" id="tripTitle" contenteditable="true" spellcheck="false">Nuestro viaje a Japón</h1>
+  </div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="btnExport" title="Exportar">⇧</button>
+    <button class="icon-btn" id="btnImportTrigger" title="Importar">⇩</button>
+    <input type="file" id="fileImport" accept="application/json">
+  </div>
+</header>
+
+<div class="chip-row" id="dayChipRow"></div>
+<div class="chip-row" id="flightToggleRow"></div>
+
+<div class="note-toast" id="toast" style="display:none;"></div>
+
+<!-- ===== Itinerario ===== -->
+<section class="panel" id="panel-itinerario">
+  <h1 class="large-title">Itinerario</h1>
+  <div class="inline-form">
+    <input type="text" id="newDayLabel" placeholder="Nombre del día, ej. Día 1 · Tokio">
+    <input type="date" id="newDayDate" style="max-width:150px;">
+    <button class="btn-ios" id="btnAddDay">Añadir</button>
+  </div>
+  <div id="daysContainer" style="margin-top:14px;"></div>
+  <div id="unassignedContainer"></div>
+</section>
+
+<!-- ===== Lugares ===== -->
+<section class="panel" id="panel-lugares">
+  <h1 class="large-title">Lugares</h1>
+  <div class="chip-row" id="catChipRow" style="position:static; padding:0 0 8px;"></div>
+  <div class="chip-row" id="regionChipRow" style="position:static; padding:0 0 12px;"></div>
+  <div id="placesContainer"></div>
+</section>
+
+<button class="fab" id="btnAddPlace">+</button>
+
+<nav class="tabbar blur">
+  <button data-tab="mapa" class="active"><span class="ti">🗺️</span><span>Mapa</span></button>
+  <button data-tab="itinerario"><span class="ti">📅</span><span>Itinerario</span></button>
+  <button data-tab="lugares"><span class="ti">📍</span><span>Lugares</span></button>
+</nav>
+
+<!-- ===== Detail sheet ===== -->
+<div class="sheet-backdrop" id="detailBackdrop"></div>
+<div class="bottom-sheet" id="detailSheet">
+  <div class="grabber"></div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- ===== Add/edit place form sheet ===== -->
+<div class="sheet-backdrop" id="formBackdrop"></div>
+<div class="form-sheet" id="formSheet">
+  <div class="form-topbar">
+    <button class="cancel" id="btnCancelModal">Cancelar</button>
+    <h2 id="modalTitle">Nuevo lugar</h2>
+    <button class="save" id="btnSavePlace">Guardar</button>
+  </div>
+  <div class="form-body">
+    <div class="field-label">Nombre</div>
+    <div class="field-group"><div class="row"><input type="text" id="fName" placeholder="ej. Fushimi Inari Taisha"></div></div>
+
+    <div class="field-label">Categoría</div>
+    <div class="cat-picker" id="catPicker"></div>
+
+    <div class="field-label">Día, zona y enlace</div>
+    <div class="field-group">
+      <div class="row"><select id="fDay"><option value="">Sin asignar</option></select></div>
+      <div class="row"><select id="fRegion">
+        <option value="Tokio">Tokio</option>
+        <option value="Osaka">Osaka</option>
+        <option value="Kioto">Kioto</option>
+        <option value="Otros">Otros</option>
+      </select></div>
+      <div class="row"><input type="text" id="fVideo" placeholder="Enlace al reel / TikTok (opcional)"></div>
+    </div>
+
+    <div class="field-label">Notas</div>
+    <div class="field-group"><div class="row"><textarea id="fNotes" placeholder="Horario, precio, qué no perderse..."></textarea></div></div>
+
+    <div class="field-label">Ubicación</div>
+    <div class="field-group" style="padding:12px 14px;">
+      <div class="search-row">
+        <input type="text" id="fSearchQuery" placeholder="Buscar lugar o dirección...">
+        <button class="btn-ios small" id="btnSearchLoc">Buscar</button>
+      </div>
+      <p class="search-hint">Busca y toca un resultado — o ajusta el pin a mano si hace falta.</p>
+      <div id="searchResults"></div>
+    </div>
+    <div id="miniMap"></div>
+    <p class="pin-status pending" id="pinStatus">Sin ubicación fijada todavía</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA9v7VTciCVzHxcT13oP3Jm4El8lDn7o90",
+  authDomain: "viaje-japon-8748a.firebaseapp.com",
+  databaseURL: "https://viaje-japon-8748a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "viaje-japon-8748a",
+  storageBucket: "viaje-japon-8748a.firebasestorage.app",
+  messagingSenderId: "680255020648",
+  appId: "1:680255020648:web:065af7c30fbb2e78c9a5dd",
+  measurementId: "G-DYW28JV7E4"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+(function(){
+  "use strict";
+
+  /* ============================================================
+     DATOS DE VUELOS (de flights.js) — fijos, no editables en la UI
+  ============================================================ */
+  const AIRPORTS = {
+    madrid:   { name: 'Madrid (MAD)',      lat: 40.4983, lng: -3.5676,  emoji: '🛫', code: 'MAD' },
+    helsinki: { name: 'Helsinki (HEL)',    lat: 60.3172, lng: 24.9633,  emoji: '🔄', code: 'HEL' },
+    tokyo:    { name: 'Tokio Narita (NRT)',lat: 35.7720, lng: 140.3929, emoji: '🛬', code: 'NRT' },
+  };
+  const FLIGHT_ROUTES = [
+    { id:1, from:'madrid', to:'helsinki', date:'2027-04-08', flight:'AY1662', class:'Q', dep:'10:15', arr:'15:25', airline:'Finnair', operatedBy:'Iberia for Finnair', terminal:'Terminal 4' },
+    { id:2, from:'helsinki', to:'tokyo', date:'2027-04-08', flight:'AY0073', class:'Q', dep:'17:45', arr:'13:05', arrNote:'Día siguiente', airline:'Finnair', operatedBy:'Finnair', terminal:'Terminal 2' },
+    { id:3, from:'tokyo', to:'helsinki', date:'2027-04-27', flight:'AY0074', class:'S', dep:'23:05', arr:'05:55', arrNote:'Día siguiente', airline:'Finnair', operatedBy:'Finnair', terminal:'Terminal 2', lastCheckin:'22:05' },
+    { id:4, from:'helsinki', to:'madrid', date:'2027-04-28', flight:'AY1661', class:'S', dep:'16:40', arr:'20:05', airline:'Finnair', operatedBy:'Iberia for Finnair', terminal:'Terminal 4', lastCheckin:'15:55' },
+  ];
+  const TRIP_START = new Date(2027,3,9);
+
+  /* ============================================================
+     CATEGORÍAS DE LUGARES
+  ============================================================ */
+  const CATEGORIES = [
+    {id:'comida',      label:'Comida',      emoji:'🍜', color:'#5C7048'},
+    {id:'templo',      label:'Templo',      emoji:'⛩️', color:'#223A5E'},
+    {id:'compras',     label:'Compras',     emoji:'🛍️', color:'#C1440E'},
+    {id:'naturaleza',  label:'Naturaleza',  emoji:'🌿', color:'#3E7C59'},
+    {id:'alojamiento', label:'Alojamiento', emoji:'🏨', color:'#B8860B'},
+    {id:'otro',        label:'Otro',        emoji:'📍', color:'#57534A'}
+  ];
+  const catById = id => CATEGORIES.find(c=>c.id===id) || CATEGORIES[CATEGORIES.length-1];
+  const REGION_FILTERS = [
+    { id:'tokio', label:'Tokio', emoji:'🗼' },
+    { id:'osaka', label:'Osaka', emoji:'🐙' },
+    { id:'kioto', label:'Kioto', emoji:'⛩️' },
+    { id:'otros', label:'Otros', emoji:'🗾' },
+  ];
+  function placeRegionGroup(p){
+    const text = `${p.region || ''} ${p.name || ''}`.toLowerCase();
+    if(text.includes('tokio') || text.includes('tokyo') || text.includes('narita')) return 'tokio';
+    if(text.includes('osaka')) return 'osaka';
+    if(text.includes('kioto') || text.includes('kyoto')) return 'kioto';
+    return 'otros';
+  }
+  function regionLabelFromId(id){
+    const r = REGION_FILTERS.find(x=>x.id===id);
+    return r ? r.label : 'Otros';
+  }
+
+  const uid = () => 'id_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+  const escapeHtml = s => (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const isValidUrl = s => { try{ new URL(s); return true; }catch(e){ return false; } };
+  const isoDate = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const addDays = (base,n) => { const d = new Date(base); d.setDate(d.getDate()+n); return d; };
+  function getFlightLegsForDay(day){
+    if(!day) return FLIGHT_ROUTES;
+    const ids = FLIGHT_DAY_LEGS[day.date];
+    if(ids) return ids.map(id => FLIGHT_ROUTES.find(f=>f.id===id)).filter(Boolean);
+    // Los días normales no dibujan rutas de vuelo en el mapa.
+    // En especial, el 27 solo muestra el aeropuerto a las 20:00;
+    // el tramo Tokio→Helsinki se reserva para "Vuelos vuelta".
+    return [];
+  }
+  function greatCirclePoints(from, to, steps){
+    steps = steps || 96;
+    const toRad = deg => deg * Math.PI / 180;
+    const toDeg = rad => rad * 180 / Math.PI;
+    const lat1 = toRad(from.lat), lon1 = toRad(from.lng);
+    const lat2 = toRad(to.lat), lon2 = toRad(to.lng);
+    const d = 2 * Math.asin(Math.sqrt(
+      Math.sin((lat2-lat1)/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin((lon2-lon1)/2)**2
+    ));
+    if(!isFinite(d) || d === 0) return [[from.lat, from.lng], [to.lat, to.lng]];
+    const pts = [];
+    for(let i=0; i<=steps; i++){
+      const f = i / steps;
+      const A = Math.sin((1-f)*d) / Math.sin(d);
+      const B = Math.sin(f*d) / Math.sin(d);
+      const x = A*Math.cos(lat1)*Math.cos(lon1) + B*Math.cos(lat2)*Math.cos(lon2);
+      const y = A*Math.cos(lat1)*Math.sin(lon1) + B*Math.cos(lat2)*Math.sin(lon2);
+      const z = A*Math.sin(lat1) + B*Math.sin(lat2);
+      pts.push([toDeg(Math.atan2(z, Math.sqrt(x*x+y*y))), toDeg(Math.atan2(y, x))]);
+    }
+    return pts;
+  }
+
+  /* ============================================================
+     GENERAR DÍAS AUTOMÁTICAMENTE (vuelo de ida -> vuelo de vuelta)
+  ============================================================ */
+  // v8: isoDate usa fecha LOCAL, no toISOString(), para que en España no se desplace un día.
+  // El 8 se muestra como "Vuelos ida" y el 28 como "Vuelos vuelta".
+  // El 27 se trata como día normal + se añade el aeropuerto como lugar a las 20:00.
+  const FLIGHT_ONLY_DATES = new Set(['2027-04-08', '2027-04-28']);
+  const FLIGHT_DAY_LEGS = {
+    '2027-04-08': [1, 2], // Madrid→Helsinki, Helsinki→Tokio
+    '2027-04-28': [3, 4], // Tokio→Helsinki, Helsinki→Madrid
+  };
+  function buildDefaultDays(){
+    const start = addDays(TRIP_START, -1); // 8 abril, día del vuelo de ida
+    const end = addDays(TRIP_START, 19);   // 28 abril, día de llegada de vuelta
+    const days = [];
+    let cursor = new Date(start);
+    while(cursor <= end){
+      const iso = isoDate(cursor);
+      const dayOfMonth = cursor.getDate();
+      let label;
+      if(iso === '2027-04-08') label = 'Vuelos ida';
+      else if(iso === '2027-04-28') label = 'Vuelos vuelta';
+      else label = `Día ${dayOfMonth}`;
+      days.push({ id:'d_'+iso, label, date: iso, isFlightDay: FLIGHT_ONLY_DATES.has(iso) });
+      cursor = addDays(cursor, 1);
+    }
+    return days;
+  }
+
+  function normalizeTravelDays(days){
+    const byDate = new Map();
+    (days || []).forEach(d => {
+      if(!d || !d.date) return;
+      if(!byDate.has(d.date)) byDate.set(d.date, Object.assign({}, d));
+    });
+    const start = addDays(TRIP_START, -1);
+    const end = addDays(TRIP_START, 19);
+    const normalized = [];
+    let cursor = new Date(start);
+    while(cursor <= end){
+      const iso = isoDate(cursor);
+      const existing = byDate.get(iso) || {};
+      let label;
+      let isFlightDay = false;
+      if(iso === '2027-04-08'){
+        label = 'Vuelos ida';
+        isFlightDay = true;
+      } else if(iso === '2027-04-28'){
+        label = 'Vuelos vuelta';
+        isFlightDay = true;
+      } else {
+        label = `Día ${cursor.getDate()}`;
+      }
+      normalized.push(Object.assign({}, existing, {
+        id: existing.id || 'd_' + iso,
+        label,
+        date: iso,
+        isFlightDay
+      }));
+      cursor = addDays(cursor, 1);
+    }
+    return normalized;
+  }
+
+  /* ============================================================
+     LUGARES DE EJEMPLO (de places.js) — puedes editarlos o borrarlos
+  ============================================================ */
+  const SEED_PLACES_RAW = [
+    { name:'Shibuya Crossing',    lat:35.6595, lng:139.7004, type:'otro',       region:'Tokio',     day:1,  time:'15:00' },
+    { name:'Hachiko Statue',      lat:35.6591, lng:139.7005, type:'otro',       region:'Tokio',     day:1,  time:'15:30' },
+    { name:'Meiji Jingu',         lat:35.6764, lng:139.6993, type:'templo',     region:'Tokio',     day:1,  time:'11:00' },
+    { name:'Senso-ji Temple',     lat:35.7148, lng:139.7967, type:'templo',     region:'Tokio',     day:2,  time:'08:00' },
+    { name:'Akihabara',           lat:35.7023, lng:139.7745, type:'compras',    region:'Tokio',     day:2,  time:'13:00' },
+    { name:'Shinjuku Gyoen',      lat:35.6852, lng:139.7100, type:'naturaleza', region:'Tokio',     day:3,  time:'10:00' },
+    { name:'Tokyo Skytree',       lat:35.7101, lng:139.8107, type:'otro',       region:'Tokio',     day:3,  time:'15:00' },
+    { name:'Fushimi Inari',       lat:34.9671, lng:135.7727, type:'templo',     region:'Kioto',     day:5,  time:'07:00' },
+    { name:'Kiyomizu-dera',       lat:34.9949, lng:135.7850, type:'templo',     region:'Kioto',     day:5,  time:'11:00' },
+    { name:'Gion District',       lat:35.0036, lng:135.7758, type:'otro',       region:'Kioto',     day:5,  time:'16:00' },
+    { name:'Arashiyama Bamboo',   lat:35.0170, lng:135.6712, type:'naturaleza', region:'Kioto',     day:6,  time:'09:00' },
+    { name:'Kinkaku-ji',          lat:35.0394, lng:135.7292, type:'templo',     region:'Kioto',     day:6,  time:'13:00' },
+    { name:'Dotonbori',           lat:34.6687, lng:135.5013, type:'comida',     region:'Osaka',     day:8,  time:'17:00' },
+    { name:'Osaka Castle',        lat:34.6873, lng:135.5259, type:'otro',       region:'Osaka',     day:8,  time:'09:00' },
+    { name:'Nara Park',           lat:34.6851, lng:135.8430, type:'naturaleza', region:'Nara',      day:10, time:'10:00' },
+    { name:'Todai-ji Temple',     lat:34.6889, lng:135.8398, type:'templo',     region:'Nara',      day:10, time:'12:00' },
+    { name:'Hiroshima Peace Park',lat:34.3955, lng:132.4536, type:'otro',       region:'Hiroshima', day:14, time:'10:00' },
+    { name:'Miyajima Island',     lat:34.2960, lng:132.3198, type:'templo',     region:'Hiroshima', day:14, time:'14:00' },
+    { name:'Llegada a Tokio Narita (NRT)', lat:35.7720, lng:140.3929, type:'otro', region:'Aeropuerto', day:1, time:'13:05', notes:'Llegada del vuelo AY0073. Estamos en el aeropuerto.' },
+    { name:'Aeropuerto Tokio Narita (NRT)', lat:35.7720, lng:140.3929, type:'otro', region:'Aeropuerto', day:19, time:'20:00', notes:'Hay que estar en el aeropuerto antes del vuelo AY0074, que despega a las 23:05.' },
+  ];
+  function buildSeedPlaces(){
+    return SEED_PLACES_RAW.map(p => ({
+      id: uid(), name: p.name, category: p.type, region: p.region,
+      dayId: 'd_' + isoDate(addDays(TRIP_START, p.day - 1)),
+      time: p.time, video: '', notes: p.notes || '', lat: p.lat, lng: p.lng
+    }));
+  }
+
+  let state = { days: normalizeTravelDays(buildDefaultDays()), places: buildSeedPlaces() };
+
+  const proyectoId = location.hash.replace('#','') || 'viaje-japon';
+  const proyectoRef = ref(db, 'proyectos/' + proyectoId);
+  let firebaseReady = false;
+  let cargandoDesdeFirebase = false;
+
+  function currentPayload(){
+    return {
+      tripTitle: document.getElementById('tripTitle').textContent.trim(),
+      state
+    };
+  }
+  function applyPayload(payload){
+    if(!payload || !payload.state || !Array.isArray(payload.state.days) || !Array.isArray(payload.state.places)) return false;
+    state = payload.state;
+    state.days = normalizeTravelDays(state.days);
+    if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
+    return true;
+  }
+  function renderAll(){ renderPlaces(); renderItinerary(); renderMap(); }
+  function save(){
+    if(!firebaseReady || cargandoDesdeFirebase) return;
+    set(proyectoRef, currentPayload()).catch(()=>toast('No se pudo sincronizar'));
+  }
+  function loadSharedState(){
+    onValue(proyectoRef, snapshot=>{
+      cargandoDesdeFirebase = true;
+      const data = snapshot.val();
+      const hadRemoteData = !!(data && data.state);
+      if(hadRemoteData) applyPayload(data);
+      firebaseReady = true;
+      renderAll();
+      cargandoDesdeFirebase = false;
+      if(!hadRemoteData) save();
+    }, ()=>{
+      firebaseReady = true;
+      toast('No se pudo conectar con Firebase');
+    });
+  }
+  document.getElementById('tripTitle').addEventListener('blur', save);
+  document.getElementById('tripTitle').addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); ev.currentTarget.blur(); } });
+
+  let activeCatFilter = '';
+  let activeRegionFilter = '';
+  let activeMapDay = '';
+  let flightsVisible = true;
+
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display='block'; t.style.opacity='1';
+    clearTimeout(toast._h);
+    toast._h = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',300); }, 1900);
+  }
+
+  /* ---------------- tabs ---------------- */
+  const tabButtons = document.querySelectorAll('.tabbar button');
+  function setTab(tab){
+    tabButtons.forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+    document.getElementById('panel-itinerario').classList.toggle('active', tab==='itinerario');
+    document.getElementById('panel-lugares').classList.toggle('active', tab==='lugares');
+    document.getElementById('dayChipRow').style.display = tab==='mapa' ? 'flex' : 'none';
+    document.getElementById('flightToggleRow').style.display = tab==='mapa' ? 'flex' : 'none';
+    document.getElementById('btnAddPlace').style.display = tab==='itinerario' ? 'none' : 'flex';
+    if(tab==='mapa'){ setTimeout(()=>{ map.invalidateSize(); }, 30); }
+  }
+  tabButtons.forEach(btn=> btn.addEventListener('click', ()=>setTab(btn.dataset.tab)));
+
+  /* ---------------- category picker (form) ---------------- */
+  let selectedCategory = CATEGORIES[0].id;
+  function renderCatPicker(){
+    document.getElementById('catPicker').innerHTML = CATEGORIES.map(c=>`
+      <div class="cat-opt ${c.id===selectedCategory?'selected':''}" data-cat="${c.id}">
+        <div class="dot" style="background:${c.color}">${c.emoji}</div><span>${c.label}</span>
+      </div>`).join('');
+    document.querySelectorAll('.cat-opt').forEach(el=>{
+      el.addEventListener('click', ()=>{ selectedCategory = el.dataset.cat; renderCatPicker(); });
+    });
+  }
+
+  /* ---------------- category chips (Lugares) ---------------- */
+  function renderCatChips(){
+    const row = document.getElementById('catChipRow');
+    row.innerHTML = `<div class="pill ${activeCatFilter===''?'active':''}" data-cat="">Todas</div>` +
+      CATEGORIES.map(c=>`<div class="pill ${activeCatFilter===c.id?'active':''}" data-cat="${c.id}">${c.emoji} ${c.label}</div>`).join('');
+    row.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeCatFilter = p.dataset.cat; renderCatChips(); renderPlaces(); });
+    });
+  }
+
+  function renderRegionChips(){
+    const row = document.getElementById('regionChipRow');
+    row.innerHTML = `<div class="pill ${activeRegionFilter===''?'active':''}" data-region="">Todas las zonas</div>` +
+      REGION_FILTERS.map(r=>`<div class="pill ${activeRegionFilter===r.id?'active':''}" data-region="${r.id}">${r.emoji} ${r.label}</div>`).join('');
+    row.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeRegionFilter = p.dataset.region; renderRegionChips(); renderPlaces(); });
+    });
+  }
+
+  /* ---------------- day chips + flight toggle (Mapa) ---------------- */
+  function renderMapChips(){
+    // Se reconstruye explícitamente para que NO aparezcan "Día 8" ni "Día 28":
+    // 8 abril = Vuelos ida; 28 abril = Vuelos vuelta.
+    state.days = normalizeTravelDays(state.days);
+    const orderedDays = state.days.slice().sort((a,b)=> a.date.localeCompare(b.date));
+    const row = document.getElementById('dayChipRow');
+    row.innerHTML = `<div class="pill ${activeMapDay===''?'active':''}" data-day="">Todos los días</div>` +
+      orderedDays.map(d=>`<div class="pill ${activeMapDay===d.id?'active':''}" data-day="${d.id}">${escapeHtml(d.label)}</div>`).join('');
+    row.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeMapDay = p.dataset.day; renderMapChips(); renderMap(); });
+    });
+
+    const frow = document.getElementById('flightToggleRow');
+    frow.innerHTML = `<div class="pill flight ${flightsVisible?'active':''}" id="flightsPill">✈️ Vuelos ${flightsVisible?'activados':'desactivados'}</div>`;
+    document.getElementById('flightsPill').addEventListener('click', ()=>{
+      flightsVisible = !flightsVisible; renderMapChips(); renderMap();
+    });
+  }
+
+  function fillDaySelect(){
+    const fDay = document.getElementById('fDay');
+    fDay.innerHTML = '<option value="">Sin asignar</option>' +
+      state.days.map(d=>`<option value="${d.id}">${escapeHtml(d.label)}</option>`).join('');
+  }
+
+  /* ---------------- LUGARES panel ---------------- */
+  function renderPlaces(){
+    const container = document.getElementById('placesContainer');
+    const list = state.places.filter(p => (!activeCatFilter || p.category === activeCatFilter) && (!activeRegionFilter || placeRegionGroup(p) === activeRegionFilter));
+    if(list.length === 0){
+      container.innerHTML = `<div class="empty"><span class="big">🗾</span><p>No hay lugares con estos filtros.<br>Toca el botón “+” para añadir uno.</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="group-label">Lugares (${list.length})</div><div class="group">` +
+      list.map(p=>{
+        const cat = catById(p.category);
+        const day = state.days.find(d=>d.id===p.dayId);
+        return `<div class="row row-tap" onclick="App.openDetail('${p.id}')">
+          <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+          <div class="main">
+            <h4>${escapeHtml(p.name)}</h4>
+            <div class="sub">${p.region ? escapeHtml(p.region)+' · ' : ''}${day ? escapeHtml(day.label) : 'Sin día asignado'}${p.video ? ' · ▶ vídeo' : ''}</div>
+          </div>
+          ${p.time ? `<div class="time">${p.time}</div>` : ''}
+          <div class="chev">›</div>
+        </div>`;
+      }).join('') + `</div>`;
+  }
+
+  /* ---------------- ITINERARIO panel ---------------- */
+  function formatDate(iso){
+    const [y,m,d] = iso.split('-');
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${parseInt(d,10)} ${months[parseInt(m,10)-1]}`;
+  }
+
+  function getOrderedStops(dayId){
+    return state.places
+      .filter(p=>p.dayId===dayId)
+      .sort((a,b)=>{
+        const ao = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+        const bo = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+        if(ao !== bo) return ao - bo;
+        const timeCmp = (a.time||'').localeCompare(b.time||'');
+        if(timeCmp) return timeCmp;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+  }
+
+  function normalizeDayOrder(dayId){
+    getOrderedStops(dayId).forEach((p,i)=>{ p.order = i + 1; });
+  }
+
+
+  function parseTimeToMinutes(time){
+    if(!time || !/^\d{1,2}:\d{2}$/.test(time)) return null;
+    const [h,m] = time.split(':').map(n=>parseInt(n,10));
+    if(!Number.isFinite(h) || !Number.isFinite(m) || h<0 || h>23 || m<0 || m>59) return null;
+    return h*60 + m;
+  }
+  function formatMinutes(mins){
+    mins = Math.max(0, Math.min(23*60+55, Math.round(mins/5)*5));
+    const h = Math.floor(mins/60);
+    const m = mins % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  function inferTimeForInsert(targetStops, insertIndex, moving){
+    const prev = targetStops[insertIndex - 1];
+    const next = targetStops[insertIndex];
+    const prevMin = prev ? parseTimeToMinutes(prev.time) : null;
+    const nextMin = next ? parseTimeToMinutes(next.time) : null;
+    const currentMin = parseTimeToMinutes(moving && moving.time);
+    if(prevMin != null && nextMin != null){
+      if(nextMin > prevMin + 10) return formatMinutes((prevMin + nextMin) / 2);
+      return formatMinutes(prevMin + 5);
+    }
+    if(prevMin != null) return formatMinutes(prevMin + 60);
+    if(nextMin != null) return formatMinutes(nextMin - 60);
+    if(currentMin != null) return formatMinutes(currentMin);
+    return '10:00';
+  }
+  function placeStopAt(moving, targetDayId, insertIndex){
+    if(!moving || !targetDayId) return;
+    const fromDayId = moving.dayId;
+    const targetStops = getOrderedStops(targetDayId).filter(p=>p.id!==moving.id);
+    insertIndex = Math.max(0, Math.min(insertIndex, targetStops.length));
+    moving.time = inferTimeForInsert(targetStops, insertIndex, moving);
+    moving.dayId = targetDayId;
+    targetStops.splice(insertIndex, 0, moving);
+    targetStops.forEach((p,i)=>{ p.order = i + 1; });
+    if(fromDayId && fromDayId !== targetDayId) normalizeDayOrder(fromDayId);
+  }
+
+  function renderItinerary(){
+    fillDaySelect();
+    renderMapChips();
+    const daysContainer = document.getElementById('daysContainer');
+    daysContainer.innerHTML = state.days.map((day, idx)=>{
+      const stops = getOrderedStops(day.id);
+      let rows;
+      if(day.isFlightDay){
+        const flightRows = getFlightLegsForDay(day).map(f=>`<div class="row row-tap" onclick="App.openFlight(${f.id})">
+          <div class="dot" style="background:var(--gold)">✈️</div>
+          <div class="main"><h4>${AIRPORTS[f.from].name} → ${AIRPORTS[f.to].name}</h4><div class="sub">${f.flight} · sale ${f.dep} · llega ${f.arr}${f.arrNote ? ' ('+f.arrNote+')' : ''}</div></div>
+          <div class="chev">›</div>
+        </div>`).join('');
+        const stopRows = stops.map((p,i)=>{
+          const cat = catById(p.category);
+          return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
+              ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
+              onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
+            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+            <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
+            ${p.time ? `<div class="time">${p.time}</div>` : ''}
+            <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
+          </div>`;
+        }).join('');
+        rows = flightRows + stopRows;
+      } else if(stops.length){
+        rows = stops.map((p,i)=>{
+          const cat = catById(p.category);
+          return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
+              ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
+              onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
+            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+            <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
+            ${p.time ? `<div class="time">${p.time}</div>` : ''}
+            <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
+          </div>`;
+        }).join('');
+      } else {
+        rows = `<div class="row"><div class="main sub" style="color:var(--ink-soft); font-size:12.5px;">Sin lugares — añade uno desde la pestaña Lugares</div></div>`;
+      }
+      return `<div class="day-card">
+        <div class="day-card-head">
+          <div class="day-stamp ${day.isFlightDay?'flight':''}">${day.isFlightDay?'✈':parseInt(day.date.split('-')[2],10)}</div>
+          <h3>${escapeHtml(day.label)}</h3>
+          <span class="date">${formatDate(day.date)}</span>
+          ${!day.isFlightDay ? `<button class="del" onclick="App.removeDay('${day.id}')">Eliminar</button>` : ''}
+        </div>
+        <div class="group itinerary-dropzone" data-day="${day.id}" ondragover="App.dragOverDay(event,'${day.id}')" ondragleave="App.dragLeaveDay(event)" ondrop="App.dropOnDay(event,'${day.id}')">${rows}</div>
+      </div>`;
+    }).join('');
+
+    const unassigned = state.places.filter(p=>!p.dayId);
+    const box = document.getElementById('unassignedContainer');
+    if(unassigned.length===0){ box.innerHTML=''; }
+    else{
+      box.innerHTML = `<div class="group-label">Sin día asignado (${unassigned.length})</div><div class="group">` +
+        unassigned.map(p=>{
+          const cat = catById(p.category);
+          return `<div class="row">
+            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+            <div class="main row-tap" onclick="App.openDetail('${p.id}')"><h4>${escapeHtml(p.name)}</h4></div>
+            <select onchange="App.assignPlace('${p.id}', this.value)" style="max-width:130px;">
+              <option value="">Asignar...</option>
+              ${state.days.map(d=>`<option value="${d.id}">${escapeHtml(d.label)}</option>`).join('')}
+            </select>
+          </div>`;
+        }).join('') + `</div>`;
+    }
+  }
+
+  document.getElementById('btnAddDay').addEventListener('click', ()=>{
+    const labelInput = document.getElementById('newDayLabel');
+    const dateInput = document.getElementById('newDayDate');
+    const label = labelInput.value.trim() || `Día extra`;
+    state.days.push({id: uid(), label, date: dateInput.value || isoDate(new Date()), isFlightDay:false});
+    state.days.sort((a,b)=> a.date.localeCompare(b.date));
+    labelInput.value=''; dateInput.value='';
+    save(); renderItinerary(); renderPlaces(); renderMap();
+  });
+
+  /* ---------------- MAP ---------------- */
+  let map, markersLayer, routeLine, flightLayer;
+  function initMap(){
+    map = L.map('map', {zoomControl:false}).setView([35.6762,139.6503], 5);
+    L.control.zoom({position:'bottomleft'}).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    flightLayer = L.layerGroup().addTo(map);
+  }
+
+  function makeIcon(cat, size){
+    size = size || 32;
+    return L.divIcon({
+      className:'',
+      html:`<div style="background:${cat.color};width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;
+             transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;
+             box-shadow:0 3px 8px rgba(34,32,28,.3);border:2.5px solid #FFFDF8;">
+             <span style="transform:rotate(45deg);font-size:${size*0.46}px;">${cat.emoji}</span></div>`,
+      iconSize:[size,size], iconAnchor:[size/2,size-1], popupAnchor:[0,-size+1]
+    });
+  }
+  function makeAirportIcon(emoji){
+    return L.divIcon({
+      className:'',
+      html:`<div style="background:var(--indigo,#223A5E);width:30px;height:30px;border-radius:50%;
+             display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;
+             box-shadow:0 3px 8px rgba(34,32,28,.35);border:2.5px solid #FFFDF8;">${emoji}</div>`,
+      iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-15]
+    });
+  }
+
+  function renderMap(){
+    if(!map) return;
+    markersLayer.clearLayers();
+    flightLayer.clearLayers();
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+
+    let list = state.places.filter(p=>p.lat!=null && p.lng!=null);
+    if(activeMapDay) list = list.filter(p=>p.dayId===activeMapDay);
+    const bounds = [];
+
+    list.forEach(p=>{
+      const cat = catById(p.category);
+      const marker = L.marker([p.lat,p.lng], {icon: makeIcon(cat)}).addTo(markersLayer);
+      marker.on('click', ()=>openDetail(p.id));
+      bounds.push([p.lat,p.lng]);
+    });
+    if(activeMapDay){
+      const dayPlaces = list.filter(p=>p.dayId===activeMapDay);
+      if(dayPlaces.length>1){
+        routeLine = L.polyline(dayPlaces.map(p=>[p.lat,p.lng]), {color:'#223A5E', weight:3, dashArray:'1 10', lineCap:'round'}).addTo(map);
+      }
+    }
+
+    if(flightsVisible){
+      const dayObj = state.days.find(d=>d.id===activeMapDay);
+      const legs = activeMapDay ? getFlightLegsForDay(dayObj) : FLIGHT_ROUTES;
+      const airportsUsed = new Set();
+      legs.forEach(f=>{
+        const from = AIRPORTS[f.from], to = AIRPORTS[f.to];
+        L.polyline(greatCirclePoints(from, to), {color:'#B8860B', weight:3, dashArray:'2 9', opacity:.9, lineCap:'round'}).addTo(flightLayer);
+        const mid = [(from.lat+to.lat)/2, (from.lng+to.lng)/2];
+        const planeMarker = L.marker(mid, {icon: L.divIcon({className:'', html:`<div style="font-size:16px;">✈️</div>`, iconSize:[20,20], iconAnchor:[10,10]})}).addTo(flightLayer);
+        planeMarker.on('click', ()=>openFlight(f.id));
+        airportsUsed.add(f.from); airportsUsed.add(f.to);
+        bounds.push([from.lat,from.lng],[to.lat,to.lng]);
+      });
+      airportsUsed.forEach(code=>{
+        const a = AIRPORTS[code];
+        const m = L.marker([a.lat,a.lng], {icon: makeAirportIcon(a.emoji)}).addTo(flightLayer);
+        m.bindTooltip(a.name, {direction:'top', offset:[0,-16]});
+      });
+    }
+
+    if(bounds.length){ map.fitBounds(bounds, {padding:[60,60], maxZoom:14}); }
+    else { map.setView([35.6762,139.6503], 5); }
+  }
+
+  /* ---------------- Detail sheet: place ---------------- */
+  const detailBackdrop = document.getElementById('detailBackdrop');
+  const detailSheet = document.getElementById('detailSheet');
+  function openDetail(id){
+    const p = state.places.find(x=>x.id===id);
+    if(!p) return;
+    const cat = catById(p.category);
+    const videoBtn = p.video ? `<a class="video-btn" href="${escapeHtml(p.video)}" target="_blank" rel="noopener">▶ Ver vídeo ↗</a><br>` : '';
+    document.getElementById('detailContent').innerHTML = `
+      <span class="sheet-cat" style="background:${cat.color}">${cat.emoji} ${cat.label}${p.region ? ' · '+escapeHtml(p.region) : ''}</span>
+      <h2 class="sheet-title">${escapeHtml(p.name)}${p.time ? ` <span style="font-size:14px;color:var(--ink-soft);font-family:'Zen Kaku Gothic New';">· ${p.time}</span>` : ''}</h2>
+      ${p.notes ? `<p class="sheet-notes">${escapeHtml(p.notes)}</p>` : ''}
+      ${videoBtn}
+      <div class="sheet-day-picker">
+        <label>Día asignado</label>
+        <select onchange="App.assignPlace('${p.id}', this.value)">
+          <option value="">Sin asignar</option>
+          ${state.days.map(d=>`<option value="${d.id}" ${d.id===p.dayId?'selected':''}>${escapeHtml(d.label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn-ios secondary" onclick="App.closeDetail()">Cerrar</button>
+        <button class="btn-ios" onclick="App.editFromDetail('${p.id}')">Editar</button>
+        <button class="btn-ios danger" onclick="App.deletePlace('${p.id}')">Eliminar</button>
+      </div>`;
+    detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
+  }
+
+  /* ---------------- Detail sheet: flight ---------------- */
+  function openFlight(flightId){
+    const f = FLIGHT_ROUTES.find(x=>x.id===flightId);
+    if(!f) return;
+    const from = AIRPORTS[f.from], to = AIRPORTS[f.to];
+    document.getElementById('detailContent').innerHTML = `
+      <span class="sheet-cat" style="background:var(--gold)">✈️ Vuelo</span>
+      <h2 class="sheet-title">${from.name} → ${to.name}</h2>
+      <div class="flight-legs">
+        <div class="flight-leg">
+          <div class="route">${f.flight} · ${f.airline}</div>
+          <div class="meta">Sale ${f.dep} · Llega ${f.arr}${f.arrNote ? ' ('+f.arrNote+')' : ''}<br>${f.terminal}${f.class ? ' · Clase '+f.class : ''}${f.operatedBy ? ' · Operado por '+f.operatedBy : ''}${f.lastCheckin ? '<br>Último check-in: '+f.lastCheckin : ''}<br>${new Date(f.date+'T00:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn-ios secondary" onclick="App.closeDetail()" style="flex:1;">Cerrar</button>
+      </div>`;
+    detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
+  }
+  function closeDetail(){ detailBackdrop.classList.remove('open'); detailSheet.classList.remove('open'); }
+  detailBackdrop.addEventListener('click', closeDetail);
+
+  /* ---------------- Form sheet: add/edit place ---------------- */
+  const formBackdrop = document.getElementById('formBackdrop');
+  const formSheet = document.getElementById('formSheet');
+  let miniMap, miniMarker, editingPlaceId=null, pendingLat=null, pendingLng=null;
+
+  function initMiniMap(){
+    miniMap = L.map('miniMap', {scrollWheelZoom:false}).setView([35.6762,139.6503], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(miniMap);
+    miniMap.on('click', e=>{
+      pendingLat=e.latlng.lat; pendingLng=e.latlng.lng;
+      placeMiniMarker(pendingLat,pendingLng); updatePinStatus();
+    });
+  }
+  function placeMiniMarker(lat,lng){
+    if(miniMarker) miniMap.removeLayer(miniMarker);
+    miniMarker = L.marker([lat,lng], {draggable:true}).addTo(miniMap);
+    miniMarker.on('dragend', ()=>{
+      const pos=miniMarker.getLatLng(); pendingLat=pos.lat; pendingLng=pos.lng; updatePinStatus();
+    });
+  }
+  function updatePinStatus(){
+    const el = document.getElementById('pinStatus');
+    if(pendingLat!=null){ el.textContent = `Ubicación fijada (${pendingLat.toFixed(4)}, ${pendingLng.toFixed(4)}) — arrastra el pin para ajustar`; el.className='pin-status ok'; }
+    else { el.textContent = 'Sin ubicación fijada todavía — busca arriba o toca el mini-mapa'; el.className='pin-status pending'; }
+  }
+
+  /* ---- buscador de direcciones (Nominatim / OpenStreetMap, gratis) ---- */
+  document.getElementById('btnSearchLoc').addEventListener('click', doSearch);
+  document.getElementById('fSearchQuery').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch(); } });
+
+  async function doSearch(){
+    const q = document.getElementById('fSearchQuery').value.trim();
+    const resultsBox = document.getElementById('searchResults');
+    if(!q){ toast('Escribe algo para buscar'); return; }
+    resultsBox.innerHTML = `<p class="search-hint">Buscando…</p>`;
+    try{
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&viewbox=128,46,146,24&bounded=0&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { headers: { 'Accept':'application/json' } });
+      const data = await res.json();
+      if(!data.length){ resultsBox.innerHTML = `<p class="search-hint">Sin resultados — prueba con otro nombre o ajusta el pin a mano.</p>`; return; }
+      resultsBox.innerHTML = `<div class="group" style="margin-top:8px;">` + data.map((r,i)=>`
+        <div class="row row-tap" onclick="App.pickSearchResult(${i})">
+          <div class="dot" style="background:var(--indigo)">📍</div>
+          <div class="main"><h4 style="font-size:13.5px;">${escapeHtml(r.display_name.split(',')[0])}</h4>
+          <div class="sub">${escapeHtml(r.display_name)}</div></div>
+        </div>`).join('') + `</div>`;
+      window.__searchResults = data;
+    }catch(err){
+      resultsBox.innerHTML = `<p class="search-hint">No se pudo buscar ahora mismo — prueba a fijar el pin a mano en el mapa.</p>`;
+    }
+  }
+  function pickSearchResult(i){
+    const r = window.__searchResults[i];
+    pendingLat = parseFloat(r.lat); pendingLng = parseFloat(r.lon);
+    if(!document.getElementById('fName').value.trim()){
+      document.getElementById('fName').value = r.display_name.split(',')[0];
+    }
+    if(!miniMap) initMiniMap();
+    miniMap.invalidateSize();
+    miniMap.setView([pendingLat,pendingLng], 15);
+    placeMiniMarker(pendingLat,pendingLng);
+    updatePinStatus();
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('fSearchQuery').value = '';
+    toast('Ubicación fijada — ajusta el pin si hace falta');
+  }
+
+  function openForm(place){
+    editingPlaceId = place ? place.id : null;
+    document.getElementById('modalTitle').textContent = place ? 'Editar lugar' : 'Nuevo lugar';
+    document.getElementById('fName').value = place ? place.name : '';
+    document.getElementById('fSearchQuery').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+    selectedCategory = place ? place.category : CATEGORIES[0].id;
+    renderCatPicker();
+    fillDaySelect();
+    document.getElementById('fDay').value = place ? (place.dayId||'') : '';
+    document.getElementById('fRegion').value = place ? regionLabelFromId(placeRegionGroup(place)) : 'Tokio';
+    document.getElementById('fVideo').value = place ? (place.video||'') : '';
+    document.getElementById('fNotes').value = place ? (place.notes||'') : '';
+    pendingLat = place ? place.lat : null;
+    pendingLng = place ? place.lng : null;
+
+    formBackdrop.classList.add('open'); formSheet.classList.add('open');
+    setTimeout(()=>{
+      if(!miniMap) initMiniMap(); else miniMap.invalidateSize();
+      if(pendingLat!=null){ miniMap.setView([pendingLat,pendingLng],13); placeMiniMarker(pendingLat,pendingLng); }
+      else if(miniMarker){ miniMap.removeLayer(miniMarker); miniMarker=null; miniMap.setView([35.6762,139.6503],5); }
+      updatePinStatus();
+    }, 60);
+  }
+  function closeForm(){ formBackdrop.classList.remove('open'); formSheet.classList.remove('open'); }
+  formBackdrop.addEventListener('click', closeForm);
+  document.getElementById('btnCancelModal').addEventListener('click', closeForm);
+  document.getElementById('btnAddPlace').addEventListener('click', ()=>openForm(null));
+
+  document.getElementById('btnSavePlace').addEventListener('click', ()=>{
+    const name = document.getElementById('fName').value.trim();
+    if(!name){ toast('Ponle un nombre al lugar'); return; }
+    if(pendingLat==null){ toast('Busca una ubicación o toca el mini-mapa'); return; }
+    const videoVal = document.getElementById('fVideo').value.trim();
+    if(videoVal && !isValidUrl(videoVal)){ toast('El enlace del vídeo no es una URL válida'); return; }
+    const data = {
+      name, category: selectedCategory, region: document.getElementById('fRegion').value,
+      dayId: document.getElementById('fDay').value || null,
+      video: videoVal, notes: document.getElementById('fNotes').value.trim(),
+      lat: pendingLat, lng: pendingLng
+    };
+    if(editingPlaceId){ Object.assign(state.places.find(p=>p.id===editingPlaceId), data); normalizeDayOrder(data.dayId); }
+    else{
+      const newPlace = Object.assign({id: uid()}, data);
+      if(newPlace.dayId){ newPlace.order = getOrderedStops(newPlace.dayId).length + 1; }
+      state.places.push(newPlace);
+    }
+    closeForm(); save(); renderPlaces(); renderItinerary(); renderMap();
+    toast('Guardado');
+  });
+
+  /* ---------------- global actions ---------------- */
+  window.App = {
+    openDetail, openFlight, closeDetail,
+    pickSearchResult,
+    editFromDetail(id){ closeDetail(); openForm(state.places.find(p=>p.id===id)); },
+    deletePlace(id){
+      if(!confirm('¿Eliminar este lugar? No se puede deshacer.')) return;
+      state.places = state.places.filter(p=>p.id!==id);
+      closeDetail(); save(); renderPlaces(); renderItinerary(); renderMap();
+    },
+    removeDay(id){
+      if(!confirm('¿Eliminar este día? Los lugares pasarán a "sin asignar".')) return;
+      state.days = state.days.filter(d=>d.id!==id);
+      state.places.forEach(p=>{ if(p.dayId===id) p.dayId=null; });
+      save(); renderItinerary(); renderPlaces(); renderMap();
+    },
+    assignPlace(placeId, dayId){
+      const p = state.places.find(p=>p.id===placeId);
+      const oldDayId = p && p.dayId;
+      if(!p) return;
+      p.dayId = dayId || null;
+      if(dayId){ p.order = getOrderedStops(dayId).length + 1; }
+      if(oldDayId) normalizeDayOrder(oldDayId);
+      save(); renderItinerary(); renderPlaces(); renderMap();
+      if(detailSheet.classList.contains('open')) openDetail(placeId);
+    },
+    unassignPlace(placeId){
+      const p = state.places.find(p=>p.id===placeId);
+      if(!p) return;
+      const oldDayId = p.dayId;
+      p.dayId = null;
+      delete p.order;
+      if(oldDayId) normalizeDayOrder(oldDayId);
+      save(); renderItinerary(); renderPlaces(); renderMap();
+    },
+    openStopDetail(ev, placeId){
+      if(window.__suppressNextClick){ ev.preventDefault(); ev.stopPropagation(); return; }
+      App.openDetail(placeId);
+    },
+    pointerDown(ev, placeId, dayId){
+      if(ev.pointerType === 'mouse' || (ev.target && ev.target.closest && ev.target.closest('button,select,input,textarea,a'))) return;
+      window.__pointerDrag = {
+        placeId, fromDayId: dayId, pointerId: ev.pointerId,
+        startX: ev.clientX, startY: ev.clientY, x: ev.clientX, y: ev.clientY,
+        started: false, row: ev.currentTarget
+      };
+      window.__pointerDrag.timer = setTimeout(()=>App.startPointerDrag(), 420);
+    },
+    startPointerDrag(){
+      const d = window.__pointerDrag;
+      if(!d || d.started) return;
+      d.started = true;
+      d.row.classList.add('dragging');
+      try{ d.row.setPointerCapture && d.row.setPointerCapture(d.pointerId); }catch(e){}
+      const place = state.places.find(p=>p.id===d.placeId);
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.textContent = place ? place.name : 'Evento';
+      document.body.appendChild(ghost);
+      d.ghost = ghost;
+      App.updatePointerGhost(d.x, d.y);
+      window.__suppressNextClick = true;
+    },
+    updatePointerGhost(x,y){
+      const d = window.__pointerDrag;
+      if(d && d.ghost) d.ghost.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+      document.querySelectorAll('.itinerary-stop.drop-target').forEach(el=>el.classList.remove('drop-target'));
+      document.querySelectorAll('.itinerary-dropzone.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      const el = document.elementFromPoint(x,y);
+      const row = el && el.closest ? el.closest('.itinerary-stop') : null;
+      const zone = el && el.closest ? el.closest('.itinerary-dropzone') : null;
+      if(row && row.dataset.place !== d.placeId) row.classList.add('drop-target');
+      else if(zone) zone.classList.add('drag-over');
+    },
+    pointerMove(ev){
+      const d = window.__pointerDrag;
+      if(!d || d.pointerId !== ev.pointerId) return;
+      d.x = ev.clientX; d.y = ev.clientY;
+      const moved = Math.hypot(d.x-d.startX, d.y-d.startY);
+      if(!d.started && moved > 12) App.startPointerDrag();
+      if(d.started){ ev.preventDefault(); App.updatePointerGhost(d.x, d.y); }
+    },
+    pointerUp(ev){
+      const d = window.__pointerDrag;
+      if(!d || d.pointerId !== ev.pointerId) return;
+      clearTimeout(d.timer);
+      if(d.started){
+        ev.preventDefault();
+        const moving = state.places.find(p=>p.id===d.placeId);
+        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+        const row = el && el.closest ? el.closest('.itinerary-stop') : null;
+        const zone = el && el.closest ? el.closest('.itinerary-dropzone') : null;
+        if(moving && row && row.dataset.place !== moving.id){
+          const targetDayId = row.dataset.day;
+          const targetStops = getOrderedStops(targetDayId).filter(p=>p.id!==moving.id);
+          const targetIndex = targetStops.findIndex(p=>p.id===row.dataset.place);
+          const rect = row.getBoundingClientRect();
+          const insertAfter = ev.clientY > rect.top + rect.height/2;
+          placeStopAt(moving, targetDayId, targetIndex + (insertAfter ? 1 : 0));
+        } else if(moving && zone){
+          placeStopAt(moving, zone.dataset.day, getOrderedStops(zone.dataset.day).filter(p=>p.id!==moving.id).length);
+        }
+        save(); renderItinerary(); renderPlaces(); renderMap();
+        setTimeout(()=>{ window.__suppressNextClick = false; }, 250);
+      }
+      App.cleanupPointerDrag();
+    },
+    pointerCancel(ev){
+      const d = window.__pointerDrag;
+      if(d && d.pointerId === ev.pointerId){ clearTimeout(d.timer); App.cleanupPointerDrag(); }
+    },
+    cleanupPointerDrag(){
+      const d = window.__pointerDrag;
+      if(d && d.ghost) d.ghost.remove();
+      document.querySelectorAll('.itinerary-stop.dragging,.itinerary-stop.drop-target').forEach(el=>el.classList.remove('dragging','drop-target'));
+      document.querySelectorAll('.itinerary-dropzone.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      window.__pointerDrag = null;
+    },
+    dragStart(ev, placeId, dayId){
+      window.__dragPlace = {placeId, fromDayId: dayId};
+      if(ev.dataTransfer){
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', placeId);
+      }
+      const row = ev.currentTarget;
+      setTimeout(()=>row.classList.add('dragging'), 0);
+    },
+    dragEnd(ev){
+      document.querySelectorAll('.itinerary-stop.dragging,.itinerary-stop.drop-target').forEach(el=>el.classList.remove('dragging','drop-target'));
+      document.querySelectorAll('.itinerary-dropzone.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      window.__dragPlace = null;
+    },
+    dragOverRow(ev, targetPlaceId, targetDayId){
+      if(!window.__dragPlace || window.__dragPlace.placeId===targetPlaceId) return;
+      ev.preventDefault();
+      ev.currentTarget.classList.add('drop-target');
+      if(ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+    },
+    dragOverDay(ev, dayId){
+      if(!window.__dragPlace) return;
+      ev.preventDefault();
+      ev.currentTarget.classList.add('drag-over');
+      if(ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+    },
+    dragLeaveDay(ev){
+      if(ev.currentTarget && !ev.currentTarget.contains(ev.relatedTarget)){
+        ev.currentTarget.classList.remove('drag-over');
+      }
+    },
+    dropOnRow(ev, targetPlaceId, targetDayId){
+      ev.preventDefault();
+      ev.stopPropagation();
+      const dragged = window.__dragPlace;
+      if(!dragged || dragged.placeId===targetPlaceId) return;
+      const moving = state.places.find(p=>p.id===dragged.placeId);
+      if(!moving) return;
+      const targetStops = getOrderedStops(targetDayId).filter(p=>p.id!==moving.id);
+      const targetIndex = targetStops.findIndex(p=>p.id===targetPlaceId);
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const insertAfter = ev.clientY > rect.top + rect.height/2;
+      placeStopAt(moving, targetDayId, targetIndex + (insertAfter ? 1 : 0));
+      save(); renderItinerary(); renderPlaces(); renderMap();
+    },
+    dropOnDay(ev, dayId){
+      ev.preventDefault();
+      const dragged = window.__dragPlace;
+      if(!dragged) return;
+      if(ev.target.closest && ev.target.closest('.itinerary-stop')) return;
+      const moving = state.places.find(p=>p.id===dragged.placeId);
+      if(!moving) return;
+      placeStopAt(moving, dayId, getOrderedStops(dayId).filter(p=>p.id!==moving.id).length);
+      save(); renderItinerary(); renderPlaces(); renderMap();
+    },
+    moveStop(dayId, placeId, dir){
+      const stops = getOrderedStops(dayId);
+      const idx = stops.findIndex(p=>p.id===placeId);
+      const swapWith = idx+dir;
+      if(idx<0 || swapWith<0 || swapWith>=stops.length) return;
+      const moving = stops[idx];
+      stops.splice(idx, 1);
+      stops.splice(swapWith, 0, moving);
+      moving.time = inferTimeForInsert(stops.filter(p=>p.id!==moving.id), swapWith, moving);
+      stops.forEach((p,i)=>{ p.order = i + 1; });
+      save(); renderItinerary(); renderPlaces(); renderMap();
+    }
+  };
+
+  /* ---------------- export / import ---------------- */
+  document.getElementById('btnExport').addEventListener('click', ()=>{
+    const payload = { tripTitle: document.getElementById('tripTitle').textContent.trim(), state };
+    const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='viaje-japon.json'; a.click();
+    URL.revokeObjectURL(url); toast('Exportado');
+  });
+  document.getElementById('btnImportTrigger').addEventListener('click', ()=>document.getElementById('fileImport').click());
+  document.getElementById('fileImport').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const payload = JSON.parse(reader.result);
+        if(!payload.state || !Array.isArray(payload.state.days) || !Array.isArray(payload.state.places)){
+          toast('Archivo con formato inesperado'); return;
+        }
+        const mode = confirm('Aceptar = FUSIONAR con tus datos. Cancelar = REEMPLAZAR todo.') ? 'merge':'replace';
+        if(mode==='replace'){ state = payload.state; state.days = normalizeTravelDays(state.days); }
+        else{
+          const exD = new Set(state.days.map(d=>d.id));
+          payload.state.days.forEach(d=>{ if(!exD.has(d.id)) state.days.push(d); });
+          state.days = normalizeTravelDays(state.days);
+          const exP = new Set(state.places.map(p=>p.id));
+          payload.state.places.forEach(p=>{ if(!exP.has(p.id)) state.places.push(p); });
+        }
+        if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
+        save(); renderPlaces(); renderItinerary(); renderMap();
+        toast('Importado');
+      }catch(err){ toast('No se pudo leer el archivo'); }
+      e.target.value='';
+    };
+    reader.readAsText(file);
+  });
+
+  /* ---------------- init ---------------- */
+  initMap();
+  renderCatChips();
+  renderRegionChips();
+  renderCatPicker();
+  renderPlaces();
+  renderItinerary();
+  renderMap();
+  setTab('mapa');
+})();
+</script>
+</body>
+</html>
