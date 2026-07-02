@@ -219,6 +219,22 @@
 
   input[type=file]{display:none;}
 
+
+
+  /* ============ DESPLAZAMIENTOS + HOTELES ============ */
+  .transfer-row{background:rgba(34,58,94,.045); padding:9px 14px 9px 52px; border-bottom:1px dashed var(--line); cursor:pointer;}
+  .transfer-row:active{background:rgba(34,58,94,.09);}
+  .transfer-chip{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 9px; background:var(--surface); border:1px solid var(--line); color:var(--indigo); font-size:11.5px; font-weight:800;}
+  .transfer-meta{font-size:11.5px; color:var(--ink-soft); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .transport-option{background:var(--cream-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:10px 12px; margin:8px 0;}
+  .transport-option.selected{outline:2px solid var(--accent); background:rgba(193,68,14,.08);}
+  .transport-option .route{font-weight:800; font-size:14px; color:var(--indigo-2);}
+  .transport-option .meta{font-size:12px; color:var(--ink-soft); margin-top:3px; line-height:1.35;}
+  .hotel-card{margin-bottom:12px;}
+  .hotel-info{font-size:12.5px; color:var(--ink-soft); line-height:1.45; margin-top:2px;}
+  #hotelFields{display:none;}
+  #hotelFields.open{display:block;}
+
   .leaflet-popup-content-wrapper{border-radius:12px; font-family:'Zen Kaku Gothic New',sans-serif;}
   .popup-title{font-weight:700; font-size:13.5px; margin:0; color:var(--indigo-2);}
   .popup-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
@@ -265,12 +281,23 @@
   <div id="placesContainer"></div>
 </section>
 
+<!-- ===== Hoteles ===== -->
+<section class="panel" id="panel-hoteles">
+  <h1 class="large-title">Hoteles</h1>
+  <div class="empty" style="padding:18px 16px; margin-bottom:14px; text-align:left;">
+    <strong>🏨 Organiza aquí los alojamientos.</strong><br>
+    Añade un lugar con categoría “Hoteles” y rellena dirección, noches, contacto, reserva y notas.
+  </div>
+  <div id="hotelsContainer"></div>
+</section>
+
 <button class="fab" id="btnAddPlace">+</button>
 
 <nav class="tabbar blur">
   <button data-tab="mapa" class="active"><span class="ti">🗺️</span><span>Mapa</span></button>
   <button data-tab="itinerario"><span class="ti">📅</span><span>Itinerario</span></button>
   <button data-tab="lugares"><span class="ti">📍</span><span>Lugares</span></button>
+  <button data-tab="hoteles"><span class="ti">🏨</span><span>Hoteles</span></button>
 </nav>
 
 <!-- ===== Detail sheet ===== -->
@@ -309,6 +336,18 @@
 
     <div class="field-label">Notas</div>
     <div class="field-group"><div class="row"><textarea id="fNotes" placeholder="Horario, precio, qué no perderse..."></textarea></div></div>
+
+    <div id="hotelFields">
+      <div class="field-label">Datos del hotel</div>
+      <div class="field-group">
+        <div class="row"><input type="text" id="fAddress" placeholder="Dirección completa"></div>
+        <div class="row"><input type="text" id="fHotelArea" placeholder="Zona / barrio, ej. Shinjuku, Ueno..."></div>
+        <div class="row"><input type="date" id="fCheckIn"><input type="date" id="fCheckOut"></div>
+        <div class="row"><input type="text" id="fBookingRef" placeholder="Nº reserva / plataforma"></div>
+        <div class="row"><input type="text" id="fHotelPhone" placeholder="Teléfono / contacto"></div>
+        <div class="row"><input type="text" id="fHotelWebsite" placeholder="Web del hotel o reserva"></div>
+      </div>
+    </div>
 
     <div class="field-label">Ubicación</div>
     <div class="field-group" style="padding:12px 14px;">
@@ -369,10 +408,22 @@ const db = getDatabase(firebaseApp);
     {id:'templo',      label:'Templo',      emoji:'⛩️', color:'#223A5E'},
     {id:'compras',     label:'Compras',     emoji:'🛍️', color:'#C1440E'},
     {id:'naturaleza',  label:'Naturaleza',  emoji:'🌿', color:'#3E7C59'},
-    {id:'alojamiento', label:'Alojamiento', emoji:'🏨', color:'#B8860B'},
+    {id:'alojamiento', label:'Hoteles', emoji:'🏨', color:'#B8860B'},
     {id:'otro',        label:'Otro',        emoji:'📍', color:'#57534A'}
   ];
   const catById = id => CATEGORIES.find(c=>c.id===id) || CATEGORIES[CATEGORIES.length-1];
+  const TRANSPORT_MODES = [
+    {id:'walk', label:'Caminando', emoji:'🚶', color:'#5C7048', dash:'1 8'},
+    {id:'metro', label:'Metro', emoji:'🚇', color:'#223A5E', dash:'6 8'},
+    {id:'train', label:'Tren', emoji:'🚆', color:'#B8860B', dash:null},
+    {id:'bus', label:'Bus', emoji:'🚌', color:'#3E7C59', dash:'10 8'},
+    {id:'car', label:'Coche', emoji:'🚗', color:'#C1440E', dash:null},
+    {id:'taxi', label:'Taxi', emoji:'🚕', color:'#C1440E', dash:'4 6'},
+    {id:'plane', label:'Avión', emoji:'✈️', color:'#B8860B', dash:'2 9'},
+    {id:'other', label:'Otro', emoji:'➡️', color:'#57534A', dash:'3 7'}
+  ];
+  const transportById = id => TRANSPORT_MODES.find(m=>m.id===id) || TRANSPORT_MODES[TRANSPORT_MODES.length-1];
+
   const REGION_FILTERS = [
     { id:'tokio', label:'Tokio', emoji:'🗼' },
     { id:'osaka', label:'Osaka', emoji:'🐙' },
@@ -530,12 +581,83 @@ const db = getDatabase(firebaseApp);
     }));
   }
 
-  let state = { days: normalizeTravelDays(buildDefaultDays()), places: buildSeedPlaces() };
+  let state = { days: normalizeTravelDays(buildDefaultDays()), places: buildSeedPlaces(), transfers: [] };
+  ensureStateShape();
 
   const proyectoId = location.hash.replace('#','') || 'viaje-japon';
   const proyectoRef = ref(db, 'proyectos/' + proyectoId);
   let firebaseReady = false;
   let cargandoDesdeFirebase = false;
+
+
+  function ensureStateShape(){
+    state = state || {};
+    state.days = normalizeTravelDays(Array.isArray(state.days) ? state.days : buildDefaultDays());
+    state.places = Array.isArray(state.places) ? state.places : [];
+    state.transfers = Array.isArray(state.transfers) ? state.transfers : [];
+    seedNaritaTokyoTransfer();
+  }
+  function findPlace(id){ return state.places.find(p=>p.id===id); }
+  function transferKey(dayId, fromId, toId){ return [dayId || '', fromId || '', toId || ''].join('__'); }
+  function getTransfer(dayId, fromId, toId){
+    ensureStateShape();
+    let t = state.transfers.find(x=>x.dayId===dayId && x.fromPlaceId===fromId && x.toPlaceId===toId);
+    if(!t){
+      t = { id: uid(), dayId, fromPlaceId: fromId, toPlaceId: toId, options: [], selectedOptionId: null };
+      state.transfers.push(t);
+    }
+    if(!Array.isArray(t.options)) t.options = [];
+    return t;
+  }
+  function selectedTransferOption(t){
+    if(!t || !Array.isArray(t.options) || !t.options.length) return null;
+    return t.options.find(o=>o.id===t.selectedOptionId) || t.options[0];
+  }
+  function transferLabel(t){
+    const o = selectedTransferOption(t);
+    if(!o) return 'Añadir opciones de desplazamiento';
+    const mode = transportById(o.mode);
+    return `${mode.emoji} ${mode.label}${o.duration ? ' · '+o.duration : ''}${o.price ? ' · '+o.price : ''}`;
+  }
+  function parseWaypoints(text){
+    return (text || '').split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{
+      const parts = line.split(',').map(x=>parseFloat(x.trim()));
+      if(parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+      return [parts[0], parts[1]];
+    }).filter(Boolean);
+  }
+  function getRouteLatLngs(t, fromPlace, toPlace){
+    const o = selectedTransferOption(t);
+    const pts = o ? parseWaypoints(o.waypoints) : [];
+    if(pts.length) return [[fromPlace.lat, fromPlace.lng], ...pts, [toPlace.lat, toPlace.lng]];
+    return [[fromPlace.lat, fromPlace.lng], [toPlace.lat, toPlace.lng]];
+  }
+  function seedNaritaTokyoTransfer(){
+    if(!state || !Array.isArray(state.places)) return;
+    if(!Array.isArray(state.transfers)) state.transfers = [];
+    const narita = state.places.find(p => /narita/i.test(p.name || '') && p.dayId);
+    if(!narita) return;
+    const sameDay = getOrderedStops(narita.dayId);
+    const next = sameDay[sameDay.findIndex(p=>p.id===narita.id)+1];
+    if(!next || !/tokio|tokyo/i.test(`${next.region || ''} ${next.name || ''}`)) return;
+    let t = state.transfers.find(x=>x.dayId===narita.dayId && x.fromPlaceId===narita.id && x.toPlaceId===next.id);
+    if(t && Array.isArray(t.options) && t.options.length) return;
+    if(!t){ t = { id: uid(), dayId:narita.dayId, fromPlaceId:narita.id, toPlaceId:next.id, options:[], selectedOptionId:null }; state.transfers.push(t); }
+    t.options = [
+      {id:uid(), mode:'train', title:'Narita Express', duration:'~55 min', price:'¥3.070 aprox.', notes:'Cómodo y directo hacia Tokyo/Shinjuku/Shibuya según tren. Buena opción si llevamos maletas.'},
+      {id:uid(), mode:'train', title:'Keisei Skyliner + metro/JR', duration:'~50-70 min', price:'¥2.570 + enlace', notes:'Muy rápido hasta Ueno/Nippori y luego conexión a zona del hotel.'},
+      {id:uid(), mode:'bus', title:'Limousine Bus', duration:'~75-120 min', price:'¥3.200 aprox.', notes:'Más cómodo si deja cerca del hotel; depende mucho del tráfico.'},
+      {id:uid(), mode:'taxi', title:'Taxi / traslado privado', duration:'~60-90 min', price:'¥25.000-35.000+', notes:'Solo si llegamos cansados o con mucho equipaje; caro.'}
+    ];
+    t.selectedOptionId = t.options[0].id;
+  }
+  function daysBetween(checkIn, checkOut){
+    if(!checkIn || !checkOut) return '';
+    const a = new Date(checkIn+'T00:00:00');
+    const b = new Date(checkOut+'T00:00:00');
+    const n = Math.round((b-a)/(24*60*60*1000));
+    return n > 0 ? `${n} noche${n===1?'':'s'}` : '';
+  }
 
   function currentPayload(){
     return {
@@ -546,11 +668,11 @@ const db = getDatabase(firebaseApp);
   function applyPayload(payload){
     if(!payload || !payload.state || !Array.isArray(payload.state.days) || !Array.isArray(payload.state.places)) return false;
     state = payload.state;
-    state.days = normalizeTravelDays(state.days);
+    ensureStateShape();
     if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
     return true;
   }
-  function renderAll(){ renderPlaces(); renderItinerary(); renderMap(); }
+  function renderAll(){ renderPlaces(); renderHotels(); renderItinerary(); renderMap(); }
   function save(){
     if(!firebaseReady || cargandoDesdeFirebase) return;
     set(proyectoRef, currentPayload()).catch(()=>toast('No se pudo sincronizar'));
@@ -591,9 +713,10 @@ const db = getDatabase(firebaseApp);
     tabButtons.forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
     document.getElementById('panel-itinerario').classList.toggle('active', tab==='itinerario');
     document.getElementById('panel-lugares').classList.toggle('active', tab==='lugares');
+    document.getElementById('panel-hoteles').classList.toggle('active', tab==='hoteles');
     document.getElementById('dayChipRow').style.display = tab==='mapa' ? 'flex' : 'none';
     document.getElementById('flightToggleRow').style.display = tab==='mapa' ? 'flex' : 'none';
-    document.getElementById('btnAddPlace').style.display = tab==='itinerario' ? 'none' : 'flex';
+    document.getElementById('btnAddPlace').style.display = (tab==='itinerario') ? 'none' : 'flex';
     if(tab==='mapa'){ setTimeout(()=>{ map.invalidateSize(); }, 30); }
   }
   tabButtons.forEach(btn=> btn.addEventListener('click', ()=>setTab(btn.dataset.tab)));
@@ -606,8 +729,13 @@ const db = getDatabase(firebaseApp);
         <div class="dot" style="background:${c.color}">${c.emoji}</div><span>${c.label}</span>
       </div>`).join('');
     document.querySelectorAll('.cat-opt').forEach(el=>{
-      el.addEventListener('click', ()=>{ selectedCategory = el.dataset.cat; renderCatPicker(); });
+      el.addEventListener('click', ()=>{ selectedCategory = el.dataset.cat; renderCatPicker(); toggleHotelFields(); });
     });
+  }
+
+  function toggleHotelFields(){
+    const box = document.getElementById('hotelFields');
+    if(box) box.classList.toggle('open', selectedCategory === 'alojamiento');
   }
 
   /* ---------------- category chips (Lugares) ---------------- */
@@ -679,6 +807,29 @@ const db = getDatabase(firebaseApp);
       }).join('') + `</div>`;
   }
 
+
+
+  function renderHotels(){
+    const container = document.getElementById('hotelsContainer');
+    if(!container) return;
+    const hotels = state.places.filter(p=>p.category==='alojamiento');
+    if(!hotels.length){
+      container.innerHTML = `<div class="empty"><span class="big">🏨</span><p>Todavía no hay hoteles.<br>Toca “+”, elige categoría Hoteles y rellena sus datos.</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="group-label">Hoteles (${hotels.length})</div>` + hotels.map(p=>{
+      const stay = daysBetween(p.checkIn, p.checkOut);
+      const day = state.days.find(d=>d.id===p.dayId);
+      return `<div class="group hotel-card"><div class="row row-tap" onclick="App.openDetail('${p.id}')">
+        <div class="dot" style="background:var(--gold)">🏨</div>
+        <div class="main">
+          <h4>${escapeHtml(p.name)}</h4>
+          <div class="hotel-info">${p.address ? escapeHtml(p.address)+'<br>' : ''}${p.checkIn || p.checkOut ? `Entrada ${escapeHtml(p.checkIn || '—')} · Salida ${escapeHtml(p.checkOut || '—')}` : (day ? escapeHtml(day.label) : 'Sin fecha')}${stay ? ' · '+stay : ''}${p.bookingRef ? '<br>Reserva: '+escapeHtml(p.bookingRef) : ''}</div>
+        </div><div class="chev">›</div>
+      </div></div>`;
+    }).join('');
+  }
+
   /* ---------------- ITINERARIO panel ---------------- */
   function formatDate(iso){
     const [y,m,d] = iso.split('-');
@@ -743,11 +894,41 @@ const db = getDatabase(firebaseApp);
     if(fromDayId && fromDayId !== targetDayId) normalizeDayOrder(fromDayId);
   }
 
+  function renderStopRow(p, day){
+    const cat = catById(p.category);
+    return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
+        ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
+        onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
+      <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+      <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
+      ${p.time ? `<div class="time">${p.time}</div>` : ''}
+      <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
+    </div>`;
+  }
+  function renderTransferRow(day, from, to){
+    const t = getTransfer(day.id, from.id, to.id);
+    const o = selectedTransferOption(t);
+    const mode = transportById(o && o.mode);
+    return `<div class="transfer-row" onclick="App.openTransfer('${t.id}')">
+      <span class="transfer-chip">${mode.emoji} ${o ? escapeHtml(o.title || mode.label) : 'Elegir desplazamiento'}</span>
+      <div class="transfer-meta">${escapeHtml(from.name)} → ${escapeHtml(to.name)}${o && o.duration ? ' · '+escapeHtml(o.duration) : ''}${o && o.price ? ' · '+escapeHtml(o.price) : ''}</div>
+    </div>`;
+  }
+  function renderStopRowsWithTransfers(day, stops){
+    if(!stops.length) return `<div class="row"><div class="main sub" style="color:var(--ink-soft); font-size:12.5px;">Sin lugares — añade uno desde la pestaña Lugares</div></div>`;
+    let html = '';
+    stops.forEach((p,i)=>{
+      html += renderStopRow(p, day);
+      if(i < stops.length - 1) html += renderTransferRow(day, p, stops[i+1]);
+    });
+    return html;
+  }
   function renderItinerary(){
+    ensureStateShape();
     fillDaySelect();
     renderMapChips();
     const daysContainer = document.getElementById('daysContainer');
-    daysContainer.innerHTML = state.days.map((day, idx)=>{
+    daysContainer.innerHTML = state.days.map((day)=>{
       const stops = getOrderedStops(day.id);
       let rows;
       if(day.isFlightDay){
@@ -756,32 +937,9 @@ const db = getDatabase(firebaseApp);
           <div class="main"><h4>${AIRPORTS[f.from].name} → ${AIRPORTS[f.to].name}</h4><div class="sub">${f.flight} · sale ${f.dep} · llega ${f.arr}${f.arrNote ? ' ('+f.arrNote+')' : ''}</div></div>
           <div class="chev">›</div>
         </div>`).join('');
-        const stopRows = stops.map((p,i)=>{
-          const cat = catById(p.category);
-          return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
-              ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
-              onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
-            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
-            <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
-            ${p.time ? `<div class="time">${p.time}</div>` : ''}
-            <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
-          </div>`;
-        }).join('');
-        rows = flightRows + stopRows;
-      } else if(stops.length){
-        rows = stops.map((p,i)=>{
-          const cat = catById(p.category);
-          return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
-              ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
-              onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
-            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
-            <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
-            ${p.time ? `<div class="time">${p.time}</div>` : ''}
-            <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
-          </div>`;
-        }).join('');
+        rows = flightRows + renderStopRowsWithTransfers(day, stops);
       } else {
-        rows = `<div class="row"><div class="main sub" style="color:var(--ink-soft); font-size:12.5px;">Sin lugares — añade uno desde la pestaña Lugares</div></div>`;
+        rows = renderStopRowsWithTransfers(day, stops);
       }
       return `<div class="day-card">
         <div class="day-card-head">
@@ -820,11 +978,11 @@ const db = getDatabase(firebaseApp);
     state.days.push({id: uid(), label, date: dateInput.value || isoDate(new Date()), isFlightDay:false});
     state.days.sort((a,b)=> a.date.localeCompare(b.date));
     labelInput.value=''; dateInput.value='';
-    save(); renderItinerary(); renderPlaces(); renderMap();
+    save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
   });
 
   /* ---------------- MAP ---------------- */
-  let map, markersLayer, routeLine, flightLayer;
+  let map, markersLayer, routeLayer, routeLine, flightLayer;
   function initMap(){
     map = L.map('map', {zoomControl:false}).setView([35.6762,139.6503], 5);
     L.control.zoom({position:'bottomleft'}).addTo(map);
@@ -832,6 +990,7 @@ const db = getDatabase(firebaseApp);
       maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
+    routeLayer = L.layerGroup().addTo(map);
     flightLayer = L.layerGroup().addTo(map);
   }
 
@@ -858,7 +1017,9 @@ const db = getDatabase(firebaseApp);
 
   function renderMap(){
     if(!map) return;
+    ensureStateShape();
     markersLayer.clearLayers();
+    routeLayer.clearLayers();
     flightLayer.clearLayers();
     if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
 
@@ -872,10 +1033,18 @@ const db = getDatabase(firebaseApp);
       marker.on('click', ()=>openDetail(p.id));
       bounds.push([p.lat,p.lng]);
     });
+
     if(activeMapDay){
-      const dayPlaces = list.filter(p=>p.dayId===activeMapDay);
-      if(dayPlaces.length>1){
-        routeLine = L.polyline(dayPlaces.map(p=>[p.lat,p.lng]), {color:'#223A5E', weight:3, dashArray:'1 10', lineCap:'round'}).addTo(map);
+      const dayPlaces = getOrderedStops(activeMapDay).filter(p=>p.lat!=null && p.lng!=null);
+      for(let i=0; i<dayPlaces.length-1; i++){
+        const from = dayPlaces[i], to = dayPlaces[i+1];
+        const t = getTransfer(activeMapDay, from.id, to.id);
+        const o = selectedTransferOption(t);
+        const mode = transportById(o && o.mode);
+        const pts = getRouteLatLngs(t, from, to);
+        L.polyline(pts, {color:mode.color, weight:4, dashArray:mode.dash || null, opacity:.85, lineCap:'round'}).addTo(routeLayer).on('click', ()=>openTransfer(t.id));
+        const mid = pts[Math.floor(pts.length/2)];
+        L.marker(mid, {icon:L.divIcon({className:'', html:`<div style="background:#FFFDF8;border:1px solid ${mode.color};border-radius:999px;padding:2px 5px;font-size:13px;box-shadow:0 2px 6px rgba(34,32,28,.2);">${mode.emoji}</div>`, iconSize:[28,22], iconAnchor:[14,11]})}).addTo(routeLayer).on('click', ()=>openTransfer(t.id));
       }
     }
 
@@ -885,9 +1054,10 @@ const db = getDatabase(firebaseApp);
       const airportsUsed = new Set();
       legs.forEach(f=>{
         const from = AIRPORTS[f.from], to = AIRPORTS[f.to];
-        L.polyline(greatCirclePoints(from, to), {color:'#B8860B', weight:3, dashArray:'2 9', opacity:.9, lineCap:'round'}).addTo(flightLayer);
-        const mid = [(from.lat+to.lat)/2, (from.lng+to.lng)/2];
-        const planeMarker = L.marker(mid, {icon: L.divIcon({className:'', html:`<div style="font-size:16px;">✈️</div>`, iconSize:[20,20], iconAnchor:[10,10]})}).addTo(flightLayer);
+        const gc = greatCirclePoints(from, to, 128);
+        L.polyline(gc, {color:'#B8860B', weight:3, dashArray:'2 9', opacity:.9, lineCap:'round'}).addTo(flightLayer);
+        const mid = gc[Math.floor(gc.length/2)];
+        const planeMarker = L.marker(mid, {icon: L.divIcon({className:'', html:`<div style="font-size:18px;filter:drop-shadow(0 1px 2px rgba(34,32,28,.35));">✈️</div>`, iconSize:[22,22], iconAnchor:[11,11]})}).addTo(flightLayer);
         planeMarker.on('click', ()=>openFlight(f.id));
         airportsUsed.add(f.from); airportsUsed.add(f.to);
         bounds.push([from.lat,from.lng],[to.lat,to.lng]);
@@ -903,6 +1073,7 @@ const db = getDatabase(firebaseApp);
     else { map.setView([35.6762,139.6503], 5); }
   }
 
+
   /* ---------------- Detail sheet: place ---------------- */
   const detailBackdrop = document.getElementById('detailBackdrop');
   const detailSheet = document.getElementById('detailSheet');
@@ -914,6 +1085,7 @@ const db = getDatabase(firebaseApp);
     document.getElementById('detailContent').innerHTML = `
       <span class="sheet-cat" style="background:${cat.color}">${cat.emoji} ${cat.label}${p.region ? ' · '+escapeHtml(p.region) : ''}</span>
       <h2 class="sheet-title">${escapeHtml(p.name)}${p.time ? ` <span style="font-size:14px;color:var(--ink-soft);font-family:'Zen Kaku Gothic New';">· ${p.time}</span>` : ''}</h2>
+      ${p.category==='alojamiento' ? `<p class="sheet-notes"><strong>Dirección:</strong> ${escapeHtml(p.address || 'Sin dirección')}<br>${p.hotelArea ? '<strong>Zona:</strong> '+escapeHtml(p.hotelArea)+'<br>' : ''}${p.checkIn || p.checkOut ? '<strong>Noches:</strong> Entrada '+escapeHtml(p.checkIn || '—')+' · Salida '+escapeHtml(p.checkOut || '—')+(daysBetween(p.checkIn,p.checkOut)?' · '+daysBetween(p.checkIn,p.checkOut):'')+'<br>' : ''}${p.bookingRef ? '<strong>Reserva:</strong> '+escapeHtml(p.bookingRef)+'<br>' : ''}${p.hotelPhone ? '<strong>Teléfono:</strong> '+escapeHtml(p.hotelPhone)+'<br>' : ''}${p.hotelWebsite && isValidUrl(p.hotelWebsite) ? '<a href="'+escapeHtml(p.hotelWebsite)+'" target="_blank" rel="noopener">Web / reserva ↗</a>' : ''}</p>` : ''}
       ${p.notes ? `<p class="sheet-notes">${escapeHtml(p.notes)}</p>` : ''}
       ${videoBtn}
       <div class="sheet-day-picker">
@@ -950,6 +1122,33 @@ const db = getDatabase(firebaseApp);
       </div>`;
     detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
   }
+
+  function openTransfer(transferId){
+    const t = state.transfers.find(x=>x.id===transferId);
+    if(!t) return;
+    const from = findPlace(t.fromPlaceId), to = findPlace(t.toPlaceId);
+    if(!from || !to) return;
+    const optionsHtml = (t.options || []).map(o=>{
+      const mode = transportById(o.mode);
+      const selected = (o.id === t.selectedOptionId) || (!t.selectedOptionId && t.options[0] && t.options[0].id===o.id);
+      return `<div class="transport-option ${selected?'selected':''}">
+        <div class="route">${mode.emoji} ${escapeHtml(o.title || mode.label)} ${selected ? '· elegida' : ''}</div>
+        <div class="meta">${o.duration ? 'Duración: '+escapeHtml(o.duration)+' · ' : ''}${o.price ? 'Precio: '+escapeHtml(o.price) : ''}${o.notes ? '<br>'+escapeHtml(o.notes) : ''}${o.url && isValidUrl(o.url) ? '<br><a href="'+escapeHtml(o.url)+'" target="_blank" rel="noopener">Enlace ↗</a>' : ''}${o.waypoints ? '<br>Ruta manual con '+parseWaypoints(o.waypoints).length+' punto(s)' : ''}</div>
+        <div class="sheet-actions" style="margin-top:8px;"><button class="btn-ios small" onclick="App.selectTransferOption('${t.id}','${o.id}')">Elegir</button><button class="btn-ios small secondary" onclick="App.editTransferOption('${t.id}','${o.id}')">Editar</button><button class="btn-ios small danger" onclick="App.deleteTransferOption('${t.id}','${o.id}')">Borrar</button></div>
+      </div>`;
+    }).join('') || `<p class="sheet-notes">Aún no hay opciones. Añade tren, metro, coche, caminando, taxi, etc.</p>`;
+    document.getElementById('detailContent').innerHTML = `
+      <span class="sheet-cat" style="background:var(--indigo)">➡️ Desplazamiento</span>
+      <h2 class="sheet-title">${escapeHtml(from.name)} → ${escapeHtml(to.name)}</h2>
+      <p class="sheet-notes">Puedes guardar varias alternativas y elegir cuál se dibuja en el mapa y aparece en el itinerario. Para que la línea no sea recta, en “Editar” pega puntos intermedios como <em>35.68,139.76</em>, uno por línea.</p>
+      ${optionsHtml}
+      <div class="sheet-actions">
+        <button class="btn-ios" onclick="App.addTransferOption('${t.id}')">Añadir opción</button>
+        <button class="btn-ios secondary" onclick="App.closeDetail()">Cerrar</button>
+      </div>`;
+    detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
+  }
+
   function closeDetail(){ detailBackdrop.classList.remove('open'); detailSheet.classList.remove('open'); }
   detailBackdrop.addEventListener('click', closeDetail);
 
@@ -1030,11 +1229,19 @@ const db = getDatabase(firebaseApp);
     document.getElementById('searchResults').innerHTML = '';
     selectedCategory = place ? place.category : CATEGORIES[0].id;
     renderCatPicker();
+    toggleHotelFields();
     fillDaySelect();
     document.getElementById('fDay').value = place ? (place.dayId||'') : '';
     document.getElementById('fRegion').value = place ? regionLabelFromId(placeRegionGroup(place)) : 'Tokio';
     document.getElementById('fVideo').value = place ? (place.video||'') : '';
     document.getElementById('fNotes').value = place ? (place.notes||'') : '';
+    document.getElementById('fAddress').value = place ? (place.address||'') : '';
+    document.getElementById('fHotelArea').value = place ? (place.hotelArea||'') : '';
+    document.getElementById('fCheckIn').value = place ? (place.checkIn||'') : '';
+    document.getElementById('fCheckOut').value = place ? (place.checkOut||'') : '';
+    document.getElementById('fBookingRef').value = place ? (place.bookingRef||'') : '';
+    document.getElementById('fHotelPhone').value = place ? (place.hotelPhone||'') : '';
+    document.getElementById('fHotelWebsite').value = place ? (place.hotelWebsite||'') : '';
     pendingLat = place ? place.lat : null;
     pendingLng = place ? place.lng : null;
 
@@ -1061,7 +1268,14 @@ const db = getDatabase(firebaseApp);
       name, category: selectedCategory, region: document.getElementById('fRegion').value,
       dayId: document.getElementById('fDay').value || null,
       video: videoVal, notes: document.getElementById('fNotes').value.trim(),
-      lat: pendingLat, lng: pendingLng
+      lat: pendingLat, lng: pendingLng,
+      address: document.getElementById('fAddress').value.trim(),
+      hotelArea: document.getElementById('fHotelArea').value.trim(),
+      checkIn: document.getElementById('fCheckIn').value,
+      checkOut: document.getElementById('fCheckOut').value,
+      bookingRef: document.getElementById('fBookingRef').value.trim(),
+      hotelPhone: document.getElementById('fHotelPhone').value.trim(),
+      hotelWebsite: document.getElementById('fHotelWebsite').value.trim()
     };
     if(editingPlaceId){ Object.assign(state.places.find(p=>p.id===editingPlaceId), data); normalizeDayOrder(data.dayId); }
     else{
@@ -1069,25 +1283,65 @@ const db = getDatabase(firebaseApp);
       if(newPlace.dayId){ newPlace.order = getOrderedStops(newPlace.dayId).length + 1; }
       state.places.push(newPlace);
     }
-    closeForm(); save(); renderPlaces(); renderItinerary(); renderMap();
+    closeForm(); save(); renderPlaces(); renderHotels(); renderItinerary(); renderMap();
     toast('Guardado');
   });
 
   /* ---------------- global actions ---------------- */
   window.App = {
-    openDetail, openFlight, closeDetail,
+    openDetail, openFlight, openTransfer, closeDetail,
     pickSearchResult,
+
+    selectTransferOption(transferId, optionId){
+      const t = state.transfers.find(x=>x.id===transferId); if(!t) return;
+      t.selectedOptionId = optionId;
+      save(); renderItinerary(); renderHotels(); renderMap(); openTransfer(transferId);
+    },
+    addTransferOption(transferId){
+      const t = state.transfers.find(x=>x.id===transferId); if(!t) return;
+      const mode = prompt('Tipo: walk, metro, train, bus, car, taxi, plane, other', 'train');
+      if(mode===null) return;
+      const title = prompt('Nombre de la opción', transportById(mode).label) || transportById(mode).label;
+      const duration = prompt('Duración aproximada', '') || '';
+      const price = prompt('Precio aproximado', '') || '';
+      const notes = prompt('Notas', '') || '';
+      const url = prompt('Enlace opcional', '') || '';
+      const waypoints = prompt('Puntos intermedios opcionales para dibujar la ruta (lat,lng uno por línea)', '') || '';
+      const o = {id:uid(), mode, title, duration, price, notes, url, waypoints};
+      t.options.push(o); t.selectedOptionId = o.id;
+      save(); renderItinerary(); renderHotels(); renderMap(); openTransfer(transferId);
+    },
+    editTransferOption(transferId, optionId){
+      const t = state.transfers.find(x=>x.id===transferId); if(!t) return;
+      const o = t.options.find(x=>x.id===optionId); if(!o) return;
+      const mode = prompt('Tipo: walk, metro, train, bus, car, taxi, plane, other', o.mode || 'train'); if(mode===null) return;
+      const title = prompt('Nombre de la opción', o.title || transportById(mode).label); if(title===null) return;
+      const duration = prompt('Duración aproximada', o.duration || ''); if(duration===null) return;
+      const price = prompt('Precio aproximado', o.price || ''); if(price===null) return;
+      const notes = prompt('Notas', o.notes || ''); if(notes===null) return;
+      const url = prompt('Enlace opcional', o.url || ''); if(url===null) return;
+      const waypoints = prompt('Puntos intermedios para que la línea siga otro recorrido (lat,lng uno por línea)', o.waypoints || ''); if(waypoints===null) return;
+      Object.assign(o, {mode, title, duration, price, notes, url, waypoints});
+      save(); renderItinerary(); renderHotels(); renderMap(); openTransfer(transferId);
+    },
+    deleteTransferOption(transferId, optionId){
+      const t = state.transfers.find(x=>x.id===transferId); if(!t) return;
+      if(!confirm('¿Borrar esta opción de desplazamiento?')) return;
+      t.options = t.options.filter(o=>o.id!==optionId);
+      t.selectedOptionId = t.options[0] ? t.options[0].id : null;
+      save(); renderItinerary(); renderHotels(); renderMap(); openTransfer(transferId);
+    },
     editFromDetail(id){ closeDetail(); openForm(state.places.find(p=>p.id===id)); },
     deletePlace(id){
       if(!confirm('¿Eliminar este lugar? No se puede deshacer.')) return;
       state.places = state.places.filter(p=>p.id!==id);
-      closeDetail(); save(); renderPlaces(); renderItinerary(); renderMap();
+      closeDetail(); save(); renderPlaces(); renderHotels(); renderItinerary(); renderMap();
     },
     removeDay(id){
       if(!confirm('¿Eliminar este día? Los lugares pasarán a "sin asignar".')) return;
       state.days = state.days.filter(d=>d.id!==id);
       state.places.forEach(p=>{ if(p.dayId===id) p.dayId=null; });
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
     },
     assignPlace(placeId, dayId){
       const p = state.places.find(p=>p.id===placeId);
@@ -1096,7 +1350,7 @@ const db = getDatabase(firebaseApp);
       p.dayId = dayId || null;
       if(dayId){ p.order = getOrderedStops(dayId).length + 1; }
       if(oldDayId) normalizeDayOrder(oldDayId);
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
       if(detailSheet.classList.contains('open')) openDetail(placeId);
     },
     unassignPlace(placeId){
@@ -1106,7 +1360,7 @@ const db = getDatabase(firebaseApp);
       p.dayId = null;
       delete p.order;
       if(oldDayId) normalizeDayOrder(oldDayId);
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
     },
     openStopDetail(ev, placeId){
       if(window.__suppressNextClick){ ev.preventDefault(); ev.stopPropagation(); return; }
@@ -1175,7 +1429,7 @@ const db = getDatabase(firebaseApp);
         } else if(moving && zone){
           placeStopAt(moving, zone.dataset.day, getOrderedStops(zone.dataset.day).filter(p=>p.id!==moving.id).length);
         }
-        save(); renderItinerary(); renderPlaces(); renderMap();
+        save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
         setTimeout(()=>{ window.__suppressNextClick = false; }, 250);
       }
       App.cleanupPointerDrag();
@@ -1234,7 +1488,7 @@ const db = getDatabase(firebaseApp);
       const rect = ev.currentTarget.getBoundingClientRect();
       const insertAfter = ev.clientY > rect.top + rect.height/2;
       placeStopAt(moving, targetDayId, targetIndex + (insertAfter ? 1 : 0));
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
     },
     dropOnDay(ev, dayId){
       ev.preventDefault();
@@ -1244,7 +1498,7 @@ const db = getDatabase(firebaseApp);
       const moving = state.places.find(p=>p.id===dragged.placeId);
       if(!moving) return;
       placeStopAt(moving, dayId, getOrderedStops(dayId).filter(p=>p.id!==moving.id).length);
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
     },
     moveStop(dayId, placeId, dir){
       const stops = getOrderedStops(dayId);
@@ -1256,7 +1510,7 @@ const db = getDatabase(firebaseApp);
       stops.splice(swapWith, 0, moving);
       moving.time = inferTimeForInsert(stops.filter(p=>p.id!==moving.id), swapWith, moving);
       stops.forEach((p,i)=>{ p.order = i + 1; });
-      save(); renderItinerary(); renderPlaces(); renderMap();
+      save(); renderItinerary(); renderHotels(); renderPlaces(); renderMap();
     }
   };
 
@@ -1279,16 +1533,16 @@ const db = getDatabase(firebaseApp);
           toast('Archivo con formato inesperado'); return;
         }
         const mode = confirm('Aceptar = FUSIONAR con tus datos. Cancelar = REEMPLAZAR todo.') ? 'merge':'replace';
-        if(mode==='replace'){ state = payload.state; state.days = normalizeTravelDays(state.days); }
+        if(mode==='replace'){ state = payload.state; ensureStateShape(); }
         else{
           const exD = new Set(state.days.map(d=>d.id));
           payload.state.days.forEach(d=>{ if(!exD.has(d.id)) state.days.push(d); });
-          state.days = normalizeTravelDays(state.days);
+          ensureStateShape();
           const exP = new Set(state.places.map(p=>p.id));
           payload.state.places.forEach(p=>{ if(!exP.has(p.id)) state.places.push(p); });
         }
         if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
-        save(); renderPlaces(); renderItinerary(); renderMap();
+        save(); renderPlaces(); renderHotels(); renderItinerary(); renderMap();
         toast('Importado');
       }catch(err){ toast('No se pudo leer el archivo'); }
       e.target.value='';
@@ -1302,6 +1556,7 @@ const db = getDatabase(firebaseApp);
   renderRegionChips();
   renderCatPicker();
   renderPlaces();
+  renderHotels();
   renderItinerary();
   renderMap();
   setTab('mapa');
