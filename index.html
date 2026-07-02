@@ -757,16 +757,29 @@ const db = getDatabase(firebaseApp);
   function isAirportPlace(p){
     return !!p && (p.airport || /narita/i.test(p.name || '') || /aeropuerto/i.test(p.name || ''));
   }
+  function mergeCatalogPlace(existing, catalog){
+    if(!existing) return Object.assign({}, catalog);
+    const merged = Object.assign({}, catalog, existing);
+    // Mantener límites/geometría y metadatos técnicos actualizados, pero sin pisar ediciones del usuario
+    // como categoría, nombre, notas, día, hora, enlaces, hotel, etc.
+    merged.boundary = catalog.boundary || existing.boundary || null;
+    merged.catalogItem = catalog.catalogItem !== false;
+    if(catalog.lat != null && existing.lat == null) merged.lat = catalog.lat;
+    if(catalog.lng != null && existing.lng == null) merged.lng = catalog.lng;
+    return merged;
+  }
+
   function applyCatalogUpdate(){
     if(!state || state.catalogVersion === CATALOG_VERSION) return false;
-    const keep = (Array.isArray(state.places) ? state.places : []).filter(p => p.category === 'alojamiento' || isAirportPlace(p));
-    const byId = new Map(keep.map(p => [p.id, p]));
+    const existingPlaces = Array.isArray(state.places) ? state.places : [];
+    const byId = new Map(existingPlaces.map(p => [p.id, Object.assign({}, p)]));
     AIRPORT_PLACES_RAW.forEach(ap => {
-      const existing = byId.get(ap.id) || keep.find(p => /narita/i.test(p.name || '') && String(p.time || '') === String(ap.time || ''));
-      if(existing){ Object.assign(existing, ap); byId.set(existing.id, existing); }
-      else byId.set(ap.id, Object.assign({}, ap));
+      const existing = byId.get(ap.id) || existingPlaces.find(p => /narita/i.test(p.name || '') && String(p.time || '') === String(ap.time || ''));
+      byId.set((existing && existing.id) || ap.id, Object.assign({}, existing || {}, ap));
     });
-    CATALOG_PLACES_RAW.forEach(cp => byId.set(cp.id, Object.assign({}, cp)));
+    CATALOG_PLACES_RAW.forEach(cp => {
+      byId.set(cp.id, mergeCatalogPlace(byId.get(cp.id), cp));
+    });
     state.places = Array.from(byId.values());
     const validIds = new Set(state.places.map(p=>p.id));
     state.transfers = (Array.isArray(state.transfers) ? state.transfers : []).filter(t => validIds.has(t.fromPlaceId) && validIds.has(t.toPlaceId));
@@ -1992,6 +2005,7 @@ const db = getDatabase(firebaseApp);
   renderItinerary();
   renderMap({fit:true});
   setTab('mapa');
+  loadSharedState();
 })();
 </script>
 </body>
