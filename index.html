@@ -238,6 +238,35 @@
   .leaflet-popup-content-wrapper{border-radius:12px; font-family:'Zen Kaku Gothic New',sans-serif;}
   .popup-title{font-weight:700; font-size:13.5px; margin:0; color:var(--indigo-2);}
   .popup-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+
+  .zone-tooltip{background:rgba(255,253,248,.94); border:1px solid var(--line); color:var(--indigo-2); border-radius:999px; padding:3px 8px; font-weight:700; font-size:11.5px; box-shadow:0 2px 6px rgba(34,32,28,.14);}
+  .zone-tooltip:before{display:none;}
+  .zone-pin{display:flex; align-items:center; gap:5px; padding:5px 9px; border-radius:999px; background:rgba(255,253,248,.96); border:1px solid var(--line); box-shadow:0 3px 10px rgba(34,32,28,.20); color:var(--indigo-2); font-size:11.5px; font-weight:800; white-space:nowrap;}
+  .zone-pin .pin-dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.9);}
+  .zone-pin.small-label{padding:5px; border-radius:50%;}
+  .zone-pin.small-label .pin-text{display:none;}
+  .map-filter-panel{
+    position:fixed; right:10px; top:calc(env(safe-area-inset-top,0px) + 100px); z-index:36;
+    display:flex; flex-direction:column; gap:7px; max-height:calc(100vh - 240px); overflow-y:auto;
+    padding:8px; border-radius:18px; border:1px solid var(--line);
+    background:rgba(255,253,248,.88); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    box-shadow:0 4px 14px rgba(34,32,28,.14); -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .map-filter-panel::-webkit-scrollbar{display:none;}
+  .map-filter-btn{
+    width:42px; height:42px; border-radius:14px; border:1px solid var(--line); background:var(--surface);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft);
+    font-size:18px; font-weight:900; box-shadow:0 1px 4px rgba(34,32,28,.08); position:relative;
+  }
+  .map-filter-btn.active{background:var(--indigo); color:#fff; border-color:var(--indigo);}
+  .map-filter-btn.inactive{opacity:.42; filter:grayscale(.85);}
+  .map-filter-btn .plain-icon{font-size:15px; letter-spacing:-.08em;}
+  .map-filter-btn:after{
+    content:attr(data-label); position:absolute; right:48px; top:50%; transform:translateY(-50%);
+    background:rgba(34,32,28,.92); color:#fff; border-radius:999px; padding:5px 9px; font-size:11px;
+    font-weight:800; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s ease;
+  }
+  .map-filter-btn:hover:after,.map-filter-btn:focus-visible:after{opacity:1;}
 </style>
 </head>
 <body>
@@ -258,6 +287,7 @@
 
 <div class="chip-row" id="dayChipRow"></div>
 <div class="chip-row" id="flightToggleRow"></div>
+<div class="map-filter-panel" id="mapFilterPanel" aria-label="Filtros del mapa"></div>
 
 <div class="note-toast" id="toast" style="display:none;"></div>
 
@@ -327,8 +357,16 @@
       <div class="row"><select id="fDay"><option value="">Sin asignar</option></select></div>
       <div class="row"><select id="fRegion">
         <option value="Tokio">Tokio</option>
-        <option value="Osaka">Osaka</option>
         <option value="Kioto">Kioto</option>
+        <option value="Osaka">Osaka</option>
+        <option value="Excursiones">Excursiones</option>
+        <option value="Kanazawa">Kanazawa</option>
+        <option value="Nikko">Nikko</option>
+        <option value="Uji">Uji</option>
+        <option value="Fukuoka">Fukuoka</option>
+        <option value="Narai Juku">Narai Juku</option>
+        <option value="Nara">Nara</option>
+        <option value="Hiroshima">Hiroshima</option>
         <option value="Otros">Otros</option>
       </select></div>
       <div class="row"><input type="text" id="fVideo" placeholder="Enlace al reel / TikTok (opcional)"></div>
@@ -405,10 +443,12 @@ const db = getDatabase(firebaseApp);
   ============================================================ */
   const CATEGORIES = [
     {id:'comida',      label:'Comida',      emoji:'🍜', color:'#5C7048'},
-    {id:'templo',      label:'Templo',      emoji:'⛩️', color:'#223A5E'},
+    {id:'templo',      label:'Templos',     emoji:'⛩️', color:'#223A5E'},
     {id:'compras',     label:'Compras',     emoji:'🛍️', color:'#C1440E'},
     {id:'naturaleza',  label:'Naturaleza',  emoji:'🌿', color:'#3E7C59'},
-    {id:'alojamiento', label:'Hoteles', emoji:'🏨', color:'#B8860B'},
+    {id:'zona',        label:'Zonas / barrios', emoji:'', color:'#7C6A46'},
+    {id:'excursion',   label:'Excursiones', emoji:'🗾', color:'#8A5A44'},
+    {id:'alojamiento', label:'Hoteles',     emoji:'🏨', color:'#B8860B'},
     {id:'otro',        label:'Otro',        emoji:'📍', color:'#57534A'}
   ];
   const catById = id => CATEGORIES.find(c=>c.id===id) || CATEGORIES[CATEGORIES.length-1];
@@ -426,15 +466,19 @@ const db = getDatabase(firebaseApp);
 
   const REGION_FILTERS = [
     { id:'tokio', label:'Tokio', emoji:'🗼' },
-    { id:'osaka', label:'Osaka', emoji:'🐙' },
     { id:'kioto', label:'Kioto', emoji:'⛩️' },
-    { id:'otros', label:'Otros', emoji:'🗾' },
+    { id:'osaka', label:'Osaka', emoji:'🐙' },
+    { id:'nara', label:'Nara', emoji:'🦌' },
+    { id:'excursiones', label:'Excursiones', emoji:'🗾' },
+    { id:'otros', label:'Otros', emoji:'📍' },
   ];
   function placeRegionGroup(p){
     const text = `${p.region || ''} ${p.name || ''}`.toLowerCase();
     if(text.includes('tokio') || text.includes('tokyo') || text.includes('narita')) return 'tokio';
     if(text.includes('osaka')) return 'osaka';
     if(text.includes('kioto') || text.includes('kyoto')) return 'kioto';
+    if(text.includes('nara')) return 'nara';
+    if(text.includes('excursiones') || p.category === 'excursion') return 'excursiones';
     return 'otros';
   }
   function regionLabelFromId(id){
@@ -549,39 +593,181 @@ const db = getDatabase(firebaseApp);
   }
 
   /* ============================================================
-     LUGARES DE EJEMPLO (de places.js) — puedes editarlos o borrarlos
+     CATÁLOGO BASE DE SITIOS — sin asignar a días salvo aeropuertos
   ============================================================ */
-  const SEED_PLACES_RAW = [
-    { name:'Shibuya Crossing',    lat:35.6595, lng:139.7004, type:'otro',       region:'Tokio',     day:1,  time:'15:00' },
-    { name:'Hachiko Statue',      lat:35.6591, lng:139.7005, type:'otro',       region:'Tokio',     day:1,  time:'15:30' },
-    { name:'Meiji Jingu',         lat:35.6764, lng:139.6993, type:'templo',     region:'Tokio',     day:1,  time:'11:00' },
-    { name:'Senso-ji Temple',     lat:35.7148, lng:139.7967, type:'templo',     region:'Tokio',     day:2,  time:'08:00' },
-    { name:'Akihabara',           lat:35.7023, lng:139.7745, type:'compras',    region:'Tokio',     day:2,  time:'13:00' },
-    { name:'Shinjuku Gyoen',      lat:35.6852, lng:139.7100, type:'naturaleza', region:'Tokio',     day:3,  time:'10:00' },
-    { name:'Tokyo Skytree',       lat:35.7101, lng:139.8107, type:'otro',       region:'Tokio',     day:3,  time:'15:00' },
-    { name:'Fushimi Inari',       lat:34.9671, lng:135.7727, type:'templo',     region:'Kioto',     day:5,  time:'07:00' },
-    { name:'Kiyomizu-dera',       lat:34.9949, lng:135.7850, type:'templo',     region:'Kioto',     day:5,  time:'11:00' },
-    { name:'Gion District',       lat:35.0036, lng:135.7758, type:'otro',       region:'Kioto',     day:5,  time:'16:00' },
-    { name:'Arashiyama Bamboo',   lat:35.0170, lng:135.6712, type:'naturaleza', region:'Kioto',     day:6,  time:'09:00' },
-    { name:'Kinkaku-ji',          lat:35.0394, lng:135.7292, type:'templo',     region:'Kioto',     day:6,  time:'13:00' },
-    { name:'Dotonbori',           lat:34.6687, lng:135.5013, type:'comida',     region:'Osaka',     day:8,  time:'17:00' },
-    { name:'Osaka Castle',        lat:34.6873, lng:135.5259, type:'otro',       region:'Osaka',     day:8,  time:'09:00' },
-    { name:'Nara Park',           lat:34.6851, lng:135.8430, type:'naturaleza', region:'Nara',      day:10, time:'10:00' },
-    { name:'Todai-ji Temple',     lat:34.6889, lng:135.8398, type:'templo',     region:'Nara',      day:10, time:'12:00' },
-    { name:'Hiroshima Peace Park',lat:34.3955, lng:132.4536, type:'otro',       region:'Hiroshima', day:14, time:'10:00' },
-    { name:'Miyajima Island',     lat:34.2960, lng:132.3198, type:'templo',     region:'Hiroshima', day:14, time:'14:00' },
-    { name:'Llegada a Tokio Narita (NRT)', lat:35.7720, lng:140.3929, type:'otro', region:'Aeropuerto', day:1, time:'13:05', notes:'Llegada del vuelo AY0073. Estamos en el aeropuerto.' },
-    { name:'Aeropuerto Tokio Narita (NRT)', lat:35.7720, lng:140.3929, type:'otro', region:'Aeropuerto', day:19, time:'20:00', notes:'Hay que estar en el aeropuerto antes del vuelo AY0074, que despega a las 23:05.' },
-  ];
-  function buildSeedPlaces(){
-    return SEED_PLACES_RAW.map(p => ({
-      id: uid(), name: p.name, category: p.type, region: p.region,
-      dayId: 'd_' + isoDate(addDays(TRIP_START, p.day - 1)),
-      time: p.time, video: '', notes: p.notes || '', lat: p.lat, lng: p.lng
-    }));
+  const CATALOG_VERSION = 'sitios-japon-2026-07-02-v8-map-filters-excursions';
+  let catalogNeedsSave = false;
+
+  function softAreaPolygon(lat, lng, radiusLat, radiusLng, points){
+    points = points || 36;
+    const pts = [];
+    for(let i=0; i<points; i++){
+      const a = (Math.PI * 2 * i) / points;
+      const wobble = 1 + 0.08 * Math.sin(a*3) + 0.04 * Math.cos(a*5);
+      pts.push([lat + Math.sin(a) * radiusLat * wobble, lng + Math.cos(a) * radiusLng * wobble]);
+    }
+    return pts;
+  }
+  function boundaryQuery(query, fallbackLatRadius, fallbackLngRadius, opts){
+    return Object.assign({
+      boundaryQuery: query,
+      boundaryStatus: 'pendiente',
+      allowFallback: false,
+      fallbackPolygon: softAreaPolygon(0, 0, fallbackLatRadius || 0.006, fallbackLngRadius || 0.008)
+    }, opts || {});
   }
 
-  let state = { days: normalizeTravelDays(buildDefaultDays()), places: buildSeedPlaces(), transfers: [] };
+  const TOKYO_SPECIAL_WARDS = [
+    'Chiyoda City, Tokyo, Japan','Chuo City, Tokyo, Japan','Minato City, Tokyo, Japan','Shinjuku City, Tokyo, Japan',
+    'Bunkyo City, Tokyo, Japan','Taito City, Tokyo, Japan','Sumida City, Tokyo, Japan','Koto City, Tokyo, Japan',
+    'Shinagawa City, Tokyo, Japan','Meguro City, Tokyo, Japan','Ota City, Tokyo, Japan','Setagaya City, Tokyo, Japan',
+    'Shibuya City, Tokyo, Japan','Nakano City, Tokyo, Japan','Suginami City, Tokyo, Japan','Toshima City, Tokyo, Japan',
+    'Kita City, Tokyo, Japan','Arakawa City, Tokyo, Japan','Itabashi City, Tokyo, Japan','Nerima City, Tokyo, Japan',
+    'Adachi City, Tokyo, Japan','Katsushika City, Tokyo, Japan','Edogawa City, Tokyo, Japan'
+  ];
+  function boundaryQueries(queries, fallbackLatRadius, fallbackLngRadius, opts){
+    return Object.assign({
+      boundaryQueries: queries,
+      boundaryStatus: 'pendiente',
+      allowFallback: false,
+      fallbackPolygon: softAreaPolygon(0, 0, fallbackLatRadius || 0.006, fallbackLngRadius || 0.008)
+    }, opts || {});
+  }
+
+
+  function fastPolygon(coords, opts){
+    return Object.assign({ polygon: coords, fixedPolygon: true, boundaryStatus: 'local' }, opts || {});
+  }
+  function fastBoundary(query, coords, opts){
+    return Object.assign({ boundaryQuery: query, polygon: coords, fixedPolygon: true, boundaryStatus: 'local' }, opts || {});
+  }
+
+  const TOKYO_CITY_POLYGON = [
+    [35.671,139.548],[35.716,139.555],[35.758,139.590],[35.796,139.666],
+    [35.812,139.745],[35.801,139.826],[35.771,139.890],[35.724,139.928],
+    [35.676,139.915],[35.644,139.872],[35.626,139.825],[35.614,139.779],
+    [35.617,139.734],[35.590,139.696],[35.548,139.665],[35.565,139.617],
+    [35.612,139.575]
+  ];
+  const KYOTO_CITY_POLYGON = [
+    [35.074,135.640],[35.105,135.735],[35.084,135.848],[35.031,135.876],
+    [34.944,135.838],[34.908,135.755],[34.946,135.675],[35.012,135.642]
+  ];
+  const OSAKA_CITY_POLYGON = [
+    [34.777,135.395],[34.802,135.505],[34.755,135.590],[34.650,135.585],
+    [34.585,135.515],[34.604,135.405],[34.690,135.365]
+  ];
+  const NARA_PARK_POLYGON = [
+    [34.6958,135.8238],[34.6947,135.8466],[34.6829,135.8560],[34.6728,135.8456],
+    [34.6719,135.8268],[34.6803,135.8169],[34.6899,135.8162]
+  ];
+  const ZONE_POLYGONS = {
+    shibuya:[[35.6775,139.6805],[35.6752,139.7108],[35.6578,139.7212],[35.6417,139.7035],[35.6485,139.6818],[35.6632,139.6737]],
+    ueno:[[35.7219,139.7661],[35.7248,139.7775],[35.7169,139.7842],[35.7090,139.7785],[35.7107,139.7670]],
+    ginza:[[35.6768,139.7601],[35.6743,139.7722],[35.6667,139.7707],[35.6661,139.7608],[35.6712,139.7569]],
+    odaiba:[[35.6323,139.7647],[35.6330,139.7863],[35.6221,139.7951],[35.6138,139.7846],[35.6172,139.7630]],
+    harajuku:[[35.6746,139.6971],[35.6737,139.7086],[35.6660,139.7097],[35.6633,139.6998],[35.6687,139.6940]],
+    yoyogi:[[35.6792,139.6883],[35.6784,139.7031],[35.6674,139.7044],[35.6621,139.6948],[35.6684,139.6867]],
+    takeshita:[[35.6728,139.7028],[35.6725,139.7062],[35.6706,139.7063],[35.6704,139.7030]],
+    akihabara:[[35.7050,139.7660],[35.7058,139.7795],[35.6970,139.7820],[35.6924,139.7732],[35.6966,139.7650]],
+    shinjuku:[[35.7140,139.6780],[35.7100,139.7245],[35.6905,139.7354],[35.6755,139.7135],[35.6790,139.6817]],
+    arashiyama:[[35.0244,135.6626],[35.0240,135.6784],[35.0125,135.6810],[35.0097,135.6662],[35.0172,135.6582]],
+    pontocho:[[35.0108,135.7694],[35.0100,135.7731],[35.0033,135.7726],[35.0037,135.7694]],
+    shijo_kawaramachi:[[35.0083,135.7646],[35.0071,135.7743],[34.9991,135.7739],[34.9995,135.7644]],
+    higashiyama:[[35.0312,135.7715],[35.0270,135.8043],[34.9846,135.8038],[34.9824,135.7740],[35.0048,135.7648]],
+    sannenzaka:[[34.9994,135.7790],[34.9990,135.7838],[34.9954,135.7840],[34.9946,135.7804]],
+    gion:[[35.0069,135.7711],[35.0072,135.7806],[34.9992,135.7817],[34.9985,135.7737]],
+    denden_town:[[34.6648,135.5018],[34.6654,135.5120],[34.6550,135.5132],[34.6539,135.5035]],
+    namba:[[34.6739,135.4955],[34.6732,135.5088],[34.6610,135.5097],[34.6584,135.4996],[34.6651,135.4938]],
+    kanazawa:[[36.603,136.610],[36.610,136.682],[36.560,136.720],[36.515,136.681],[36.519,136.615],[36.565,136.590]],
+    nikko:[[36.775,139.575],[36.789,139.640],[36.748,139.672],[36.720,139.630],[36.730,139.582]],
+    uji:[[34.910,135.785],[34.914,135.833],[34.880,135.846],[34.858,135.808],[34.881,135.778]],
+    fukuoka:[[33.635,130.330],[33.655,130.430],[33.600,130.485],[33.545,130.450],[33.540,130.350],[33.585,130.315]],
+    narai_juku:[[35.9704,137.8055],[35.9711,137.8177],[35.9633,137.8186],[35.9616,137.8080]]
+  };
+  function catalogPlace(slug, name, category, region, lat, lng, notes, extra){
+    const obj = Object.assign({id:'catalog_'+slug, name, category, region, dayId:null, time:'', video:'', notes:notes || '', lat, lng, catalog:true}, extra || {});
+    if(obj.fallbackPolygon){
+      obj.fallbackPolygon = obj.fallbackPolygon.map(pt => [lat + pt[0], lng + pt[1]]);
+    }
+    return obj;
+  }
+  function airportPlace(slug, name, dayOffset, time, notes){
+    return {id:'airport_'+slug, name, category:'otro', region:'Aeropuerto', dayId:'d_' + isoDate(addDays(TRIP_START, dayOffset)), time, video:'', notes, lat:35.7720, lng:140.3929, airport:true};
+  }
+
+  const AIRPORT_PLACES_RAW = [
+    airportPlace('narita_llegada', 'Llegada a Tokio Narita (NRT)', 0, '13:05', 'Llegada del vuelo AY0073. Estamos en el aeropuerto.'),
+    airportPlace('narita_salida', 'Aeropuerto Tokio Narita (NRT)', 18, '20:00', 'Hay que estar en el aeropuerto antes del vuelo AY0074, que despega a las 23:05.')
+  ];
+
+  const CATALOG_PLACES_RAW = [
+    catalogPlace('tokio', 'Tokio', 'zona', 'Tokio', 35.6762, 139.6503, 'Tokio como una única masa urbana aproximada de los 23 barrios especiales, sin coger la prefectura ni entrar en la bahía.', fastPolygon(TOKYO_CITY_POLYGON, {baseLayer:true, cityBase:true})),
+    catalogPlace('shibuya', 'Shibuya', 'zona', 'Tokio', 35.6595, 139.7005, 'Barrio de cruces, pantallas, compras y ambiente.', fastBoundary('Shibuya City, Tokyo, Japan', ZONE_POLYGONS.shibuya, {polygonZoom:11})),
+    catalogPlace('sensoji', 'Templo Senso-Ji', 'templo', 'Tokio', 35.7148, 139.7967, 'Templo clásico de Asakusa.'),
+    catalogPlace('ueno', 'Parque Ueno', 'naturaleza', 'Tokio', 35.7156, 139.7745, 'Parque, museos, estanque y paseo.', fastBoundary('Ueno Park, Taito, Tokyo, Japan', ZONE_POLYGONS.ueno, {polygonZoom:12})),
+    catalogPlace('ginza', 'Barrio de Ginza', 'zona', 'Tokio', 35.6718, 139.7650, 'Zona elegante de tiendas, luces y restaurantes.', fastBoundary('Ginza, Chuo, Tokyo, Japan', ZONE_POLYGONS.ginza, {polygonZoom:12})),
+    catalogPlace('odaiba', 'Isla artificial de Odaiba', 'zona', 'Tokio', 35.6249, 139.7755, 'Isla artificial con bahía, vistas y centros comerciales.', fastBoundary('Odaiba, Tokyo, Japan', ZONE_POLYGONS.odaiba, {polygonZoom:11})),
+    catalogPlace('harajuku', 'Harajuku', 'zona', 'Tokio', 35.6702, 139.7027, 'Zona de moda joven, tiendas y cafeterías.', fastBoundary('Harajuku, Shibuya, Tokyo, Japan', ZONE_POLYGONS.harajuku, {polygonZoom:13})),
+    catalogPlace('yoyogi', 'Parque Yoyogi', 'naturaleza', 'Tokio', 35.6717, 139.6949, 'Gran parque junto a Harajuku y Meiji.', fastBoundary('Yoyogi Park, Shibuya, Tokyo, Japan', ZONE_POLYGONS.yoyogi, {polygonZoom:12})),
+    catalogPlace('meiji', 'Santuario Meiji', 'templo', 'Tokio', 35.6764, 139.6993, 'Santuario sintoísta rodeado de bosque.'),
+    catalogPlace('takeshita', 'Calle Takeshita: moda', 'zona', 'Tokio', 35.6716, 139.7050, 'Calle de moda, tiendas curiosas y dulces.', fastBoundary('Takeshita Street, Harajuku, Tokyo, Japan', ZONE_POLYGONS.takeshita, {polygonZoom:16})),
+    catalogPlace('akihabara', 'Akihabara: tiendas frikis', 'zona', 'Tokio', 35.6984, 139.7730, 'Barrio otaku, electrónica, figuras, manga y tiendas frikis.', fastBoundary('Akihabara, Tokyo, Japan', ZONE_POLYGONS.akihabara, {polygonZoom:13})),
+    catalogPlace('shinjuku', 'Shinjuku: neones', 'zona', 'Tokio', 35.6938, 139.7034, 'Neones, rascacielos, restaurantes y ambiente nocturno.', fastBoundary('Shinjuku City, Tokyo, Japan', ZONE_POLYGONS.shinjuku, {polygonZoom:11})),
+    catalogPlace('tokyo_metropolitan', 'Centro metropolitano', 'otro', 'Tokio', 35.6896, 139.6921, 'Tokyo Metropolitan Government Building; miradores gratuitos según horario.'),
+    catalogPlace('mori_tower', 'Torre Mori', 'otro', 'Tokio', 35.6605, 139.7292, 'Roppongi Hills Mori Tower y zona de mirador/museo.'),
+    catalogPlace('kamakura_excursion', 'Excursión a Kamakura', 'excursion', 'Excursiones', 35.3192, 139.5467, 'Desde Tokio. Excursión costera con templos, Gran Buda y ambiente tradicional.'),
+    catalogPlace('takayama_kamikochi_excursion', 'Excursión a Takayama/Kamikochi en los alpes japoneses y dormir en ryokan típico', 'excursion', 'Excursiones', 36.1430, 137.2520, 'Desde Tokio o Kioto/Osaka según ruta. Alpes japoneses, naturaleza y noche en ryokan típico.'),
+    catalogPlace('nikko_excursion', 'Excursión a Nikko', 'excursion', 'Excursiones', 36.7551, 139.6180, 'Desde Tokio. Santuarios, montaña, bosque y cascadas.'),
+    catalogPlace('hakone_fuji_excursion', 'Excursión a Hakone y Mt Fuji', 'excursion', 'Excursiones', 35.2324, 139.1069, 'Desde Tokio. Zona de Hakone, vistas del Fuji si el tiempo acompaña, lago y onsens.'),
+    catalogPlace('kioto', 'Kioto', 'zona', 'Kioto', 35.0116, 135.7681, 'Kioto como capa base inferior, más transparente que sus barrios y zonas.', fastPolygon(KYOTO_CITY_POLYGON, {baseLayer:true, cityBase:true})),
+    catalogPlace('arashiyama', 'Bosque de bambús de Arashiyama', 'naturaleza', 'Kioto', 35.0170, 135.6712, 'Bosque de bambú y zona de Arashiyama.', fastBoundary('Arashiyama Bamboo Grove, Kyoto, Japan', ZONE_POLYGONS.arashiyama, {polygonZoom:13})),
+    catalogPlace('pontocho', 'Centro Pontocho', 'zona', 'Kioto', 35.0063, 135.7714, 'Calle estrecha de restaurantes junto al río.', fastBoundary('Pontocho, Kyoto, Japan', ZONE_POLYGONS.pontocho, {polygonZoom:16})),
+    catalogPlace('shijo_kawaramachi', 'Shijo-kawaramachi', 'zona', 'Kioto', 35.0037, 135.7690, 'Zona céntrica de compras, transporte y restaurantes.', fastBoundary('Shijo Kawaramachi, Kyoto, Japan', ZONE_POLYGONS.shijo_kawaramachi, {polygonZoom:14})),
+    catalogPlace('nijo_castle', 'Castillo de Nijo', 'otro', 'Kioto', 35.0142, 135.7480, 'Castillo histórico de Kioto.'),
+    catalogPlace('kinkakuji', 'Templo de oro', 'templo', 'Kioto', 35.0394, 135.7292, 'Kinkaku-ji, el pabellón dorado.'),
+    catalogPlace('higashiyama', 'Higashiyama', 'zona', 'Kioto', 34.9980, 135.7807, 'Zona histórica de templos, cuestas y calles tradicionales.', fastBoundary('Higashiyama Ward, Kyoto, Japan', ZONE_POLYGONS.higashiyama, {polygonZoom:12})),
+    catalogPlace('sannenzaka', 'Calle Sannenzaka', 'zona', 'Kioto', 34.9972, 135.7816, 'Calle tradicional cerca de Kiyomizu-dera.', fastBoundary('Sannenzaka, Kyoto, Japan', ZONE_POLYGONS.sannenzaka, {polygonZoom:16})),
+    catalogPlace('yasaka', 'Santuario Yasaka', 'templo', 'Kioto', 35.0037, 135.7786, 'Santuario junto a Gion e Higashiyama.'),
+    catalogPlace('gion', 'Barrio de las geishas de Guion', 'zona', 'Kioto', 35.0038, 135.7750, 'Gion/Guion, zona tradicional asociada a geishas y casas de té.', fastBoundary('Gion, Kyoto, Japan', ZONE_POLYGONS.gion, {polygonZoom:14})),
+    catalogPlace('denden_town', 'Denden town (barrio otaku)', 'zona', 'Osaka', 34.6595, 135.5063, 'Barrio otaku y de electrónica de Osaka.', fastBoundary('Den Den Town, Osaka, Japan', ZONE_POLYGONS.denden_town, {polygonZoom:14})),
+    catalogPlace('namba', 'Barrio de Namba: neones y luces', 'zona', 'Osaka', 34.6660, 135.5018, 'Zona de neones, ocio, comida y ambiente nocturno.', fastBoundary('Namba, Osaka, Japan', ZONE_POLYGONS.namba, {polygonZoom:13})),
+    catalogPlace('nara_inari_excursion', 'Excursión a Nara e Inari (templos y ciervos)', 'excursion', 'Excursiones', 34.8020, 135.8080, 'Desde Kioto u Osaka. Combinar Fushimi Inari con Nara, templos y ciervos.'),
+    catalogPlace('hiroshima_miyajima_excursion', 'Excursión a Hiroshima y Miyajima', 'excursion', 'Excursiones', 34.3540, 132.3860, 'Desde Kioto u Osaka. Hiroshima, Parque de la Paz y la isla de Miyajima.'),
+    catalogPlace('uji_excursion', 'Excursión a Uji', 'excursion', 'Excursiones', 34.8895, 135.8077, 'Desde Kioto. Té verde, Byodo-in y paseo junto al río.'),
+    catalogPlace('nara', 'Parque de Nara', 'naturaleza', 'Nara', 34.6851, 135.8430, 'Parque de Nara: naturaleza, templos cercanos y ciervos. No es capa de ciudad de fondo.', fastBoundary('Nara Park, Nara, Japan', NARA_PARK_POLYGON, {polygonZoom:13})),
+    catalogPlace('osaka', 'Osaka', 'zona', 'Osaka', 34.6937, 135.5023, 'Osaka como capa base inferior, más transparente que sus barrios y zonas.', fastPolygon(OSAKA_CITY_POLYGON, {baseLayer:true, cityBase:true})),
+    catalogPlace('kanazawa', 'Kanazawa', 'excursion', 'Excursiones', 36.5613, 136.6562, 'Excursión o parada de ruta. Jardín Kenroku-en, barrios tradicionales y mercado.'),
+    catalogPlace('fukuoka', 'Fukuoka', 'excursion', 'Excursiones', 33.5902, 130.4017, 'Excursión o etapa de ruta en Kyushu: yatai, ramen y ambiente urbano.'),
+    catalogPlace('narai_juku', 'Narai Juku: pueblo auténtico', 'excursion', 'Excursiones', 35.9656, 137.8111, 'Excursión o parada de ruta. Pueblo histórico de la Nakasendo, con ambiente tradicional.')
+  ];
+
+  function buildSeedPlaces(){
+    return AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).map(p => Object.assign({}, p));
+  }
+
+  function isAirportPlace(p){
+    return !!p && (p.airport || /narita/i.test(p.name || '') || /aeropuerto/i.test(p.name || ''));
+  }
+  function applyCatalogUpdate(){
+    if(!state || state.catalogVersion === CATALOG_VERSION) return false;
+    const keep = (Array.isArray(state.places) ? state.places : []).filter(p => p.category === 'alojamiento' || isAirportPlace(p));
+    const byId = new Map(keep.map(p => [p.id, p]));
+    AIRPORT_PLACES_RAW.forEach(ap => {
+      const existing = byId.get(ap.id) || keep.find(p => /narita/i.test(p.name || '') && String(p.time || '') === String(ap.time || ''));
+      if(existing){ Object.assign(existing, ap); byId.set(existing.id, existing); }
+      else byId.set(ap.id, Object.assign({}, ap));
+    });
+    CATALOG_PLACES_RAW.forEach(cp => byId.set(cp.id, Object.assign({}, cp)));
+    state.places = Array.from(byId.values());
+    const validIds = new Set(state.places.map(p=>p.id));
+    state.transfers = (Array.isArray(state.transfers) ? state.transfers : []).filter(t => validIds.has(t.fromPlaceId) && validIds.has(t.toPlaceId));
+    state.catalogVersion = CATALOG_VERSION;
+    catalogNeedsSave = true;
+    return true;
+  }
+
+  let state = { days: normalizeTravelDays(buildDefaultDays()), places: buildSeedPlaces(), transfers: [], catalogVersion: CATALOG_VERSION };
   ensureStateShape();
 
   const proyectoId = location.hash.replace('#','') || 'viaje-japon';
@@ -595,6 +781,7 @@ const db = getDatabase(firebaseApp);
     state.days = normalizeTravelDays(Array.isArray(state.days) ? state.days : buildDefaultDays());
     state.places = Array.isArray(state.places) ? state.places : [];
     state.transfers = Array.isArray(state.transfers) ? state.transfers : [];
+    applyCatalogUpdate();
     seedNaritaTokyoTransfer();
   }
   function findPlace(id){ return state.places.find(p=>p.id===id); }
@@ -686,7 +873,7 @@ const db = getDatabase(firebaseApp);
       firebaseReady = true;
       renderAll();
       cargandoDesdeFirebase = false;
-      if(!hadRemoteData) save();
+      if(!hadRemoteData || catalogNeedsSave){ catalogNeedsSave = false; save(); }
     }, ()=>{
       firebaseReady = true;
       toast('No se pudo conectar con Firebase');
@@ -699,6 +886,7 @@ const db = getDatabase(firebaseApp);
   let activeRegionFilter = '';
   let activeMapDay = '';
   let flightsVisible = true;
+  const activeMapCategories = new Set(CATEGORIES.map(c=>c.id));
 
   function toast(msg){
     const t = document.getElementById('toast');
@@ -715,7 +903,8 @@ const db = getDatabase(firebaseApp);
     document.getElementById('panel-lugares').classList.toggle('active', tab==='lugares');
     document.getElementById('panel-hoteles').classList.toggle('active', tab==='hoteles');
     document.getElementById('dayChipRow').style.display = tab==='mapa' ? 'flex' : 'none';
-    document.getElementById('flightToggleRow').style.display = tab==='mapa' ? 'flex' : 'none';
+    document.getElementById('flightToggleRow').style.display = 'none';
+    document.getElementById('mapFilterPanel').style.display = tab==='mapa' ? 'flex' : 'none';
     document.getElementById('btnAddPlace').style.display = (tab==='itinerario') ? 'none' : 'flex';
     if(tab==='mapa'){ setTimeout(()=>{ map.invalidateSize(); }, 30); }
   }
@@ -726,7 +915,7 @@ const db = getDatabase(firebaseApp);
   function renderCatPicker(){
     document.getElementById('catPicker').innerHTML = CATEGORIES.map(c=>`
       <div class="cat-opt ${c.id===selectedCategory?'selected':''}" data-cat="${c.id}">
-        <div class="dot" style="background:${c.color}">${c.emoji}</div><span>${c.label}</span>
+        <div class="dot" style="background:${c.color}">${c.emoji || ''}</div><span>${c.label}</span>
       </div>`).join('');
     document.querySelectorAll('.cat-opt').forEach(el=>{
       el.addEventListener('click', ()=>{ selectedCategory = el.dataset.cat; renderCatPicker(); toggleHotelFields(); });
@@ -742,7 +931,7 @@ const db = getDatabase(firebaseApp);
   function renderCatChips(){
     const row = document.getElementById('catChipRow');
     row.innerHTML = `<div class="pill ${activeCatFilter===''?'active':''}" data-cat="">Todas</div>` +
-      CATEGORIES.map(c=>`<div class="pill ${activeCatFilter===c.id?'active':''}" data-cat="${c.id}">${c.emoji} ${c.label}</div>`).join('');
+      CATEGORIES.map(c=>`<div class="pill ${activeCatFilter===c.id?'active':''}" data-cat="${c.id}">${c.emoji ? c.emoji + ' ' : ''}${c.label}</div>`).join('');
     row.querySelectorAll('.pill').forEach(p=>{
       p.addEventListener('click', ()=>{ activeCatFilter = p.dataset.cat; renderCatChips(); renderPlaces(); });
     });
@@ -759,21 +948,45 @@ const db = getDatabase(firebaseApp);
 
   /* ---------------- day chips + flight toggle (Mapa) ---------------- */
   function renderMapChips(){
-    // Se reconstruye explícitamente para que NO aparezcan "Día 8" ni "Día 28":
-    // 8 abril = Vuelos ida; 28 abril = Vuelos vuelta.
+    // Fila única: botón de vuelos solo con icono + chips de días.
     state.days = normalizeTravelDays(state.days);
     const orderedDays = state.days.slice().sort((a,b)=> a.date.localeCompare(b.date));
     const row = document.getElementById('dayChipRow');
-    row.innerHTML = `<div class="pill ${activeMapDay===''?'active':''}" data-day="">Todos los días</div>` +
+    row.innerHTML = `<div class="pill flight ${flightsVisible?'active':''}" id="flightsPill" title="Mostrar/ocultar vuelos" aria-label="Mostrar/ocultar vuelos">✈️</div>` +
+      `<div class="pill ${activeMapDay===''?'active':''}" data-day="">Todos los días</div>` +
       orderedDays.map(d=>`<div class="pill ${activeMapDay===d.id?'active':''}" data-day="${d.id}">${escapeHtml(d.label)}</div>`).join('');
-    row.querySelectorAll('.pill').forEach(p=>{
-      p.addEventListener('click', ()=>{ activeMapDay = p.dataset.day; renderMapChips(); renderMap(); });
+    document.getElementById('flightsPill').addEventListener('click', ()=>{
+      flightsVisible = !flightsVisible;
+      requestMapAutoFit();
+      renderMapChips();
+      renderMap({fit:true});
+    });
+    row.querySelectorAll('.pill[data-day]').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeMapDay = p.dataset.day; requestMapAutoFit(); renderMapChips(); renderMap({fit:true}); });
     });
 
     const frow = document.getElementById('flightToggleRow');
-    frow.innerHTML = `<div class="pill flight ${flightsVisible?'active':''}" id="flightsPill">✈️ Vuelos ${flightsVisible?'activados':'desactivados'}</div>`;
-    document.getElementById('flightsPill').addEventListener('click', ()=>{
-      flightsVisible = !flightsVisible; renderMapChips(); renderMap();
+    if(frow) frow.innerHTML = '';
+  }
+
+
+  function mapCategoryIcon(c){
+    if(c.id === 'zona') return '<span class="plain-icon">▦</span>';
+    return c.emoji || '•';
+  }
+  function renderMapCategoryFilter(){
+    const panel = document.getElementById('mapFilterPanel');
+    panel.innerHTML = CATEGORIES.map(c=>`
+      <button class="map-filter-btn ${activeMapCategories.has(c.id) ? 'active' : 'inactive'}"
+        data-cat="${c.id}" data-label="${escapeHtml(c.label)}" title="${escapeHtml(c.label)}" type="button">${mapCategoryIcon(c)}</button>`).join('');
+    panel.querySelectorAll('.map-filter-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.cat;
+        if(activeMapCategories.has(id)) activeMapCategories.delete(id);
+        else activeMapCategories.add(id);
+        renderMapCategoryFilter();
+        renderMap({fit:false});
+      });
     });
   }
 
@@ -796,7 +1009,7 @@ const db = getDatabase(firebaseApp);
         const cat = catById(p.category);
         const day = state.days.find(d=>d.id===p.dayId);
         return `<div class="row row-tap" onclick="App.openDetail('${p.id}')">
-          <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+          <div class="dot" style="background:${cat.color}">${cat.emoji || ''}</div>
           <div class="main">
             <h4>${escapeHtml(p.name)}</h4>
             <div class="sub">${p.region ? escapeHtml(p.region)+' · ' : ''}${day ? escapeHtml(day.label) : 'Sin día asignado'}${p.video ? ' · ▶ vídeo' : ''}</div>
@@ -899,7 +1112,7 @@ const db = getDatabase(firebaseApp);
     return `<div class="row itinerary-stop" draggable="true" data-day="${day.id}" data-place="${p.id}"
         ondragstart="App.dragStart(event,'${p.id}','${day.id}')" ondragover="App.dragOverRow(event,'${p.id}','${day.id}')" ondrop="App.dropOnRow(event,'${p.id}','${day.id}')" ondragend="App.dragEnd(event)"
         onpointerdown="App.pointerDown(event,'${p.id}','${day.id}')" onpointermove="App.pointerMove(event)" onpointerup="App.pointerUp(event)" onpointercancel="App.pointerCancel(event)">
-      <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+      <div class="dot" style="background:${cat.color}">${cat.emoji || ''}</div>
       <div class="main row-tap" onclick="App.openStopDetail(event,'${p.id}')"><h4>${escapeHtml(p.name)}</h4>${p.region ? `<div class="sub">${escapeHtml(p.region)}</div>` : ''}</div>
       ${p.time ? `<div class="time">${p.time}</div>` : ''}
       <div class="step-btns"><button onclick="event.stopPropagation(); App.unassignPlace('${p.id}')">✕</button></div>
@@ -960,7 +1173,7 @@ const db = getDatabase(firebaseApp);
         unassigned.map(p=>{
           const cat = catById(p.category);
           return `<div class="row">
-            <div class="dot" style="background:${cat.color}">${cat.emoji}</div>
+            <div class="dot" style="background:${cat.color}">${cat.emoji || ''}</div>
             <div class="main row-tap" onclick="App.openDetail('${p.id}')"><h4>${escapeHtml(p.name)}</h4></div>
             <select onchange="App.assignPlace('${p.id}', this.value)" style="max-width:130px;">
               <option value="">Asignar...</option>
@@ -982,13 +1195,21 @@ const db = getDatabase(firebaseApp);
   });
 
   /* ---------------- MAP ---------------- */
-  let map, markersLayer, routeLayer, routeLine, flightLayer;
+  let map, cityLayer, zoneLayer, markersLayer, routeLayer, routeLine, flightLayer;
+  let allowMapAutoFit = true;
+  let programmaticMapMove = false;
+  function requestMapAutoFit(){ allowMapAutoFit = true; }
+  function stopMapAutoFit(){ if(!programmaticMapMove) allowMapAutoFit = false; }
   function initMap(){
     map = L.map('map', {zoomControl:false}).setView([35.6762,139.6503], 5);
+    map.on('zoomstart dragstart', stopMapAutoFit);
+    map.on('zoomend', ()=>renderMap({fit:false}));
     L.control.zoom({position:'bottomleft'}).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom:20, subdomains:'abcd', attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
+    cityLayer = L.layerGroup().addTo(map);
+    zoneLayer = L.layerGroup().addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
     flightLayer = L.layerGroup().addTo(map);
@@ -1015,19 +1236,215 @@ const db = getDatabase(firebaseApp);
     });
   }
 
-  function renderMap(){
+  function makeZonePinIcon(p, cat){
+    const iconChar = cat.emoji || '•';
+    const html = `<div class="zone-pin small-label"><span class="pin-dot" style="background:${cat.color}">${iconChar}</span></div>`;
+    return L.divIcon({className:'', html, iconSize:null, iconAnchor:[14,14], popupAnchor:[0,-14]});
+  }
+
+  function zonePolygonZoomThreshold(p){
+    if(isBaseCityZone(p)) return 0;
+    if(Number.isFinite(p.polygonZoom)) return p.polygonZoom;
+    if(['catalog_narai_juku','catalog_takeshita','catalog_pontocho','catalog_sannenzaka'].includes(p.id)) return 15;
+    if(['catalog_nara','catalog_ueno','catalog_yoyogi','catalog_arashiyama'].includes(p.id)) return 12;
+    if(p.category === 'naturaleza') return 12;
+    if(p.category === 'zona') return 11;
+    return 10;
+  }
+
+  function shouldDrawZonePolygon(p){
+    if(isBaseCityZone(p)) return true;
+    return (map ? map.getZoom() : 5) >= zonePolygonZoomThreshold(p);
+  }
+
+  function drawZonePin(p, targetLayer, bounds){
+    if(p.lat == null || p.lng == null) return;
+    const cat = catById(p.category);
+    const marker = L.marker([p.lat, p.lng], {icon: makeZonePinIcon(p, cat)}).addTo(targetLayer);
+    marker.on('click', ()=>openDetail(p.id));
+    marker.bindTooltip(escapeHtml(p.name), {direction:'top', offset:[0,-12]});
+    bounds.push([p.lat, p.lng]);
+  }
+
+
+  const boundaryRequests = new Set();
+  const boundaryQueue = [];
+  let boundaryQueueRunning = false;
+  function cacheKeyForBoundary(query){ return 'viaje-japon-boundary-v3:' + query.toLowerCase(); }
+  function isUsableGeoJSON(g){ return g && (g.type === 'Polygon' || g.type === 'MultiPolygon'); }
+  function getBoundaryQueries(p){
+    if(Array.isArray(p.boundaryQueries) && p.boundaryQueries.length) return p.boundaryQueries;
+    return p.boundaryQuery ? [p.boundaryQuery] : [];
+  }
+  function getStoredBoundary(query){
+    try{
+      const raw = localStorage.getItem(cacheKeyForBoundary(query));
+      if(!raw) return null;
+      const g = JSON.parse(raw);
+      return isUsableGeoJSON(g) ? g : null;
+    }catch(e){ return null; }
+  }
+  function storeBoundary(query, geojson){
+    try{ localStorage.setItem(cacheKeyForBoundary(query), JSON.stringify(geojson)); }catch(e){}
+  }
+  function hasAllBoundaries(p){
+    const qs = getBoundaryQueries(p);
+    if(!qs.length) return !!p.geojson;
+    if(qs.length === 1) return !!p.geojson || (p.geojsons && !!p.geojsons[qs[0]]);
+    return !!p.geojsons && qs.every(q => !!p.geojsons[q]);
+  }
+  function requestBoundary(p){
+    if(!p || p.boundaryStatus === 'no_encontrado') return;
+    const qs = getBoundaryQueries(p);
+    if(!qs.length || hasAllBoundaries(p)) return;
+    if(!p.geojsons) p.geojsons = {};
+    let queuedAny = false;
+    qs.forEach(query=>{
+      if(p.geojsons[query] || (qs.length === 1 && p.geojson)) return;
+      const cached = getStoredBoundary(query);
+      if(cached){
+        p.geojsons[query] = cached;
+        if(qs.length === 1) p.geojson = cached;
+        p.boundaryStatus = 'osm_cache';
+        return;
+      }
+      const reqKey = p.id + '|' + query;
+      if(boundaryRequests.has(reqKey)) return;
+      boundaryRequests.add(reqKey);
+      boundaryQueue.push({placeId:p.id, query});
+      queuedAny = true;
+    });
+    if(queuedAny){
+      p.boundaryStatus = 'cargando';
+      runBoundaryQueue();
+    }
+  }
+  async function fetchBoundaryGeoJSON(query){
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&polygon_geojson=1&addressdetails=0&q=' + encodeURIComponent(query);
+    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    const data = await res.json();
+    const usable = (data || []).filter(r => isUsableGeoJSON(r.geojson));
+    const hit = usable.find(r => r.class === 'boundary') || usable.find(r => /administrative|boundary|park|garden|neighbourhood|quarter|suburb/i.test(String(r.type || '') + ' ' + String(r.class || ''))) || usable[0];
+    return hit ? {geojson: hit.geojson, displayName: hit.display_name || query} : null;
+  }
+  async function runBoundaryQueue(){
+    if(boundaryQueueRunning) return;
+    boundaryQueueRunning = true;
+    while(boundaryQueue.length){
+      const item = boundaryQueue.shift();
+      const p = state.places.find(x=>x.id===item.placeId);
+      if(!p) continue;
+      if(!p.geojsons) p.geojsons = {};
+      if(p.geojsons[item.query]) continue;
+      try{
+        const hit = await fetchBoundaryGeoJSON(item.query);
+        if(hit){
+          p.geojsons[item.query] = hit.geojson;
+          if(getBoundaryQueries(p).length === 1) p.geojson = hit.geojson;
+          p.boundaryStatus = 'osm';
+          p.boundaryDisplayName = hit.displayName;
+          storeBoundary(item.query, hit.geojson);
+          catalogNeedsSave = true;
+        } else if(!Object.keys(p.geojsons).length){
+          p.boundaryStatus = 'no_encontrado';
+        }
+      }catch(e){
+        p.boundaryStatus = 'error';
+      }
+      renderMap({fit:false});
+      await new Promise(resolve => setTimeout(resolve, 1150));
+    }
+    boundaryQueueRunning = false;
+    if(catalogNeedsSave) save();
+  }
+  function zoneLatLngs(p){
+    if(Array.isArray(p.polygon) && p.polygon.length >= 3) return p.polygon;
+    if(p.allowFallback !== false && Array.isArray(p.fallbackPolygon) && p.fallbackPolygon.length >= 3) return p.fallbackPolygon;
+    if(!(p.boundaryQuery || p.boundaryQueries) && p.lat != null && p.lng != null) return softAreaPolygon(p.lat, p.lng, 0.006, 0.008, 36);
+    return null;
+  }
+  function isBaseCityZone(p){
+    return !!p && (p.baseLayer || p.cityBase || ['catalog_tokio','catalog_kioto','catalog_osaka'].includes(p.id));
+  }
+  function zoneStyle(p, cat){
+    if(isBaseCityZone(p)){
+      return {
+        color: p.id === 'catalog_tokio' ? '#223A5E' : '#6B6152',
+        weight: p.id === 'catalog_tokio' ? 0.8 : 1.2,
+        opacity: p.id === 'catalog_tokio' ? .24 : .34,
+        fillColor: p.id === 'catalog_tokio' ? '#223A5E' : '#7C6A46',
+        fillOpacity: p.id === 'catalog_tokio' ? .14 : .09,
+        lineCap:'round',
+        interactive:true
+      };
+    }
+    const isTiny = ['catalog_narai_juku','catalog_takeshita','catalog_pontocho','catalog_sannenzaka'].includes(p.id);
+    return {
+      color:cat.color,
+      weight:isTiny ? 1.8 : 2.1,
+      opacity:.72,
+      fillColor:cat.color,
+      fillOpacity:p.category==='zona' ? .13 : .10,
+      lineCap:'round',
+      lineJoin:'round',
+      interactive:true
+    };
+  }
+  function drawZone(p, targetLayer, bounds){
+    const cat = catById(p.category);
+    if(!shouldDrawZonePolygon(p)){
+      drawZonePin(p, targetLayer, bounds);
+      return;
+    }
+    if((p.boundaryQuery || p.boundaryQueries) && !p.fixedPolygon && !hasAllBoundaries(p)) requestBoundary(p);
+    const geoms = [];
+    if(isUsableGeoJSON(p.geojson)) geoms.push(p.geojson);
+    if(p.geojsons) Object.values(p.geojsons).forEach(g=>{ if(isUsableGeoJSON(g) && !geoms.includes(g)) geoms.push(g); });
+    if(geoms.length){
+      const style = zoneStyle(p, cat);
+      geoms.forEach(g=>{
+        const layer = L.geoJSON(g, { style }).addTo(targetLayer);
+        layer.bindTooltip(escapeHtml(p.name), {permanent:false, direction:'center', className:'zone-tooltip'});
+        layer.on('click', ()=>openDetail(p.id));
+        try{
+          const b = layer.getBounds();
+          if(b.isValid()){ bounds.push([b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]); }
+        }catch(e){}
+      });
+      return;
+    }
+    const pts = zoneLatLngs(p);
+    if(!pts) return;
+    const style = zoneStyle(p, cat);
+    style.opacity = Math.min(style.opacity || .65, .60);
+    style.fillOpacity = Math.min(style.fillOpacity || .08, .07);
+    const poly = L.polygon(pts, style).addTo(targetLayer);
+    poly.bindTooltip(escapeHtml(p.name), {permanent:false, direction:'center', className:'zone-tooltip'});
+    poly.on('click', ()=>openDetail(p.id));
+    pts.forEach(pt=>bounds.push(pt));
+  }
+
+  function renderMap(options){
+    options = options || {};
     if(!map) return;
     ensureStateShape();
+    cityLayer.clearLayers();
+    zoneLayer.clearLayers();
     markersLayer.clearLayers();
     routeLayer.clearLayers();
     flightLayer.clearLayers();
     if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
 
-    let list = state.places.filter(p=>p.lat!=null && p.lng!=null);
+    let list = state.places.filter(p=>p.lat!=null && p.lng!=null && activeMapCategories.has(p.category));
     if(activeMapDay) list = list.filter(p=>p.dayId===activeMapDay);
     const bounds = [];
 
+    const areaPlaces = list.filter(p=>p.category === 'zona' || p.geojson || p.boundaryQuery || p.boundaryQueries || p.polygon || p.fallbackPolygon);
+    areaPlaces.filter(isBaseCityZone).forEach(p=>drawZone(p, cityLayer, bounds));
+    areaPlaces.filter(p=>!isBaseCityZone(p)).forEach(p=>drawZone(p, zoneLayer, bounds));
+
     list.forEach(p=>{
+      if(p.category === 'zona') return;
       const cat = catById(p.category);
       const marker = L.marker([p.lat,p.lng], {icon: makeIcon(cat)}).addTo(markersLayer);
       marker.on('click', ()=>openDetail(p.id));
@@ -1069,8 +1486,14 @@ const db = getDatabase(firebaseApp);
       });
     }
 
-    if(bounds.length){ map.fitBounds(bounds, {padding:[60,60], maxZoom:14}); }
-    else { map.setView([35.6762,139.6503], 5); }
+    const shouldFit = options.fit === true || (options.fit !== false && allowMapAutoFit);
+    if(shouldFit){
+      programmaticMapMove = true;
+      if(bounds.length){ map.fitBounds(bounds, {padding:[60,60], maxZoom:14}); }
+      else { map.setView([35.6762,139.6503], 5); }
+      setTimeout(()=>{ programmaticMapMove = false; }, 300);
+      allowMapAutoFit = false;
+    }
   }
 
 
@@ -1083,7 +1506,7 @@ const db = getDatabase(firebaseApp);
     const cat = catById(p.category);
     const videoBtn = p.video ? `<a class="video-btn" href="${escapeHtml(p.video)}" target="_blank" rel="noopener">▶ Ver vídeo ↗</a><br>` : '';
     document.getElementById('detailContent').innerHTML = `
-      <span class="sheet-cat" style="background:${cat.color}">${cat.emoji} ${cat.label}${p.region ? ' · '+escapeHtml(p.region) : ''}</span>
+      <span class="sheet-cat" style="background:${cat.color}">${cat.emoji ? cat.emoji + ' ' : ''}${cat.label}${p.region ? ' · '+escapeHtml(p.region) : ''}</span>
       <h2 class="sheet-title">${escapeHtml(p.name)}${p.time ? ` <span style="font-size:14px;color:var(--ink-soft);font-family:'Zen Kaku Gothic New';">· ${p.time}</span>` : ''}</h2>
       ${p.category==='alojamiento' ? `<p class="sheet-notes"><strong>Dirección:</strong> ${escapeHtml(p.address || 'Sin dirección')}<br>${p.hotelArea ? '<strong>Zona:</strong> '+escapeHtml(p.hotelArea)+'<br>' : ''}${p.checkIn || p.checkOut ? '<strong>Noches:</strong> Entrada '+escapeHtml(p.checkIn || '—')+' · Salida '+escapeHtml(p.checkOut || '—')+(daysBetween(p.checkIn,p.checkOut)?' · '+daysBetween(p.checkIn,p.checkOut):'')+'<br>' : ''}${p.bookingRef ? '<strong>Reserva:</strong> '+escapeHtml(p.bookingRef)+'<br>' : ''}${p.hotelPhone ? '<strong>Teléfono:</strong> '+escapeHtml(p.hotelPhone)+'<br>' : ''}${p.hotelWebsite && isValidUrl(p.hotelWebsite) ? '<a href="'+escapeHtml(p.hotelWebsite)+'" target="_blank" rel="noopener">Web / reserva ↗</a>' : ''}</p>` : ''}
       ${p.notes ? `<p class="sheet-notes">${escapeHtml(p.notes)}</p>` : ''}
@@ -1232,7 +1655,7 @@ const db = getDatabase(firebaseApp);
     toggleHotelFields();
     fillDaySelect();
     document.getElementById('fDay').value = place ? (place.dayId||'') : '';
-    document.getElementById('fRegion').value = place ? regionLabelFromId(placeRegionGroup(place)) : 'Tokio';
+    document.getElementById('fRegion').value = place ? (place.region || regionLabelFromId(placeRegionGroup(place))) : 'Tokio';
     document.getElementById('fVideo').value = place ? (place.video||'') : '';
     document.getElementById('fNotes').value = place ? (place.notes||'') : '';
     document.getElementById('fAddress').value = place ? (place.address||'') : '';
@@ -1554,11 +1977,12 @@ const db = getDatabase(firebaseApp);
   initMap();
   renderCatChips();
   renderRegionChips();
+  renderMapCategoryFilter();
   renderCatPicker();
   renderPlaces();
   renderHotels();
   renderItinerary();
-  renderMap();
+  renderMap({fit:true});
   setTab('mapa');
 })();
 </script>
