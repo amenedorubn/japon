@@ -270,6 +270,42 @@
     font-weight:800; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s ease;
   }
   .map-filter-btn:hover:after,.map-filter-btn:focus-visible:after{opacity:1;}
+
+  .map-dani-panel{
+    position:fixed; left:14px; top:calc(env(safe-area-inset-top,0px) + 102px); z-index:36;
+    display:flex; flex-direction:column; align-items:flex-start; gap:7px;
+  }
+  .source-toggle{
+    border:1px solid var(--line); border-radius:999px; padding:8px 12px;
+    background:rgba(255,253,248,.92); color:var(--indigo-2); font-weight:900; font-size:12.5px;
+    box-shadow:0 3px 10px rgba(34,32,28,.14); cursor:pointer;
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    display:flex; align-items:center; gap:6px;
+  }
+  .source-toggle.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .source-toggle.ours.active{background:var(--indigo); border-color:var(--indigo);}
+  .source-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;}
+  .source-toggle.ours .source-badge{background:var(--indigo);}
+  .source-toggle.active .source-badge{background:rgba(255,255,255,.22); color:#fff;}
+  .dani-toggle{}
+  .dani-badge{}
+  .dani-row{background:rgba(193,68,14,.045);}
+  .dani-action{padding:6px 8px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;}
+
+  @media (max-width: 700px){
+    .map-filter-panel{
+      left:10px; right:10px; top:auto;
+      bottom:calc(58px + env(safe-area-inset-bottom,0px));
+      flex-direction:row; justify-content:flex-start; align-items:center;
+      max-height:none; overflow-x:auto; overflow-y:hidden;
+      border-radius:16px; padding:7px;
+    }
+    .map-filter-btn{width:39px; height:39px; flex:0 0 auto; border-radius:13px;}
+    .map-filter-btn:after{display:none;}
+    .map-dani-panel{top:calc(env(safe-area-inset-top,0px) + 100px); left:12px; gap:6px;}
+    .source-toggle{padding:7px 10px; font-size:12px;}
+    .source-badge{width:20px; height:20px;}
+  }
 </style>
 </head>
 <body>
@@ -298,6 +334,10 @@
 </header>
 
 <div class="chip-row" id="dayChipRow"></div>
+<div class="map-dani-panel" id="daniMapPanel">
+  <button class="source-toggle ours" id="oursMapToggle" type="button"><span class="source-badge">N</span>Nosotros</button>
+  <button class="source-toggle dani-toggle" id="daniMapToggle" type="button"><span class="source-badge">D</span>Dani</button>
+</div>
 <div class="chip-row" id="flightToggleRow"></div>
 <div class="map-filter-panel" id="mapFilterPanel" aria-label="Filtros del mapa"></div>
 
@@ -319,7 +359,8 @@
 <section class="panel" id="panel-lugares">
   <h1 class="large-title">Lugares</h1>
   <div class="chip-row" id="catChipRow" style="position:static; padding:0 0 8px;"></div>
-  <div class="chip-row" id="regionChipRow" style="position:static; padding:0 0 12px;"></div>
+  <div class="chip-row" id="regionChipRow" style="position:static; padding:0 0 8px;"></div>
+  <div class="chip-row" id="daniFilterRow" style="position:static; padding:0 0 12px;"></div>
   <div id="placesContainer"></div>
 </section>
 
@@ -607,7 +648,7 @@ const db = getDatabase(firebaseApp);
   /* ============================================================
      CATÁLOGO BASE DE SITIOS — sin asignar a días salvo aeropuertos
   ============================================================ */
-  const CATALOG_VERSION = 'sitios-japon-2026-07-02-v8-map-filters-excursions';
+  const CATALOG_VERSION = 'sitios-japon-2026-07-02-v9-dani-pdf';
   let catalogNeedsSave = false;
 
   function softAreaPolygon(lat, lng, radiusLat, radiusLng, points){
@@ -754,8 +795,188 @@ const db = getDatabase(firebaseApp);
     catalogPlace('narai_juku', 'Narai Juku: pueblo auténtico', 'excursion', 'Excursiones', 35.9656, 137.8111, 'Excursión o parada de ruta. Pueblo histórico de la Nakasendo, con ambiente tradicional.')
   ];
 
+
+  /* ============================================================
+     CAPA DANI — extraída del documento "JAPÓN DEFINITIVO".
+     No incluye vuelos internacionales; solo ruta y lugares de Japón.
+  ============================================================ */
+  function daniPlace(id, name, category, region, lat, lng, notes, extra){
+    return Object.assign({
+      id:'dani_' + id, name, category, region, lat, lng,
+      notes: notes || '', source:'dani', dani:true, dayId:null, time:'', catalogItem:true
+    }, extra || {});
+  }
+  const DANI_PLACES_RAW = [
+    daniPlace('kix','Aeropuerto Internacional de Kansai','otro','Dani · Osaka',34.4347,135.2441,'Llegada a Japón del documento Dani. Punto de inicio en Japón; no incluye el vuelo internacional.'),
+    daniPlace('rise_osaka','The Rise Osaka Kitashinchi','alojamiento','Dani · Osaka',34.6966,135.4994,'Hotel en Osaka 9-11 junio. 2 habitaciones dobles y una individual. Pagado.',{address:'1 Chome Kitashinchi / zona Kitashinchi, Osaka', checkIn:'2025-06-09', checkOut:'2025-06-11', bookingRef:'380,22 €, pagado'}),
+    daniPlace('shinsaibashi','Shinsaibashisuji','compras','Dani · Osaka',34.6747,135.5002,'Calle comercial de Shinsaibashi-Suji.'),
+    daniPlace('dotonbori','Dotonbori y Glico Man','comida','Dani · Osaka',34.6687,135.5013,'Paseo por Dotonbori y Namba para ver neones, Glico Man, entretenimiento y comida.'),
+    daniPlace('namba','Namba','zona','Dani · Osaka',34.6661,135.5017,'Zona de entretenimiento, compras, neones y luces.'),
+    daniPlace('hozenji','Templo Hozen-ji','templo','Dani · Osaka',34.6677,135.5035,'Templo en callejón estrecho con la escultura cubierta de musgo Mizukake Fudo.'),
+    daniPlace('doguyasuji','Sennichimae Doguyasuji','compras','Dani · Osaka',34.6651,135.5035,'Calle de artículos de cocina, amuletos japoneses y réplicas de comida.'),
+    daniPlace('kuromon','Mercado Kuromon Ichiba','comida','Dani · Osaka',34.6646,135.5061,'Mercado para probar takoyaki, okonomiyaki, fugu, kushiage y otros platos de Osaka.'),
+    daniPlace('nipponbashi','Nipponbashi / Den Den Town','compras','Dani · Osaka',34.6606,135.5063,'Barrio del manga, cine, electrónica y tiendas otaku.'),
+    daniPlace('shinsekai','Shinsekai y Torre Tsutenkaku','otro','Dani · Osaka',34.6525,135.5063,'Zona “Nuevo Mundo”, ambiente retro, torre Tsutenkaku y restaurantes de fugu.'),
+    daniPlace('shitennoji','Templo Shitenno-ji','templo','Dani · Osaka',34.6546,135.5161,'Primer templo budista de Japón, datado en el año 593 aunque reconstruido.'),
+    daniPlace('shin_osaka','Estación Shin-Osaka','otro','Dani · Osaka',34.7335,135.5002,'Salida en shinkansen hacia Hiroshima.'),
+    daniPlace('hiroshima_station','Estación de Hiroshima','otro','Dani · Hiroshima',34.3974,132.4755,'Llegada en shinkansen desde Osaka.'),
+    daniPlace('hiroshima_castle','Hiroshima-jo','otro','Dani · Hiroshima',34.4026,132.4594,'Castillo de 1589 destruido por la bomba y restaurado. Acceso indicado como gratis.'),
+    daniPlace('hiroshima_art','Museo del Arte de Hiroshima','otro','Dani · Hiroshima',34.4008,132.4594,'Museo del Arte de Hiroshima.'),
+    daniPlace('gate_park','Hiroshima Gate Park','naturaleza','Dani · Hiroshima',34.3952,132.4540,'Parque inaugurado en 2023 donde antes había un campo de béisbol; zona con cafeterías.'),
+    daniPlace('orizuru','Torre Orizuru','otro','Dani · Hiroshima',34.3957,132.4522,'Mirador cerca de la Cúpula de la Bomba Atómica.'),
+    daniPlace('atomic_dome','Cúpula de la Bomba Atómica','otro','Dani · Hiroshima',34.3955,132.4536,'Patrimonio de la Humanidad, construida en 1915 y muy cerca del hipocentro.'),
+    daniPlace('rest_house','Rest House','otro','Dani · Hiroshima',34.3937,132.4530,'Edificio que conserva partes previas a la bomba; se menciona el sótano donde se refugió Eizo Nomura.'),
+    daniPlace('peace_park','Parque y Museo Memorial de la Paz','otro','Dani · Hiroshima',34.3929,132.4529,'Parque de la Paz y Museo Memorial de la Paz de Hiroshima.'),
+    daniPlace('peace_bridges','Puentes de la Paz','otro','Dani · Hiroshima',34.3917,132.4537,'Puentes próximos al Parque de la Paz.'),
+    daniPlace('heritage_pier','Hiroshima World Heritage Sea Route','otro','Dani · Hiroshima',34.3925,132.4520,'Muelle para ferry directo a Miyajima, unos 45 minutos según el documento.'),
+    daniPlace('miyajima_pier','Muelle de Miyajima','otro','Dani · Miyajima',34.3020,132.3220,'Llegada en ferry a la isla de Miyajima.'),
+    daniPlace('otorii','Gran Otorii de Miyajima','templo','Dani · Miyajima',34.2971,132.3198,'Gran puerta roja sobre el mar, símbolo de Miyajima.'),
+    daniPlace('itsukushima','Santuario Itsukushima','templo','Dani · Miyajima',34.2959,132.3198,'Santuario con forma actual de 1168 y pagoda cercana.'),
+    daniPlace('daishoin','Daisho-in','templo','Dani · Miyajima',34.2925,132.3180,'Templo budista más antiguo de la isla, con estatuillas de monjes de gorro rojo.'),
+    daniPlace('senjokaku','Senjo-kaku','templo','Dani · Miyajima',34.2969,132.3204,'Pabellón con vistas a la pagoda de cinco plantas.'),
+    daniPlace('misen','Monte Misen','naturaleza','Dani · Miyajima',34.2793,132.3192,'Subida opcional para evitar multitudes; teleférico en dos fases y vistas 360º.'),
+    daniPlace('kakiya','Kakiya','comida','Dani · Miyajima',34.2994,132.3217,'Restaurante recomendado para ostras.'),
+    daniPlace('cafe_lente','Café Lente','comida','Dani · Miyajima',34.2961,132.3189,'Cafetería recomendada en Miyajima.'),
+    daniPlace('kintetsu_nara','Kintetsu Nara Station','otro','Dani · Nara',34.6844,135.8276,'Llegada desde Osaka-Namba; estación cercana al parque.'),
+    daniPlace('isuien','Jardines Isui-en','naturaleza','Dani · Nara',34.6858,135.8397,'Jardines con zona del siglo XX y zona de 1670; casa de té Sanshutei.'),
+    daniPlace('nandaimon','Nandai-mon','templo','Dani · Nara',34.6888,135.8392,'Gran puerta de templo con guardianes Nio de 8 metros.'),
+    daniPlace('todaiji','Templo Todai-ji','templo','Dani · Nara',34.6889,135.8398,'Templo del Gran Buda Daibutsu y puerta Nandai-mon.'),
+    daniPlace('nigatsudo','Nigatsu-do','templo','Dani · Nara',34.6897,135.8466,'Mirador dentro del entorno de Todai-ji.'),
+    daniPlace('hokkedo','Hokke-do','templo','Dani · Nara',34.6894,135.8455,'Templo del itinerario sugerido.'),
+    daniPlace('mizuya','Mizuya Chaya','comida','Dani · Nara',34.6839,135.8448,'Casa de té para té, pastas, udon, helados y comidas sencillas.'),
+    daniPlace('kasuga','Kasuga Taisha','templo','Dani · Nara',34.6814,135.8484,'Santuario famoso por farolillos de bronce y lámparas de piedra.'),
+    daniPlace('wakamiya','Wakamiya-jinja','templo','Dani · Nara',34.6808,135.8482,'Santuario incluido en el recorrido de Nara.'),
+    daniPlace('ichino_torii','Ichi-no Torii','templo','Dani · Nara',34.6837,135.8369,'Torii de entrada hacia Kasuga Taisha.'),
+    daniPlace('kofukuji','Kofuku-ji','templo','Dani · Nara',34.6826,135.8316,'Templo con pagoda de cinco pisos y Tokondo.'),
+    daniPlace('nara_museum','Museo Nacional de Nara','otro','Dani · Nara',34.6833,135.8399,'Visita posible tras el tour.'),
+    daniPlace('nara_park','Parque de Nara','naturaleza','Dani · Nara',34.6851,135.8430,'Parque con más de 1200 ciervos considerados mensajeros de los dioses.'),
+    daniPlace('ukimido','Estanque Sagi y pabellón Ukimido','naturaleza','Dani · Nara',34.6782,135.8397,'Pabellón hexagonal que parece flotar sobre el estanque.'),
+    daniPlace('nakatanido','Nakatanido','comida','Dani · Nara',34.6827,135.8279,'Confitería famosa por el yomogi mochi.'),
+    daniPlace('naramachi','Naramachi','zona','Dani · Nara',34.6776,135.8316,'Antiguo distrito comercial con callejones, casas tradicionales, tiendas y cafeterías.'),
+    daniPlace('yukari_kyoto','Yukari Shijo Kyoto','alojamiento','Dani · Kioto',35.0018,135.7553,'Alojamiento en Kioto 11-13 junio. Casa de 3 dormitorios. Pagado.',{address:'Zona Shijo, Kioto', checkIn:'2025-06-11', checkOut:'2025-06-13', bookingRef:'367,98 €, pagado'}),
+    daniPlace('fushimi_inari','Fushimi Inari-Taisha','templo','Dani · Kioto',34.9671,135.7727,'Santuario con sendero de 4 km de torii rojos. Abierto 24h y gratuito.'),
+    daniPlace('vermillion','Vermillion Espresso Bar','comida','Dani · Kioto',34.9672,135.7714,'Café recomendado para descansar después de Fushimi Inari.'),
+    daniPlace('kiyomizu','Kiyomizu-dera','templo','Dani · Kioto',34.9949,135.7850,'Complejo de templos célebre de Kioto, con pagoda y manantial Otowa-no-taki.'),
+    daniPlace('sannenzaka','Sannenzaka y Ninenzaka','zona','Dani · Kioto',34.9972,135.7816,'Calles tradicionales con tiendas, dulces y souvenirs, camino a Kodai-ji.'),
+    daniPlace('kodaiji','Templo Kodai-ji','templo','Dani · Kioto',35.0006,135.7812,'Templo de 1605, destacado en la ruta del sur de Higashiyama.'),
+    daniPlace('chionin','Chion-in','templo','Dani · Kioto',35.0053,135.7821,'Templo en la ruta de sur a norte: Kiyomizu-dera – Kodai-ji – Chion-in – Shoren-in.'),
+    daniPlace('shorenin','Shoren-in','templo','Dani · Kioto',35.0064,135.7829,'Templo tranquilo y menos concurrido; sugerido para tomar té.'),
+    daniPlace('gion','Gion','zona','Dani · Kioto',35.0038,135.7750,'Barrio turístico y tradicional de geishas, recomendable de día y de noche.'),
+    daniPlace('yasaka','Santuario Yasaka','templo','Dani · Kioto',35.0037,135.7786,'Santuario imprescindible junto a Gion.'),
+    daniPlace('pontocho','Pontocho','zona','Dani · Kioto',35.0063,135.7714,'Distrito tradicional de vida nocturna, farolillos y restaurantes.'),
+    daniPlace('kanjiro','Casa de Kanjiro Kawai','otro','Dani · Kioto',34.9940,135.7747,'Museo/casa en el barrio de la cerámica.'),
+    daniPlace('nijo','Castillo de Nijo','otro','Dani · Kioto',35.0142,135.7480,'Castillo del siglo XVII, palacio Ninomaru, jardín Ninomaru y puerta Kara-mon.'),
+    daniPlace('kinkakuji','Pabellón Dorado / Kinkaku-ji','templo','Dani · Kioto',35.0394,135.7292,'Templo dorado reflejado sobre el lago, reconstruido tras el incendio de 1950.'),
+    daniPlace('ryoanji','Ryoan-ji','templo','Dani · Kioto',35.0345,135.7183,'Templo zen famoso por su jardín de 15 piedras.'),
+    daniPlace('myoshinji','Myoshin-ji / Taizo-in','templo','Dani · Kioto',35.0217,135.7209,'Zona de templos y barrio de geishas más antiguo que Gion; se sugiere té matcha en Taizo-in.'),
+    daniPlace('arashiyama_station','Estación de Arashiyama y Bosque de Kimonos','otro','Dani · Kioto',35.0152,135.6778,'Bosque de Kimonos en la estación de Arashiyama.'),
+    daniPlace('togetsukyo','Puente Togetsukyo','otro','Dani · Kioto',35.0128,135.6761,'Puente principal de Arashiyama.'),
+    daniPlace('bamboo','Bosque de Bambú de Arashiyama','naturaleza','Dani · Kioto',35.0170,135.6712,'Bosque de bambú; combinar con templos y Togetsukyo.'),
+    daniPlace('tenryuji','Templo Tenryu-ji','templo','Dani · Kioto',35.0163,135.6747,'Templo de Arashiyama.'),
+    daniPlace('otagi','Otagi Nenbutsu-ji','templo','Dani · Kioto',35.0311,135.6627,'Templo bonito recomendado llegando en taxi o bus y bajando hacia Arashiyama.'),
+    daniPlace('saga_torimoto','Saga-Torimoto','zona','Dani · Kioto',35.0286,135.6683,'Calles preservadas de pueblo tradicional entre Otagi y Arashiyama.'),
+    daniPlace('car_rental_kyoto','Alquiler coche Kyoto Shinkansen RR','otro','Dani · Kioto',34.9858,135.7591,'Recogida de coche en Kioto el 13 junio 18:00; devolución Ikebukuro East el 16 junio 14:00.'),
+    daniPlace('rikka_takayama','Takayama Rikka Baba Ichi','alojamiento','Dani · Takayama',36.1434,137.2563,'Noche en Takayama 13-14 junio. Casa de 2 dormitorios. Pagado.',{checkIn:'2025-06-13', checkOut:'2025-06-14', bookingRef:'Pagado'}),
+    daniPlace('hida_kokubunji','Hida Kokubun-ji','templo','Dani · Takayama',36.1439,137.2528,'Templo budista con pagoda de tres plantas del siglo XVI y ginkgo de 1200 años.'),
+    daniPlace('kaji_bridge','Puente de Kaji','otro','Dani · Takayama',36.1444,137.2574,'Puente sobre el río Miya-gawa con figuras de bronce.'),
+    daniPlace('miyagawa_market','Mercado matutino de Miyagawa','comida','Dani · Takayama',36.1450,137.2582,'Mercado matutino a orillas del río.'),
+    daniPlace('sanmachi','Casco antiguo de Takayama / Sanmachi','zona','Dani · Takayama',36.1428,137.2590,'Paisajes urbanos del periodo Edo, casas de madera, tiendas de kimonos y sake.'),
+    daniPlace('nakabashi','Puente Nakabashi','otro','Dani · Takayama',36.1397,137.2594,'Puente rojo muy pintoresco.'),
+    daniPlace('shiroyama','Parque Shiroyama y Takayama Joato','naturaleza','Dani · Takayama',36.1375,137.2603,'Final sugerido de la ruta histórica por Takayama.'),
+    daniPlace('shirakawago','Shirakawa-go','excursion','Dani · Alpes',36.2579,136.9064,'Pueblo de casas gassho-zukuri, Patrimonio de la Humanidad junto a Gokayama.'),
+    daniPlace('myozenji','Templo Myozen-ji','templo','Dani · Alpes',36.2571,136.9066,'Templo de Shirakawa-go.'),
+    daniPlace('shirakawa_hachimangu','Santuario Shirakawa Hachimangu','templo','Dani · Alpes',36.2553,136.9076,'Santuario en Shirakawa-go.'),
+    daniPlace('ogimachi_bridge','Puente colgante de Ogimachi','otro','Dani · Alpes',36.2558,136.9020,'Puente colgante en Shirakawa-go.'),
+    daniPlace('kazaguruma','Nakao Kogen Hotel Kazaguruma','alojamiento','Dani · Alpes',36.2396,137.5693,'Noche 14-15 junio. Hotel con desayuno, vistas a la montaña y baño privado.',{checkIn:'2025-06-14', checkOut:'2025-06-15', bookingRef:'393,14 €, se paga en hotel'}),
+    daniPlace('hirayu','Hirayu Onsen','otro','Dani · Alpes',36.1905,137.5523,'Punto de autobús hacia Kamikochi.'),
+    daniPlace('kamikochi','Kamikochi / Kappabashi','naturaleza','Dani · Alpes',36.2470,137.6370,'Valle del río Azusa, vistas de montaña y puente Kappabashi.'),
+    daniPlace('myojin','Estanque Myojin','naturaleza','Dani · Alpes',36.2648,137.6680,'Paseo desde Kappabashi hacia Myojin y santuario Hotaka.'),
+    daniPlace('hotaka','Santuario Hotaka','templo','Dani · Alpes',36.2652,137.6684,'Santuario junto al estanque Myojin.'),
+    daniPlace('taisho','Estanque Taisho','naturaleza','Dani · Alpes',36.2274,137.6332,'Estanque Taisho en Kamikochi.'),
+    daniPlace('shoji_hotel','Shoji Lake Hotel','alojamiento','Dani · Monte Fuji',35.4897,138.6098,'Noche 15-16 junio. Tiene sauna y baño termal.',{checkIn:'2025-06-15', checkOut:'2025-06-16', bookingRef:'301,84 €, habitación familiar + doble'}),
+    daniPlace('kawaguchi','Lago Kawaguchi','naturaleza','Dani · Monte Fuji',35.5171,138.7517,'Ruta en bicicleta alrededor del lago Kawaguchi.'),
+    daniPlace('fujisanbike','Fujisanbike Studio / NBC','otro','Dani · Monte Fuji',35.4989,138.7683,'Reserva de bicicleta 10-18h. Número 303VNAYWC, pagado.'),
+    daniPlace('chureito','Pagoda Chureito','templo','Dani · Monte Fuji',35.5013,138.8010,'Vista icónica del Fuji. Gratis, suele estar muy llena.'),
+    daniPlace('honcho','Honcho Street Shimoyoshida','otro','Dani · Monte Fuji',35.4975,138.8069,'Perspectiva urbana con el Monte Fuji al fondo si está despejado.'),
+    daniPlace('fuji_5th','Quinta estación del Monte Fuji','naturaleza','Dani · Monte Fuji',35.3949,138.7327,'Última estación accesible por carretera, punto cercano a la cima.'),
+    daniPlace('tokyo_airbnb','Airbnb Tokio','alojamiento','Dani · Tokio',35.7295,139.7109,'Apartamento entero de dos habitaciones. Noche 16-22 junio. Pagado.',{checkIn:'2025-06-16', checkOut:'2025-06-22', bookingRef:'1117,42 €, pagado'}),
+    daniPlace('ikebukuro_return','Devolución coche Ikebukuro East','otro','Dani · Tokio',35.7295,139.7180,'Devolución del coche el 16 junio a las 14:00.'),
+    daniPlace('miyabi_asakusa','Kimono Miyabi Asakusa','otro','Dani · Tokio',35.7148,139.7967,'Actividad: vestirse de geisha/kimono a las 9:30.'),
+    daniPlace('sensoji','Templo Sensō-ji','templo','Dani · Tokio',35.7148,139.7967,'Templo más antiguo de Tokio, puerta Kaminarimon y farolillo gigante.'),
+    daniPlace('kagetsudo','Kagetsudo','comida','Dani · Tokio',35.7145,139.7960,'Panadería recomendada para probar melon pan.'),
+    daniPlace('nakamise','Nakamise-dori','compras','Dani · Tokio',35.7118,139.7965,'Calle de compras tradicionales entre Kaminarimon y Sensō-ji; ningyo-yaki.'),
+    daniPlace('sumida_park','Parque Sumida','naturaleza','Dani · Tokio',35.7125,139.8030,'Parque junto al río, ideal en primavera por los cerezos.'),
+    daniPlace('azuma_bridge','Puente Azuma y Asahi Beer Hall','otro','Dani · Tokio',35.7107,139.8007,'Cruzar el río Sumida y ver el edificio Asahi Super Dry.'),
+    daniPlace('ueno_park','Parque Ueno','naturaleza','Dani · Tokio',35.7156,139.7730,'Parque Ueno.'),
+    daniPlace('ameyoko','Ameyoko','compras','Dani · Tokio',35.7101,139.7745,'Mercado/calle comercial Yokocho-Ameyoko.'),
+    daniPlace('kameido','Kameido Tenjinsha','templo','Dani · Tokio',35.7008,139.8232,'Barrio tradicional de flores, tortugas, bares, izakaya y santuario Kameido Tenjinsha.'),
+    daniPlace('kameido_gyoza','Kameido Gyoza','comida','Dani · Tokio',35.6979,139.8260,'Restaurante famoso de gyozas en Kameido.'),
+    daniPlace('skytree','Tokio Skytree','otro','Dani · Tokio',35.7101,139.8107,'Torre más alta de Japón; miradores a 350 y 450 m. Pagado, 18h para atardecer.'),
+    daniPlace('kamakura_buddha','Gran Buda de Kamakura','templo','Dani · Kamakura',35.3167,139.5358,'Gran Buda de Kotoku-in, estatua de bronce de 13,35 m.'),
+    daniPlace('hasedera','Templo Hase-dera','templo','Dani · Kamakura',35.3126,139.5331,'Templo con estatuas de jizo y ofrendas.'),
+    daniPlace('wakamiyaoji','Wakamiyaoji / Dankazura','zona','Dani · Kamakura',35.3216,139.5530,'Camino sagrado con tramo Dankazura.'),
+    daniPlace('komachi','Calle Komachi','compras','Dani · Kamakura',35.3217,139.5505,'Calle comercial con cafeterías, recuerdos, artesanía y restaurantes.'),
+    daniPlace('tsurugaoka','Santuario Tsurugaoka Hachiman-gu','templo','Dani · Kamakura',35.3260,139.5564,'Santuario dedicado al dios patrón de Minamoto y samuráis.'),
+    daniPlace('minato_mirai','Minato Mirai 21','otro','Dani · Yokohama',35.4578,139.6329,'Zona moderna de Yokohama, Landmark Tower, Cosmo World y Yokohama Air Cabin.'),
+    daniPlace('yokohama_chinatown','Barrio Chino de Yokohama','comida','Dani · Yokohama',35.4437,139.6456,'Mayor barrio chino de Japón; baos, ramen y comida china.'),
+    daniPlace('tobu_nikko','Tobu-Nikko Station','otro','Dani · Nikko',36.7471,139.6190,'Llegada desde Asakusa con Tobu Railway / Nikko World Heritage Area Pass.'),
+    daniPlace('shinkyo','Puente Shinkyo','otro','Dani · Nikko',36.7542,139.6049,'Puente sagrado, uno de los más bonitos de Japón.'),
+    daniPlace('toshogu','Santuario Toshogu','templo','Dani · Nikko',36.7581,139.5989,'Santuario con mausoleo de Tokugawa Ieyasu, pagoda, tres monos y gato dormido.'),
+    daniPlace('takinoo','Santuario Takino-o','templo','Dani · Nikko',36.7652,139.6023,'Santuario dedicado a deidad femenina; ritual de lanzar piedra sobre torii.'),
+    daniPlace('futarasan','Santuario Futarasan','templo','Dani · Nikko',36.7589,139.5953,'Santuario antiguo fundado en 782.'),
+    daniPlace('taiyuinbyo','Mausoleo Taiyuinbyo','templo','Dani · Nikko',36.7602,139.5925,'Mausoleo de Tokugawa Iemitsu, más pequeño que Toshogu.'),
+    daniPlace('rinnoji','Templo Rinnoji','templo','Dani · Nikko',36.7554,139.6004,'Templo conocido por estatuas de madera lacada en oro.'),
+    daniPlace('kanmangafuchi','Abismo de Kanmangafuchi','naturaleza','Dani · Nikko',36.7527,139.5894,'Narabi Jizo junto al río; protectores de viajeros, embarazadas y niños.'),
+    daniPlace('tokyo_station','Estación de Tokio','otro','Dani · Tokio',35.6812,139.7671,'Fachada emblemática y entramado subterráneo de tiendas y restaurantes.'),
+    daniPlace('imperial_palace','Palacio Imperial de Tokio','otro','Dani · Tokio',35.6852,139.7528,'Residencia imperial sobre el antiguo Castillo de Edo; posible tour guiado.'),
+    daniPlace('jimbocho','Jimbocho','compras','Dani · Tokio',35.6959,139.7576,'Barrio de los libros.'),
+    daniPlace('akihabara','Akihabara','compras','Dani · Tokio',35.6984,139.7730,'Electrónica, manga, anime, Super Potato, arcades, purikura y maid cafés.'),
+    daniPlace('kabukiza','Kabuki-za','otro','Dani · Tokio',35.6694,139.7670,'Teatro de Kabuki en Ginza.'),
+    daniPlace('hamarikyu','Jardines de Hamarikyu','naturaleza','Dani · Tokio',35.6596,139.7635,'Jardines tradicionales cerca de Tsukiji, con estanque de agua salada de la bahía.'),
+    daniPlace('ginza','Ginza','compras','Dani · Tokio',35.6717,139.7650,'Compras, showrooms de Nikon/Sony/Canon y calles peatonales en domingo.'),
+    daniPlace('nihonbashi','Nihonbashi','compras','Dani · Tokio',35.6840,139.7744,'Compras en Nihonbashi.'),
+    daniPlace('shibuya','Shibuya','zona','Dani · Tokio',35.6595,139.7004,'Paso de cebra, Hachiko, moda, ocio y Shibuya Sky.'),
+    daniPlace('hachiko','Estatua de Hachiko','otro','Dani · Tokio',35.6591,139.7005,'Punto clásico de Shibuya.'),
+    daniPlace('shibuya_sky','Shibuya Sky','otro','Dani · Tokio',35.6584,139.7021,'Mirador al aire libre de Shibuya Scramble Square, 360º a 230 m.'),
+    daniPlace('shibuya109','Shibuya 109','compras','Dani · Tokio',35.6595,139.6987,'Centro comercial asociado a moda gyaru.'),
+    daniPlace('daikanyama','Daikanyama','zona','Dani · Tokio',35.6480,139.7032,'Tokio hipster, tiendas trendy, casual y algunos edificios tradicionales.'),
+    daniPlace('hiroo','Hiroo','comida','Dani · Tokio',35.6515,139.7220,'Barrio exclusivo y familiar para comer.'),
+    daniPlace('harajuku','Harajuku','zona','Dani · Tokio',35.6702,139.7027,'Centro de moda callejera.'),
+    daniPlace('takeshita','Takeshita Street','compras','Dani · Tokio',35.6716,139.7050,'Moda, idol shops, gachapon y crepes.'),
+    daniPlace('gyoza_lou','Gyoza Lou','comida','Dani · Tokio',35.6679,139.7063,'Restaurante emblemático de gyozas en Harajuku.'),
+    daniPlace('meiji','Santuario Meiji Jingu','templo','Dani · Tokio',35.6764,139.6993,'Santuario dedicado al emperador Meiji y su esposa, rodeado de bosque.'),
+    daniPlace('yoyogi','Parque Yoyogi','naturaleza','Dani · Tokio',35.6717,139.6949,'Parque de descanso junto a Harajuku y Meiji.'),
+    daniPlace('shinjuku','Shinjuku','zona','Dani · Tokio',35.6938,139.7034,'Neones, Golden Gai, Omoide Yokocho, Kabukicho, Shin-Okubo y Shinjuku Nichome.'),
+    daniPlace('tochomae','Tochomae Station salida A5','otro','Dani · Tokio',35.6896,139.6921,'Punto de encuentro del free tour Shinjuku 18:30.'),
+    daniPlace('metropolitan_gov','Gobierno Metropolitano de Tokio','otro','Dani · Tokio',35.6896,139.6921,'Miradores gratuitos 360º.'),
+    daniPlace('love','Escultura LOVE Shinjuku','otro','Dani · Tokio',35.6933,139.6947,'Foto entre las letras LOVE.'),
+    daniPlace('golden_gai','Golden Gai','comida','Dani · Tokio',35.6938,139.7046,'Callejones pequeños con bares en Shinjuku.'),
+    daniPlace('omoide','Omoide Yokocho','comida','Dani · Tokio',35.6933,139.7002,'Callejón de yakitori.'),
+    daniPlace('kabukicho','Kabukicho','zona','Dani · Tokio',35.6950,139.7037,'Barrio rojo, love hotels y hotel con Godzilla.'),
+    daniPlace('shin_okubo','Shin-Okubo','zona','Dani · Tokio',35.7013,139.7003,'Barrio coreano de Tokio.'),
+    daniPlace('nichome','Shinjuku Nichome','zona','Dani · Tokio',35.6909,139.7066,'Barrio gay de Tokio.'),
+    daniPlace('roppongi','Roppongi','zona','Dani · Tokio',35.6628,139.7310,'Zona de ocio nocturno, rascacielos y miradores.'),
+    daniPlace('narita_return','Aeropuerto de Narita','otro','Dani · Tokio',35.7720,140.3929,'Tren hacia el aeropuerto 40 min - 1h. Fin de la ruta japonesa del documento Dani, sin incluir vuelo internacional.')] ;
+
+  const DANI_ROUTE_GROUPS = [
+    {id:'dani_2025_06_09', label:'Dani · 9 junio · Osaka', color:'#C1440E', placeIds:['dani_kix','dani_rise_osaka','dani_shinsaibashi','dani_dotonbori','dani_namba','dani_hozenji','dani_doguyasuji','dani_kuromon','dani_nipponbashi','dani_shinsekai','dani_shitennoji']},
+    {id:'dani_2025_06_10', label:'Dani · 10 junio · Hiroshima y Miyajima', color:'#8A5A44', placeIds:['dani_rise_osaka','dani_shin_osaka','dani_hiroshima_station','dani_hiroshima_castle','dani_hiroshima_art','dani_gate_park','dani_orizuru','dani_atomic_dome','dani_rest_house','dani_peace_park','dani_peace_bridges','dani_heritage_pier','dani_miyajima_pier','dani_otorii','dani_itsukushima','dani_daishoin','dani_senjokaku','dani_misen','dani_kakiya','dani_cafe_lente','dani_miyajima_pier','dani_hiroshima_station','dani_rise_osaka']},
+    {id:'dani_2025_06_11', label:'Dani · 11 junio · Nara y Kioto', color:'#3E7C59', placeIds:['dani_rise_osaka','dani_kintetsu_nara','dani_isuien','dani_nandaimon','dani_todaiji','dani_nigatsudo','dani_hokkedo','dani_mizuya','dani_kasuga','dani_wakamiya','dani_ichino_torii','dani_kofukuji','dani_nara_museum','dani_nara_park','dani_ukimido','dani_nakatanido','dani_naramachi','dani_yukari_kyoto']},
+    {id:'dani_2025_06_12', label:'Dani · 12 junio · Kioto sur e Higashiyama', color:'#223A5E', placeIds:['dani_yukari_kyoto','dani_fushimi_inari','dani_vermillion','dani_kiyomizu','dani_sannenzaka','dani_kodaiji','dani_chionin','dani_shorenin','dani_gion','dani_yasaka','dani_pontocho','dani_kanjiro','dani_yukari_kyoto']},
+    {id:'dani_2025_06_13', label:'Dani · 13 junio · Kioto norte, Arashiyama y coche', color:'#B8860B', placeIds:['dani_yukari_kyoto','dani_nijo','dani_kinkakuji','dani_ryoanji','dani_myoshinji','dani_arashiyama_station','dani_togetsukyo','dani_bamboo','dani_tenryuji','dani_otagi','dani_saga_torimoto','dani_car_rental_kyoto','dani_rikka_takayama']},
+    {id:'dani_2025_06_14', label:'Dani · 14 junio · Takayama y Shirakawa-go', color:'#5C7048', placeIds:['dani_rikka_takayama','dani_hida_kokubunji','dani_kaji_bridge','dani_miyagawa_market','dani_sanmachi','dani_nakabashi','dani_shiroyama','dani_shirakawago','dani_myozenji','dani_shirakawa_hachimangu','dani_ogimachi_bridge','dani_kazaguruma']},
+    {id:'dani_2025_06_15', label:'Dani · 15 junio · Kamikochi y Monte Fuji', color:'#3E7C59', placeIds:['dani_kazaguruma','dani_hirayu','dani_kamikochi','dani_myojin','dani_hotaka','dani_taisho','dani_shoji_hotel']},
+    {id:'dani_2025_06_16', label:'Dani · 16 junio · Monte Fuji y Tokio', color:'#223A5E', placeIds:['dani_shoji_hotel','dani_kawaguchi','dani_fujisanbike','dani_chureito','dani_honcho','dani_fuji_5th','dani_ikebukuro_return','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_17', label:'Dani · 17 junio · Noreste de Tokio', color:'#C1440E', placeIds:['dani_tokyo_airbnb','dani_miyabi_asakusa','dani_sensoji','dani_kagetsudo','dani_nakamise','dani_sumida_park','dani_azuma_bridge','dani_ueno_park','dani_ameyoko','dani_kameido','dani_kameido_gyoza','dani_skytree','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_18', label:'Dani · 18 junio · Kamakura y Yokohama', color:'#8A5A44', placeIds:['dani_tokyo_airbnb','dani_kamakura_buddha','dani_hasedera','dani_wakamiyaoji','dani_komachi','dani_tsurugaoka','dani_minato_mirai','dani_yokohama_chinatown','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_19', label:'Dani · 19 junio · Nikko', color:'#5C7048', placeIds:['dani_tokyo_airbnb','dani_tobu_nikko','dani_shinkyo','dani_toshogu','dani_takinoo','dani_futarasan','dani_taiyuinbyo','dani_rinnoji','dani_kanmangafuchi','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_20', label:'Dani · 20 junio · Centro de Tokio', color:'#223A5E', placeIds:['dani_tokyo_airbnb','dani_tokyo_station','dani_imperial_palace','dani_jimbocho','dani_akihabara','dani_kabukiza','dani_hamarikyu','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_21', label:'Dani · 21 junio · Oeste de Tokio', color:'#C1440E', placeIds:['dani_tokyo_airbnb','dani_shibuya','dani_hachiko','dani_shibuya_sky','dani_shibuya109','dani_daikanyama','dani_hiroo','dani_harajuku','dani_takeshita','dani_gyoza_lou','dani_meiji','dani_yoyogi','dani_shinjuku','dani_tochomae','dani_metropolitan_gov','dani_love','dani_golden_gai','dani_omoide','dani_kabukicho','dani_shin_okubo','dani_nichome','dani_roppongi','dani_tokyo_airbnb']},
+    {id:'dani_2025_06_22', label:'Dani · 22 junio · Ginza, Nihonbashi y Narita', color:'#B8860B', placeIds:['dani_tokyo_airbnb','dani_ginza','dani_nihonbashi','dani_narita_return']}
+  ];
+
   function buildSeedPlaces(){
-    return AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).map(p => Object.assign({}, p));
+    return AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).concat(DANI_PLACES_RAW).map(p => Object.assign({}, p));
   }
 
   function isAirportPlace(p){
@@ -768,6 +989,7 @@ const db = getDatabase(firebaseApp);
     // como categoría, nombre, notas, día, hora, enlaces, hotel, etc.
     merged.boundary = catalog.boundary || existing.boundary || null;
     merged.catalogItem = catalog.catalogItem !== false;
+    if(existing.daniAdopted){ merged.source = 'user'; merged.dani = false; merged.catalogItem = false; }
     if(catalog.lat != null && existing.lat == null) merged.lat = catalog.lat;
     if(catalog.lng != null && existing.lng == null) merged.lng = catalog.lng;
     return merged;
@@ -783,6 +1005,9 @@ const db = getDatabase(firebaseApp);
     });
     CATALOG_PLACES_RAW.forEach(cp => {
       byId.set(cp.id, mergeCatalogPlace(byId.get(cp.id), cp));
+    });
+    DANI_PLACES_RAW.forEach(dp => {
+      byId.set(dp.id, mergeCatalogPlace(byId.get(dp.id), dp));
     });
     state.places = Array.from(byId.values());
     const validIds = new Set(state.places.map(p=>p.id));
@@ -884,7 +1109,7 @@ const db = getDatabase(firebaseApp);
     if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
     return true;
   }
-  function renderAll(){ renderPlaces(); renderHotels(); renderItinerary(); renderMap(); }
+  function renderAll(){ renderDaniFilterChips(); renderSourceMapToggles(); renderPlaces(); renderHotels(); renderItinerary(); renderMap(); }
   function save(){
     if(!firebaseReady || cargandoDesdeFirebase) return;
     set(proyectoRef, currentPayload()).catch(()=>toast('No se pudo sincronizar'));
@@ -909,7 +1134,10 @@ const db = getDatabase(firebaseApp);
 
   let activeCatFilter = '';
   let activeRegionFilter = '';
+  let activeDaniFilter = 'ours';
   let activeMapDay = '';
+  let activeOursMap = true;
+  let activeDaniMap = false;
   let flightsVisible = false;
   const activeMapCategories = new Set(CATEGORIES.map(c=>c.id));
 
@@ -930,6 +1158,7 @@ const db = getDatabase(firebaseApp);
     document.getElementById('dayChipRow').style.display = tab==='mapa' ? 'flex' : 'none';
     document.getElementById('flightToggleRow').style.display = 'none';
     document.getElementById('mapFilterPanel').style.display = tab==='mapa' ? 'flex' : 'none';
+    document.getElementById('daniMapPanel').style.display = tab==='mapa' ? 'flex' : 'none';
     document.getElementById('btnAddPlace').style.display = (tab==='itinerario') ? 'none' : 'flex';
     if(tab==='mapa'){ setTimeout(()=>{ map.invalidateSize(); }, 30); }
   }
@@ -995,6 +1224,47 @@ const db = getDatabase(firebaseApp);
   }
 
 
+  function renderSourceMapToggles(){
+    const oursBtn = document.getElementById('oursMapToggle');
+    const daniBtn = document.getElementById('daniMapToggle');
+    if(oursBtn){
+      oursBtn.classList.toggle('active', activeOursMap);
+      oursBtn.title = activeOursMap ? 'Ocultar nuestros lugares' : 'Mostrar nuestros lugares';
+      oursBtn.onclick = ()=>{
+        activeOursMap = !activeOursMap;
+        renderSourceMapToggles();
+        requestMapAutoFit();
+        renderMap({fit:true});
+      };
+    }
+    if(daniBtn){
+      daniBtn.classList.toggle('active', activeDaniMap);
+      daniBtn.title = activeDaniMap ? 'Ocultar ruta Dani' : 'Mostrar ruta Dani';
+      daniBtn.onclick = ()=>{
+        activeDaniMap = !activeDaniMap;
+        renderSourceMapToggles();
+        requestMapAutoFit();
+        renderMap({fit:true});
+      };
+    }
+  }
+
+
+  function renderDaniFilterChips(){
+    const row = document.getElementById('daniFilterRow');
+    if(!row) return;
+    const opts = [
+      {id:'ours', label:'Nuestros'},
+      {id:'dani', label:'Dani'},
+      {id:'all', label:'Todos'}
+    ];
+    row.innerHTML = opts.map(o=>`<div class="pill ${activeDaniFilter===o.id?'active':''}" data-dani-filter="${o.id}">${o.label}</div>`).join('');
+    row.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeDaniFilter = p.dataset.daniFilter; renderDaniFilterChips(); renderPlaces(); });
+    });
+  }
+
+
   function mapCategoryIcon(c){
     if(c.id === 'zona') return '<span class="plain-icon">▦</span>';
     return c.emoji || '•';
@@ -1024,7 +1294,11 @@ const db = getDatabase(firebaseApp);
   /* ---------------- LUGARES panel ---------------- */
   function renderPlaces(){
     const container = document.getElementById('placesContainer');
-    const list = state.places.filter(p => (!activeCatFilter || p.category === activeCatFilter) && (!activeRegionFilter || placeRegionGroup(p) === activeRegionFilter));
+    const list = state.places.filter(p => {
+      if(activeDaniFilter === 'ours' && p.source === 'dani') return false;
+      if(activeDaniFilter === 'dani' && p.source !== 'dani') return false;
+      return (!activeCatFilter || p.category === activeCatFilter) && (!activeRegionFilter || placeRegionGroup(p) === activeRegionFilter);
+    });
     if(list.length === 0){
       container.innerHTML = `<div class="empty"><span class="big">🗾</span><p>No hay lugares con estos filtros.<br>Toca el botón “+” para añadir uno.</p></div>`;
       return;
@@ -1033,12 +1307,13 @@ const db = getDatabase(firebaseApp);
       list.map(p=>{
         const cat = catById(p.category);
         const day = state.days.find(d=>d.id===p.dayId);
-        return `<div class="row row-tap" onclick="App.openDetail('${p.id}')">
-          <div class="dot" style="background:${cat.color}">${cat.emoji || ''}</div>
+        return `<div class="row row-tap ${p.source==='dani'?'dani-row':''}" onclick="App.openDetail('${p.id}')">
+          <div class="dot" style="background:${cat.color}">${cat.emoji || (p.source==='dani' ? 'D' : '')}</div>
           <div class="main">
             <h4>${escapeHtml(p.name)}</h4>
-            <div class="sub">${p.region ? escapeHtml(p.region)+' · ' : ''}${day ? escapeHtml(day.label) : 'Sin día asignado'}${p.video ? ' · ▶ vídeo' : ''}</div>
+            <div class="sub">${p.source==='dani' ? 'Dani · ' : ''}${p.region ? escapeHtml(p.region)+' · ' : ''}${day ? escapeHtml(day.label) : 'Sin día asignado'}${p.video ? ' · ▶ vídeo' : ''}</div>
           </div>
+          ${p.source==='dani' ? `<button class="dani-action" onclick="event.stopPropagation(); App.adoptDaniPlace('${p.id}')">Pasar</button>` : ''}
           ${p.time ? `<div class="time">${p.time}</div>` : ''}
           <div class="chev">›</div>
         </div>`;
@@ -1220,7 +1495,7 @@ const db = getDatabase(firebaseApp);
   });
 
   /* ---------------- MAP ---------------- */
-  let map, cityLayer, zoneLayer, markersLayer, routeLayer, routeLine, flightLayer;
+  let map, cityLayer, zoneLayer, markersLayer, routeLayer, daniLayer, routeLine, flightLayer;
   let allowMapAutoFit = true;
   let programmaticMapMove = false;
   function requestMapAutoFit(){ allowMapAutoFit = true; }
@@ -1237,6 +1512,7 @@ const db = getDatabase(firebaseApp);
     zoneLayer = L.layerGroup().addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
+    daniLayer = L.layerGroup().addTo(map);
     flightLayer = L.layerGroup().addTo(map);
   }
 
@@ -1449,6 +1725,21 @@ const db = getDatabase(firebaseApp);
     pts.forEach(pt=>bounds.push(pt));
   }
 
+
+  function drawDaniRoutes(bounds){
+    if(!daniLayer) return;
+    const byId = new Map(state.places.map(p=>[p.id,p]));
+    DANI_ROUTE_GROUPS.forEach((route, idx)=>{
+      const pts = route.placeIds.map(id=>byId.get(id)).filter(p=>p && p.lat!=null && p.lng!=null).map(p=>[p.lat,p.lng]);
+      if(pts.length < 2) return;
+      const line = L.polyline(pts, {color:route.color || '#C1440E', weight:3, opacity:.66, dashArray:'8 8', lineCap:'round'}).addTo(daniLayer);
+      line.bindTooltip(route.label, {direction:'top'});
+      pts.forEach(pt=>bounds.push(pt));
+      const mid = pts[Math.floor(pts.length/2)];
+      L.marker(mid, {icon:L.divIcon({className:'', html:`<div style="background:#FFFDF8;border:1px solid ${route.color || '#C1440E'};border-radius:999px;padding:3px 7px;font-size:11px;font-weight:900;color:${route.color || '#C1440E'};box-shadow:0 2px 6px rgba(34,32,28,.22);">D${idx+1}</div>`, iconSize:[30,22], iconAnchor:[15,11]})}).addTo(daniLayer).bindTooltip(route.label, {direction:'top'});
+    });
+  }
+
   function renderMap(options){
     options = options || {};
     if(!map) return;
@@ -1457,11 +1748,12 @@ const db = getDatabase(firebaseApp);
     zoneLayer.clearLayers();
     markersLayer.clearLayers();
     routeLayer.clearLayers();
+    if(daniLayer) daniLayer.clearLayers();
     flightLayer.clearLayers();
     if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
 
-    let list = state.places.filter(p=>p.lat!=null && p.lng!=null && activeMapCategories.has(p.category));
-    if(activeMapDay) list = list.filter(p=>p.dayId===activeMapDay);
+    let list = state.places.filter(p=>p.lat!=null && p.lng!=null && activeMapCategories.has(p.category) && ((p.source === 'dani' && activeDaniMap) || (p.source !== 'dani' && activeOursMap)));
+    if(activeMapDay) list = list.filter(p=>p.dayId===activeMapDay || (activeDaniMap && p.source==='dani'));
     const bounds = [];
 
     const areaPlaces = list.filter(p=>p.category === 'zona' || p.geojson || p.boundaryQuery || p.boundaryQueries || p.polygon || p.fallbackPolygon);
@@ -1489,6 +1781,8 @@ const db = getDatabase(firebaseApp);
         L.marker(mid, {icon:L.divIcon({className:'', html:`<div style="background:#FFFDF8;border:1px solid ${mode.color};border-radius:999px;padding:2px 5px;font-size:13px;box-shadow:0 2px 6px rgba(34,32,28,.2);">${mode.emoji}</div>`, iconSize:[28,22], iconAnchor:[14,11]})}).addTo(routeLayer).on('click', ()=>openTransfer(t.id));
       }
     }
+
+    if(activeDaniMap){ drawDaniRoutes(bounds); }
 
     if(flightsVisible){
       const dayObj = state.days.find(d=>d.id===activeMapDay);
@@ -1545,7 +1839,7 @@ const db = getDatabase(firebaseApp);
       </div>
       <div class="sheet-actions">
         <button class="btn-ios secondary" onclick="App.closeDetail()">Cerrar</button>
-        <button class="btn-ios" onclick="App.editFromDetail('${p.id}')">Editar</button>
+        ${p.source==='dani' ? `<button class="btn-ios" onclick="App.adoptDaniPlace('${p.id}')">Pasar a nuestros</button>` : `<button class="btn-ios" onclick="App.editFromDetail('${p.id}')">Editar</button>`}
         <button class="btn-ios danger" onclick="App.deletePlace('${p.id}')">Eliminar</button>
       </div>`;
     detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
@@ -1779,6 +2073,13 @@ const db = getDatabase(firebaseApp);
       t.selectedOptionId = t.options[0] ? t.options[0].id : null;
       save(); renderItinerary(); renderHotels(); renderMap(); openTransfer(transferId);
     },
+    adoptDaniPlace(id){
+      const p = state.places.find(x=>x.id===id);
+      if(!p) return;
+      p.source = 'user'; p.dani = false; p.daniAdopted = true; p.catalogItem = false;
+      if(!p.notes) p.notes = 'Importado desde la ruta Dani.';
+      closeDetail(); save(); renderPlaces(); renderHotels(); renderMap({fit:false}); toast('Añadido a nuestros lugares');
+    },
     editFromDetail(id){ closeDetail(); openForm(state.places.find(p=>p.id===id)); },
     deletePlace(id){
       if(!confirm('¿Eliminar este lugar? No se puede deshacer.')) return;
@@ -2002,7 +2303,9 @@ const db = getDatabase(firebaseApp);
   initMap();
   renderCatChips();
   renderRegionChips();
+  renderDaniFilterChips();
   renderMapCategoryFilter();
+  renderSourceMapToggles();
   renderCatPicker();
   renderPlaces();
   renderHotels();
