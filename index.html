@@ -425,6 +425,7 @@
     <strong>🏨 Organiza aquí los alojamientos.</strong><br>
     Añade un lugar con categoría “Hoteles” y rellena dirección, noches, contacto, reserva y notas.
   </div>
+  <div class="chip-row" id="hotelSourceFilterRow" style="position:static; padding:0 0 12px;"></div>
   <div id="hotelsContainer"></div>
 </section>
 
@@ -458,6 +459,15 @@
 
     <div class="field-label">Categoría</div>
     <div class="cat-picker" id="catPicker"></div>
+
+    <div class="field-label">Origen</div>
+    <div class="field-group">
+      <div class="row"><select id="fSource">
+        <option value="user">Nosotros</option>
+        <option value="dani">Dani</option>
+        <option value="insta">Insta</option>
+      </select></div>
+    </div>
 
     <div class="field-label">Día, zona y enlace</div>
     <div class="field-group">
@@ -1179,7 +1189,7 @@ const db = getDatabase(firebaseApp);
     if(payload.tripTitle) document.getElementById('tripTitle').textContent = payload.tripTitle;
     return true;
   }
-  function renderAll(){ renderDaniFilterChips(); renderSourceMapToggles(); renderPlaces(); renderHotels(); renderItinerary(); renderMap(); }
+  function renderAll(){ renderDaniFilterChips(); renderHotelFilterChips(); renderSourceMapToggles(); renderPlaces(); renderHotels(); renderItinerary(); renderMap(); }
   function save(){
     if(!firebaseReady || cargandoDesdeFirebase) return;
     lastLocalSaveAt = Date.now();
@@ -1211,6 +1221,7 @@ const db = getDatabase(firebaseApp);
   let activeCatFilter = '';
   let activeRegionFilter = '';
   let activeDaniFilter = 'ours';
+  let activeHotelFilter = 'ours';
   let activeMapDay = '';
   let activeOursMap = true;
   let activeDaniMap = false;
@@ -1397,6 +1408,42 @@ const db = getDatabase(firebaseApp);
   }
 
 
+  function renderHotelFilterChips(){
+    const row = document.getElementById('hotelSourceFilterRow');
+    if(!row) return;
+    const opts = [
+      {id:'ours', label:'Nuestros'},
+      {id:'dani', label:'Dani'},
+      {id:'insta', label:'Insta'},
+      {id:'all', label:'Todos'}
+    ];
+    row.innerHTML = opts.map(o=>`<div class="pill ${activeHotelFilter===o.id?'active':''}" data-hotel-filter="${o.id}">${o.label}</div>`).join('');
+    row.querySelectorAll('.pill').forEach(p=>{
+      p.addEventListener('click', ()=>{ activeHotelFilter = p.dataset.hotelFilter; renderHotelFilterChips(); renderHotels(); });
+    });
+  }
+
+  function sourceValueForPlace(p){
+    if(!p) return 'user';
+    if(p.source === 'dani' || p.dani) return 'dani';
+    if(p.source === 'insta') return 'insta';
+    return 'user';
+  }
+  function sourceLabelForPlace(p){
+    const source = sourceValueForPlace(p);
+    if(source === 'dani') return 'Dani';
+    if(source === 'insta') return 'Insta';
+    return 'Nosotros';
+  }
+  function sourceMatchesFilter(p, filter){
+    const source = sourceValueForPlace(p);
+    if(filter === 'ours') return source === 'user';
+    if(filter === 'dani') return source === 'dani';
+    if(filter === 'insta') return source === 'insta';
+    return true;
+  }
+
+
   function mapCategoryIcon(c){
     if(c.id === 'zona') return '<span class="plain-icon">▦</span>';
     return c.emoji || '•';
@@ -1427,9 +1474,7 @@ const db = getDatabase(firebaseApp);
   function renderPlaces(){
     const container = document.getElementById('placesContainer');
     const list = state.places.filter(p => {
-      if(activeDaniFilter === 'ours' && (p.source === 'dani' || p.source === 'insta')) return false;
-      if(activeDaniFilter === 'dani' && p.source !== 'dani') return false;
-      if(activeDaniFilter === 'insta' && p.source !== 'insta') return false;
+      if(!sourceMatchesFilter(p, activeDaniFilter)) return false;
       return (!activeCatFilter || p.category === activeCatFilter) && (!activeRegionFilter || placeRegionGroup(p) === activeRegionFilter);
     });
     if(list.length === 0){
@@ -1457,21 +1502,24 @@ const db = getDatabase(firebaseApp);
 
 
   function renderHotels(){
+    renderHotelFilterChips();
     const container = document.getElementById('hotelsContainer');
     if(!container) return;
-    const hotels = state.places.filter(p=>p.category==='alojamiento');
+    const hotels = state.places.filter(p=>p.category==='alojamiento' && sourceMatchesFilter(p, activeHotelFilter));
     if(!hotels.length){
-      container.innerHTML = `<div class="empty"><span class="big">🏨</span><p>Todavía no hay hoteles.<br>Toca “+”, elige categoría Hoteles y rellena sus datos.</p></div>`;
+      const filterLabel = activeHotelFilter === 'ours' ? 'nuestros' : (activeHotelFilter === 'dani' ? 'de Dani' : (activeHotelFilter === 'insta' ? 'de Insta' : ''));
+      container.innerHTML = `<div class="empty"><span class="big">🏨</span><p>No hay hoteles ${filterLabel ? filterLabel + ' ' : ''}con este filtro.<br>Toca “+”, elige categoría Hoteles y rellena sus datos.</p></div>`;
       return;
     }
     container.innerHTML = `<div class="group-label">Hoteles (${hotels.length})</div>` + hotels.map(p=>{
       const stay = daysBetween(p.checkIn, p.checkOut);
       const day = state.days.find(d=>d.id===p.dayId);
-      return `<div class="group hotel-card"><div class="row row-tap" onclick="App.openDetail('${p.id}')">
+      const source = sourceLabelForPlace(p);
+      return `<div class="group hotel-card"><div class="row row-tap ${(p.source==='dani'||p.source==='insta')?'dani-row':''}" onclick="App.openDetail('${p.id}')">
         <div class="dot" style="background:var(--gold)">🏨</div>
         <div class="main">
           <h4>${escapeHtml(p.name)}</h4>
-          <div class="hotel-info">${p.address ? escapeHtml(p.address)+'<br>' : ''}${p.checkIn || p.checkOut ? `Entrada ${escapeHtml(p.checkIn || '—')} · Salida ${escapeHtml(p.checkOut || '—')}` : (day ? escapeHtml(day.label) : 'Sin fecha')}${stay ? ' · '+stay : ''}${p.bookingRef ? '<br>Reserva: '+escapeHtml(p.bookingRef) : ''}</div>
+          <div class="hotel-info"><strong>${escapeHtml(source)}</strong>${p.address ? ' · '+escapeHtml(p.address)+'<br>' : '<br>'}${p.checkIn || p.checkOut ? `Entrada ${escapeHtml(p.checkIn || '—')} · Salida ${escapeHtml(p.checkOut || '—')}` : (day ? escapeHtml(day.label) : 'Sin fecha')}${stay ? ' · '+stay : ''}${p.bookingRef ? '<br>Reserva: '+escapeHtml(p.bookingRef) : ''}</div>
         </div><div class="chev">›</div>
       </div></div>`;
     }).join('');
@@ -2028,7 +2076,8 @@ const db = getDatabase(firebaseApp);
       </div>
       <div class="sheet-actions">
         <button class="btn-ios secondary" onclick="App.closeDetail()">Cerrar</button>
-        ${(p.source==='dani'||p.source==='insta') ? `<button class="btn-ios" onclick="App.adoptPlace('${p.id}')">Pasar a nuestros</button>` : `<button class="btn-ios" onclick="App.editFromDetail('${p.id}')">Editar</button>`}
+        <button class="btn-ios" onclick="App.editFromDetail('${p.id}')">Editar</button>
+        ${(p.source==='dani'||p.source==='insta'||p.dani) ? `<button class="btn-ios" onclick="App.adoptPlace('${p.id}')">Pasar a nuestros</button>` : ''}
         <button class="btn-ios danger" onclick="App.deletePlace('${p.id}')">Eliminar</button>
       </div>`;
     detailBackdrop.classList.add('open'); detailSheet.classList.add('open');
@@ -2159,6 +2208,7 @@ const db = getDatabase(firebaseApp);
     document.getElementById('fSearchQuery').value = '';
     document.getElementById('searchResults').innerHTML = '';
     selectedCategory = place ? place.category : CATEGORIES[0].id;
+    document.getElementById('fSource').value = sourceValueForPlace(place);
     renderCatPicker();
     toggleHotelFields();
     fillDaySelect();
@@ -2195,8 +2245,9 @@ const db = getDatabase(firebaseApp);
     if(pendingLat==null){ toast('Busca una ubicación o toca el mini-mapa'); return; }
     const videoVal = document.getElementById('fVideo').value.trim();
     if(videoVal && !isValidUrl(videoVal)){ toast('El enlace del vídeo no es una URL válida'); return; }
+    const sourceVal = document.getElementById('fSource').value || 'user';
     const data = {
-      name, category: selectedCategory, region: document.getElementById('fRegion').value,
+      name, category: selectedCategory, source: sourceVal, dani: sourceVal === 'dani', region: document.getElementById('fRegion').value,
       dayId: document.getElementById('fDay').value || null,
       video: videoVal, notes: document.getElementById('fNotes').value.trim(),
       lat: pendingLat, lng: pendingLng,
@@ -2210,13 +2261,19 @@ const db = getDatabase(firebaseApp);
     };
     if(editingPlaceId){
       const existing = state.places.find(p=>p.id===editingPlaceId);
-      Object.assign(existing, data);
-      if(existing && existing.source === 'insta') existing.source = 'insta';
+      if(existing){
+        Object.assign(existing, data);
+        existing.dani = sourceVal === 'dani';
+        if(sourceVal === 'user') existing.daniAdopted = true;
+        if(sourceVal !== 'dani') existing.dani = false;
+        if(sourceVal !== 'dani' && sourceVal !== 'insta') existing.catalogItem = false;
+      }
       normalizeDayOrder(data.dayId);
     }
     else{
       const newPlace = Object.assign({id: uid()}, data);
-      if(isInstagramUrl(videoVal)) newPlace.source = 'insta';
+      newPlace.dani = sourceVal === 'dani';
+      if(sourceVal === 'user') newPlace.catalogItem = false;
       if(newPlace.dayId){ newPlace.order = getOrderedStops(newPlace.dayId).length + 1; }
       state.places.push(newPlace);
     }
