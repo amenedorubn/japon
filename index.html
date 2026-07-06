@@ -400,6 +400,17 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="places-grid" id="placesGrid"></div>
   </section>
 
+  <!-- ============ HOTELES ============ -->
+  <section class="view" id="view-hoteles">
+    <div class="filter-bar" style="justify-content:space-between">
+      <h2 class="section" style="margin:0">🏨 Alojamientos <small id="hotelCount"></small></h2>
+      <button class="btn small" id="btnAddHotel">＋ Añadir hotel</button>
+    </div>
+    <div class="grid2" id="hotelsList" style="margin-top:12px"></div>
+    <h2 class="section">📋 Bases por reservar <small>sugerencias del plan</small></h2>
+    <div class="grid2" id="hotelPlaceholders"></div>
+  </section>
+
   <!-- ============ GUÍA ============ -->
   <section class="view" id="view-guia">
     <h2 class="section">✅ Preparativos <small id="checkProgress"></small></h2>
@@ -1448,7 +1459,11 @@ function fixTransfers(day){
 ================================================================ */
 let fb = null, fbReady = false, applyingRemote = false;
 let syncOn = localStorage.getItem('jp27_sync') !== '0';
-const FB_PROJECT_PATH = 'proyectos/' + (location.hash.replace('#','') || 'viaje-japon');
+// El hash puede ser navegación de pestañas ('#/mapa') o un proyecto
+// alternativo ('#miproyecto', como en la app original). Solo lo segundo
+// cambia la ruta de Firebase.
+const _hashProj = location.hash.replace('#','');
+const FB_PROJECT_PATH = 'proyectos/' + ((_hashProj && !_hashProj.startsWith('/')) ? _hashProj : 'viaje-japon');
 function updateSyncBtn(){
   const b = $('#btnSync');
   b.classList.toggle('on', !!(syncOn && fbReady));
@@ -1643,11 +1658,26 @@ const placeUid = () => 'id_' + Math.random().toString(36).slice(2,10) + Date.now
 function userPlaces(){
   return state.places.filter(p => p && p.source === 'user' && !p.catalogItem && p.lat != null);
 }
-/* Adaptador de esquema original → tarjeta de esta app */
+/* Adaptador de esquema original → tarjeta de esta app.
+   Los campos de hotel (nombres de la app original) pasan tal cual. */
 function userPlaceView(p){
   return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
     lat: p.lat, lng: p.lng, dur: 60, yen: null, price: '', hours: '', web: '',
-    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: true, id: p.id};
+    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: true, id: p.id,
+    address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
+    checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
+    hotelWebsite: p.hotelWebsite || ''};
+}
+/* Noches entre dos fechas ISO (portado de la app original) */
+function daysBetween(checkIn, checkOut){
+  if(!checkIn || !checkOut) return '';
+  const a = new Date(checkIn + 'T00:00:00'), b = new Date(checkOut + 'T00:00:00');
+  const n = Math.round((b - a) / 86400000);
+  return n > 0 ? `${n} noche${n === 1 ? '' : 's'}` : '';
+}
+/* Hoteles reales (reservas del usuario, compartidas con la app original) */
+function userHotels(){
+  return state.places.filter(p => p && p.source === 'user' && !p.dani && p.category === 'alojamiento' && p.lat != null);
 }
 /* Resolución unificada: catálogo (PLACES) o sitio propio (state.places) */
 function placeById(pid){
@@ -1683,10 +1713,11 @@ async function nominatimSearch(q){
   if(!r.ok) throw 0;
   return r.json();
 }
-function openPlaceForm(placeId){
+function openPlaceForm(placeId, presetCat){
   const p = placeId ? state.places.find(x => x.id === placeId) : null;
+  const selCat = p ? p.category : (presetCat || '');
   const catOpts = Object.keys(CATS).map(c =>
-    `<option value="${c}" ${p && p.category === c ? 'selected' : ''}>${CATS[c].emoji} ${CATS[c].label}</option>`).join('');
+    `<option value="${c}" ${selCat === c ? 'selected' : ''}>${CATS[c].emoji} ${CATS[c].label}</option>`).join('');
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h3>${p ? '✏️ Editar sitio' : '📍 Nuevo sitio'}</h3>
@@ -1708,6 +1739,19 @@ function openPlaceForm(placeId){
     </div>
     <div class="form-row"><label>Notas</label><textarea id="fpNotes" rows="2" placeholder="Qué es, por qué guardarlo…">${p ? esc(p.notes || '') : ''}</textarea></div>
     <div class="form-row"><label>Reel / vídeo (enlace)</label><input id="fpVideo" value="${p ? esc(p.video || '') : ''}" placeholder="https://www.instagram.com/reel/…"></div>
+    <div id="fpHotelFields" style="display:none;border-top:1px dashed var(--line);margin-top:8px;padding-top:4px">
+      <div class="form-row"><label>Dirección</label><input id="fpAddress" value="${p ? esc(p.address || '') : ''}" placeholder="Calle, número, distrito…"></div>
+      <div class="form-row"><label>Zona / barrio</label><input id="fpHotelArea" value="${p ? esc(p.hotelArea || '') : ''}" placeholder="Ej. Asakusa, Namba…"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Check-in</label><input type="date" id="fpCheckIn" value="${p ? esc(p.checkIn || '') : ''}"></div>
+        <div class="form-row"><label>Check-out</label><input type="date" id="fpCheckOut" value="${p ? esc(p.checkOut || '') : ''}"></div>
+      </div>
+      <div class="form-row"><label>Nº reserva / plataforma</label><input id="fpBookingRef" value="${p ? esc(p.bookingRef || '') : ''}" placeholder="Booking, Agoda, email…"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Teléfono</label><input id="fpHotelPhone" value="${p ? esc(p.hotelPhone || '') : ''}" placeholder="+81 …"></div>
+        <div class="form-row"><label>Web del hotel</label><input id="fpHotelWebsite" value="${p ? esc(p.hotelWebsite || '') : ''}" placeholder="https://…"></div>
+      </div>
+    </div>
     <div class="btn-row">
       <button class="btn" onclick="savePlaceForm(${p ? `'${p.id}'` : 'null'})">${p ? 'Guardar cambios' : 'Añadir sitio'}</button>
       <button class="btn ghost" onclick="closeModal()">Cancelar</button>
@@ -1743,6 +1787,10 @@ function openPlaceForm(placeId){
   };
   $('#fpSearchBtn').addEventListener('click', doSearch);
   $('#fpSearch').addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); doSearch(); } });
+  // Campos de hotel: visibles solo con categoría "alojamiento"
+  const syncHotelFields = () => { $('#fpHotelFields').style.display = $('#fpCat').value === 'alojamiento' ? 'block' : 'none'; };
+  $('#fpCat').addEventListener('change', syncHotelFields);
+  syncHotelFields();
 }
 function savePlaceForm(placeId){
   const name = $('#fpName').value.trim();
@@ -1751,7 +1799,12 @@ function savePlaceForm(placeId){
   const video = $('#fpVideo').value.trim();
   if(video && !/^https?:\/\//i.test(video)){ toast('El enlace del vídeo no es una URL válida'); return; }
   const data = {name, category: $('#fpCat').value, region: $('#fpRegion').value.trim() || 'Mis sitios',
-    notes: $('#fpNotes').value.trim(), video, lat: pendingLat, lng: pendingLng};
+    notes: $('#fpNotes').value.trim(), video, lat: pendingLat, lng: pendingLng,
+    // Campos de hotel: mismos nombres que la app original
+    address: $('#fpAddress').value.trim(), hotelArea: $('#fpHotelArea').value.trim(),
+    checkIn: $('#fpCheckIn').value, checkOut: $('#fpCheckOut').value,
+    bookingRef: $('#fpBookingRef').value.trim(), hotelPhone: $('#fpHotelPhone').value.trim(),
+    hotelWebsite: $('#fpHotelWebsite').value.trim()};
   if(placeId){
     const p = state.places.find(x => x.id === placeId);
     if(p) Object.assign(p, data);
@@ -1760,7 +1813,8 @@ function savePlaceForm(placeId){
       catalogItem: false, dayId: null, time: ''}, data));
   }
   pushPlaces();
-  closeModal(); renderSitios(); if(curTab === 'mapa') renderMapDay();
+  closeModal(); renderSitios(); renderHoteles(); renderInicio();
+  if(curTab === 'mapa') renderMapDay();
   toast(placeId ? 'Sitio actualizado' : 'Sitio añadido ✓');
 }
 function deleteUserPlace(placeId){
@@ -1773,10 +1827,63 @@ function deleteUserPlace(placeId){
     if(day.stops.length !== before) fixTransfers(day);
   });
   pushPlaces(); commit();
-  closeModal(); renderSitios(); renderItinerary(); if(curTab === 'mapa') renderMapDay();
+  closeModal(); renderSitios(); renderHoteles(); renderInicio(); renderItinerary();
+  if(curTab === 'mapa') renderMapDay();
   toast('Sitio eliminado');
 }
 $('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
+
+/* ================================================================
+   HOTELES (fase 4)
+   Reservas reales desde state.places (compartidas con la app
+   original: address, checkIn/Out, bookingRef, hotelPhone, …) +
+   las bases "por reservar" sugeridas del catálogo como referencia.
+================================================================ */
+function hotelBasePlaceholders(){
+  return Object.keys(PLACES)
+    .filter(pid => PLACES[pid].cat === 'alojamiento' && /por reservar/i.test(PLACES[pid].price || ''))
+    .map(pid => ({pid, p: PLACES[pid]}));
+}
+function hotelCardHTML(p){
+  const nights = daysBetween(p.checkIn, p.checkOut);
+  const website = p.hotelWebsite && /^https?:\/\//i.test(p.hotelWebsite) ? p.hotelWebsite : '';
+  return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="font-size:24px">🏨</div>
+      <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(p.name)}</b>
+        <div style="font-size:12px;color:var(--muted)">${esc(p.hotelArea || p.region || '')}</div>
+      </div>
+      <span class="pill green">✓ Reservado</span>
+    </div>
+    <div class="info-rows" style="margin:0">
+      ${p.checkIn ? `<div class="info-row"><span class="k">📅 Fechas</span><span class="v">${esc(p.checkIn)} → ${esc(p.checkOut)}${nights ? ' · ' + nights : ''}</span></div>` : ''}
+      ${p.address ? `<div class="info-row"><span class="k">📍 Dirección</span><span class="v">${esc(p.address)}</span></div>` : ''}
+      ${p.bookingRef ? `<div class="info-row"><span class="k">🎫 Reserva</span><span class="v">${esc(p.bookingRef)}</span></div>` : ''}
+      ${p.hotelPhone ? `<div class="info-row"><span class="k">📞 Teléfono</span><span class="v"><a href="tel:${esc(p.hotelPhone.replace(/\s+/g,''))}">${esc(p.hotelPhone)}</a></span></div>` : ''}
+    </div>
+    ${p.notes ? `<div style="font-size:12.5px;color:var(--muted)">${esc(p.notes)}</div>` : ''}
+    <div class="btn-row" style="margin-top:2px">
+      ${website ? `<a class="btn ghost small" href="${esc(website)}" target="_blank" rel="noopener">🌐 Web</a>` : ''}
+      <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Maps</a>
+      <button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>
+    </div>
+  </div>`;
+}
+function renderHoteles(){
+  const hotels = userHotels();
+  $('#hotelCount').textContent = hotels.length ? hotels.length + ' reservado' + (hotels.length === 1 ? '' : 's') : '';
+  $('#hotelsList').innerHTML = hotels.map(hotelCardHTML).join('')
+    || `<div class="card" style="padding:18px;color:var(--muted);font-size:13.5px">Todavía no hay hoteles reservados. Usa <b>＋ Añadir hotel</b> cuando tengáis la primera reserva: dirección, fechas, nº de reserva y teléfono quedarán guardados y sincronizados.</div>`;
+  $('#hotelPlaceholders').innerHTML = hotelBasePlaceholders().map(({pid, p}) => `
+    <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${pid}')">
+      <div style="font-size:22px">🏨</div>
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
+        <div style="font-size:12.5px;color:var(--muted)">${esc(p.desc)}</div>
+      </div>
+      <span class="pill red">Por reservar</span>
+    </div>`).join('');
+}
+$('#btnAddHotel').addEventListener('click', () => openPlaceForm(null, 'alojamiento'));
 
 /* ================================================================
    RUTAS REALES (OSRM sobre OpenStreetMap)
@@ -1825,7 +1932,7 @@ function cachedRoute(a, b, profile){
 /* ================================================================
    NAVEGACIÓN
 ================================================================ */
-const TABS = [['inicio','🏠','Inicio'],['itinerario','📅','Itinerario'],['mapa','🗺️','Mapa'],['sitios','📍','Sitios'],['guia','🧳','Guía']];
+const TABS = [['inicio','🏠','Inicio'],['itinerario','📅','Itinerario'],['mapa','🗺️','Mapa'],['sitios','📍','Sitios'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
 let curTab = 'inicio';
 function buildNav(){
   $('#topnav').innerHTML = TABS.map(t => `<button data-tab="${t[0]}">${t[2]}</button>`).join('');
@@ -1927,22 +2034,27 @@ function renderInicio(){
       ${f.note ? `<div style="font-size:12px;color:var(--muted)">⚠️ ${esc(f.note)}</div>` : ''}
     </div>`).join('');
 
-  const hotels = [
-    {pid: 'hotel_tokyo', dates: '9–16 y 22–25 abril (12 noches)', ok: false},
-    {pid: 'hotel_kyoto', dates: '16–19 abril (3 noches)', ok: false},
-    {pid: 'hotel_osaka', dates: '19–22 abril (3 noches)', ok: false},
-    {pid: 'apa_asakusabashi', dates: '25–27 abril (2 noches)', ok: true},
-  ];
-  $('#hotelCards').innerHTML = hotels.map(h => {
-    const p = PLACES[h.pid];
-    return `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${h.pid}')">
+  // Reservas reales (state.places, sincronizadas) + bases sugeridas del catálogo.
+  const BASE_DATES = {hotel_tokyo: '9–16 y 22–25 abril (12 noches)', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
+  const bookedCards = userHotels().map(p => {
+    const nights = daysBetween(p.checkIn, p.checkOut);
+    return `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${p.id}')">
       <div class="emoji" style="font-size:24px">🏨</div>
-      <div style="flex:1"><b>${esc(p.name)}</b>
-        <div style="font-size:12.5px;color:var(--muted)">${h.dates}</div>
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
+        <div style="font-size:12.5px;color:var(--muted)">${p.checkIn ? esc(p.checkIn) + ' → ' + esc(p.checkOut || '') + (nights ? ' (' + nights + ')' : '') : esc(p.hotelArea || p.region || '')}</div>
       </div>
-      <span class="pill ${h.ok ? 'green' : 'red'}">${h.ok ? '✓ Reservado' : 'Por reservar'}</span>
+      <span class="pill green">✓ Reservado</span>
     </div>`;
-  }).join('');
+  });
+  const baseCards = hotelBasePlaceholders().map(({pid, p}) =>
+    `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${pid}')">
+      <div class="emoji" style="font-size:24px">🏨</div>
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
+        <div style="font-size:12.5px;color:var(--muted)">${esc(BASE_DATES[pid] || '')}</div>
+      </div>
+      <span class="pill red">Por reservar</span>
+    </div>`);
+  $('#hotelCards').innerHTML = bookedCards.concat(baseCards).join('');
 }
 
 /* ================================================================
@@ -2148,7 +2260,11 @@ function openPlace(pid){
     <div class="info-rows">
       ${p.price ? `<div class="info-row"><span class="k">💴 Precio</span><span class="v">${esc(p.price)}</span></div>` : p.yen === 0 ? '<div class="info-row"><span class="k">💴 Precio</span><span class="v">Gratis</span></div>' : ''}
       ${p.hours ? `<div class="info-row"><span class="k">🕐 Horario</span><span class="v">${esc(p.hours)}</span></div>` : ''}
-      ${p.dur ? `<div class="info-row"><span class="k">⏱️ Tiempo sugerido</span><span class="v">${fmtMin(p.dur)}</span></div>` : ''}
+      ${p.dur && p.cat !== 'alojamiento' ? `<div class="info-row"><span class="k">⏱️ Tiempo sugerido</span><span class="v">${fmtMin(p.dur)}</span></div>` : ''}
+      ${p.checkIn ? `<div class="info-row"><span class="k">📅 Fechas</span><span class="v">${esc(p.checkIn)} → ${esc(p.checkOut || '')}${daysBetween(p.checkIn, p.checkOut) ? ' · ' + daysBetween(p.checkIn, p.checkOut) : ''}</span></div>` : ''}
+      ${p.address ? `<div class="info-row"><span class="k">📍 Dirección</span><span class="v">${esc(p.address)}</span></div>` : ''}
+      ${p.bookingRef ? `<div class="info-row"><span class="k">🎫 Reserva</span><span class="v">${esc(p.bookingRef)}</span></div>` : ''}
+      ${p.hotelPhone ? `<div class="info-row"><span class="k">📞 Teléfono</span><span class="v"><a href="tel:${esc(p.hotelPhone.replace(/\s+/g,''))}">${esc(p.hotelPhone)}</a></span></div>` : ''}
     </div>
     <div class="btn-row">
       ${p.web ? `<a class="btn ghost small" href="${esc(p.web)}" target="_blank" rel="noopener">🌐 Web oficial</a>` : ''}
@@ -2504,7 +2620,7 @@ $('#btnReset').addEventListener('click', () => {
    INIT
 ================================================================ */
 function renderAll(){
-  renderInicio(); renderItinerary(); renderSitios(); renderGuia();
+  renderInicio(); renderItinerary(); renderSitios(); renderHoteles(); renderGuia();
   if(curTab === 'mapa') renderMapDay();
 }
 buildNav();
