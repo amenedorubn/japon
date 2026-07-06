@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\amene\\\\Downloads\\\\index.html\" | Measure-Object -Line\\).Lines)",
+      "PowerShell($p = \"C:\\\\Users\\\\amene\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-amene-Documents-JAPAN\\\\972fb372-185b-439f-95e7-e1cb3a698e9c\\\\scratchpad\\\\extracted.html\"; \\(Get-Content $p | Measure-Object -Line\\).Lines; Select-String -Path $p -Pattern 'text/babel|const DAYS|const ITINERARY|itinerary|dias|días' -List | Select-Object -First 10 LineNumber, @{n='L';e={$_.Line.Substring\\(0,[Math]::Min\\(120,$_.Line.Length\\)\\)}})"
+    ]
+  }
+}
