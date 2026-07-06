@@ -393,6 +393,7 @@ table.phr tr:last-child td{border-bottom:none;}
   <section class="view" id="view-sitios">
     <div class="filter-bar">
       <input type="search" id="placeSearch" placeholder="Buscar sitio… (templo, ramen, mirador)">
+      <button class="btn small" id="btnAddPlace">＋ Añadir sitio</button>
     </div>
     <div class="filter-bar" id="regionChips"></div>
     <div class="filter-bar" id="catChips"></div>
@@ -1371,7 +1372,7 @@ const LS_KEY = 'japon27_app_v1';
 const CITY_COLORS = {Tokio:'#cf3f2a', Kioto:'#2b4a7a', Osaka:'#a97b12', Nara:'#3e7c59', Hiroshima:'#57534a', Kamakura:'#8a5a44', Nikko:'#5c7048', 'Monte Fuji':'#2b8ca3', Yokohama:'#4a7a9a', Miyajima:'#8a4a8a', Vuelo:'#889'};
 
 function gapWalkEstimate(day, i){
-  const a = PLACES[day.stops[i] && day.stops[i].pid], b = PLACES[day.stops[i+1] && day.stops[i+1].pid];
+  const a = placeById(day.stops[i] && day.stops[i].pid), b = placeById(day.stops[i+1] && day.stops[i+1].pid);
   if(!a || !b) return 10;
   return walkEstimate(haversine(a, b));
 }
@@ -1529,7 +1530,8 @@ async function initFirebase(){
       set: dbM.set,
       rootNode: dbM.ref(db, FB_PROJECT_PATH),             // lectura: payload completo
       v2Node: dbM.ref(db, FB_PROJECT_PATH + '/state/v2'), // escritura: nuestro hijo
-      titleNode: dbM.ref(db, FB_PROJECT_PATH + '/tripTitle') // hoja escalar compartida
+      titleNode: dbM.ref(db, FB_PROJECT_PATH + '/tripTitle'), // hoja escalar compartida
+      placesNode: dbM.ref(db, FB_PROJECT_PATH + '/state/places') // lugares compartidos (fase 3)
     };
     dbM.onValue(fb.rootNode, snap => {
       const remote = snap.val();
@@ -1629,6 +1631,152 @@ function notifyRemoteChange(){
   }catch(e){}
 }
 $('#btnNotify').addEventListener('click', requestChangeNotifications);
+
+/* ================================================================
+   SITIOS PROPIOS (fase 3)
+   Lugares creados por el usuario. Viven en state.places con el MISMO
+   esquema que la app original (source:'user', category, notes, video…),
+   así aparecen también en ella vía Firebase sin conversión alguna.
+================================================================ */
+const placeUid = () => 'id_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+// Lugares del usuario (no catálogo, no Dani: esos llegan en fase 5)
+function userPlaces(){
+  return state.places.filter(p => p && p.source === 'user' && !p.catalogItem && p.lat != null);
+}
+/* Adaptador de esquema original → tarjeta de esta app */
+function userPlaceView(p){
+  return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
+    lat: p.lat, lng: p.lng, dur: 60, yen: null, price: '', hours: '', web: '',
+    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: true, id: p.id};
+}
+/* Resolución unificada: catálogo (PLACES) o sitio propio (state.places) */
+function placeById(pid){
+  if(PLACES[pid]) return PLACES[pid];
+  const p = state.places.find(x => x && x.id === pid && x.source === 'user');
+  return p ? userPlaceView(p) : null;
+}
+let placesTimer = null;
+function pushPlaces(){
+  persistLocal();
+  if(!fb || !syncOn) return;
+  clearTimeout(placesTimer);
+  placesTimer = setTimeout(() => {
+    lastLocalSaveAt = Date.now();
+    // set() SOLO sobre el hijo state/places (la app original lo lee tal cual).
+    fb.set(fb.placesNode, state.places).catch(() => toast('No se pudo sincronizar'));
+  }, 800);
+}
+
+/* --- Formulario de alta/edición con mini-mapa + búsqueda Nominatim --- */
+let miniMap = null, miniPin = null, pendingLat = null, pendingLng = null;
+function setMiniPin(lat, lng, pan){
+  pendingLat = lat; pendingLng = lng;
+  if(!miniMap) return;
+  if(!miniPin){ miniPin = L.marker([lat, lng]).addTo(miniMap); }
+  else miniPin.setLatLng([lat, lng]);
+  if(pan) miniMap.setView([lat, lng], Math.max(miniMap.getZoom(), 14));
+  const st = $('#pinStatus');
+  if(st){ st.textContent = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`; st.style.color = 'var(--green)'; }
+}
+async function nominatimSearch(q){
+  const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=es&q=' + encodeURIComponent(q));
+  if(!r.ok) throw 0;
+  return r.json();
+}
+function openPlaceForm(placeId){
+  const p = placeId ? state.places.find(x => x.id === placeId) : null;
+  const catOpts = Object.keys(CATS).map(c =>
+    `<option value="${c}" ${p && p.category === c ? 'selected' : ''}>${CATS[c].emoji} ${CATS[c].label}</option>`).join('');
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3>${p ? '✏️ Editar sitio' : '📍 Nuevo sitio'}</h3>
+    <div class="form-row"><label>Nombre *</label><input id="fpName" value="${p ? esc(p.name) : ''}" placeholder="Ej. Café con vistas al Fuji"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Categoría</label><select id="fpCat">${catOpts}</select></div>
+      <div class="form-row"><label>Zona / región</label><input id="fpRegion" value="${p ? esc(p.region || '') : ''}" placeholder="Ej. Tokio"></div>
+    </div>
+    <div class="form-row"><label>Buscar dirección o lugar</label>
+      <div style="display:flex;gap:8px">
+        <input id="fpSearch" style="flex:1" placeholder="Ej. Nakameguro, Tokyo">
+        <button class="btn small ghost" id="fpSearchBtn">Buscar</button>
+      </div>
+      <div class="search-list" id="fpResults" style="max-height:22dvh"></div>
+    </div>
+    <div class="form-row"><label>O toca el mapa para fijar el punto</label>
+      <div id="fpMiniMap" style="height:200px;border-radius:12px;border:1px solid var(--line)"></div>
+      <div id="pinStatus" style="font-size:12px;margin-top:5px;color:var(--muted)">Sin ubicación todavía</div>
+    </div>
+    <div class="form-row"><label>Notas</label><textarea id="fpNotes" rows="2" placeholder="Qué es, por qué guardarlo…">${p ? esc(p.notes || '') : ''}</textarea></div>
+    <div class="form-row"><label>Reel / vídeo (enlace)</label><input id="fpVideo" value="${p ? esc(p.video || '') : ''}" placeholder="https://www.instagram.com/reel/…"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="savePlaceForm(${p ? `'${p.id}'` : 'null'})">${p ? 'Guardar cambios' : 'Añadir sitio'}</button>
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      ${p ? `<button class="btn danger" onclick="deleteUserPlace('${p.id}')" style="margin-left:auto">🗑 Eliminar</button>` : ''}
+    </div>`);
+  pendingLat = p ? p.lat : null; pendingLng = p ? p.lng : null;
+  if(miniMap){ miniMap.remove(); miniMap = null; miniPin = null; }
+  miniMap = L.map('fpMiniMap', {zoomControl: false, attributionControl: false})
+    .setView(p ? [p.lat, p.lng] : [35.68, 139.76], p ? 14 : 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 19}).addTo(miniMap);
+  miniMap.on('click', ev => setMiniPin(ev.latlng.lat, ev.latlng.lng, false));
+  if(p) setMiniPin(p.lat, p.lng, false);
+  setTimeout(() => miniMap && miniMap.invalidateSize(), 120);
+  const doSearch = async () => {
+    const q = $('#fpSearch').value.trim();
+    if(!q) return;
+    $('#fpResults').innerHTML = '<div style="padding:8px;color:var(--muted);font-size:13px">Buscando…</div>';
+    try{
+      const rs = await nominatimSearch(q);
+      $('#fpResults').innerHTML = rs.length ? rs.map((r, i) => `
+        <div class="search-item" data-i="${i}">
+          <div class="emoji">📍</div>
+          <div style="min-width:0"><b>${esc(r.name || r.display_name.split(',')[0])}</b>
+          <small style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.display_name)}</small></div>
+        </div>`).join('') : '<div style="padding:8px;color:var(--muted);font-size:13px">Sin resultados</div>';
+      $$('#fpResults .search-item').forEach(el => el.addEventListener('click', () => {
+        const r = rs[+el.dataset.i];
+        setMiniPin(+r.lat, +r.lon, true);
+        if(!$('#fpName').value.trim()) $('#fpName').value = r.name || r.display_name.split(',')[0];
+        $('#fpResults').innerHTML = '';
+      }));
+    }catch(e){ $('#fpResults').innerHTML = '<div style="padding:8px;color:var(--muted);font-size:13px">No se pudo buscar (¿sin conexión?)</div>'; }
+  };
+  $('#fpSearchBtn').addEventListener('click', doSearch);
+  $('#fpSearch').addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); doSearch(); } });
+}
+function savePlaceForm(placeId){
+  const name = $('#fpName').value.trim();
+  if(!name){ toast('Ponle un nombre al sitio'); return; }
+  if(pendingLat == null){ toast('Busca una dirección o toca el mini-mapa'); return; }
+  const video = $('#fpVideo').value.trim();
+  if(video && !/^https?:\/\//i.test(video)){ toast('El enlace del vídeo no es una URL válida'); return; }
+  const data = {name, category: $('#fpCat').value, region: $('#fpRegion').value.trim() || 'Mis sitios',
+    notes: $('#fpNotes').value.trim(), video, lat: pendingLat, lng: pendingLng};
+  if(placeId){
+    const p = state.places.find(x => x.id === placeId);
+    if(p) Object.assign(p, data);
+  } else {
+    state.places.push(Object.assign({id: placeUid(), source: 'user', dani: false,
+      catalogItem: false, dayId: null, time: ''}, data));
+  }
+  pushPlaces();
+  closeModal(); renderSitios(); if(curTab === 'mapa') renderMapDay();
+  toast(placeId ? 'Sitio actualizado' : 'Sitio añadido ✓');
+}
+function deleteUserPlace(placeId){
+  if(!confirm('¿Eliminar este sitio? También se quitará de los días del itinerario donde aparezca.')) return;
+  state.places = state.places.filter(p => p.id !== placeId);
+  // Quitar las paradas del itinerario v2 que lo referencien
+  state.days.forEach(day => {
+    const before = day.stops.length;
+    day.stops = day.stops.filter(s => s.pid !== placeId);
+    if(day.stops.length !== before) fixTransfers(day);
+  });
+  pushPlaces(); commit();
+  closeModal(); renderSitios(); renderItinerary(); if(curTab === 'mapa') renderMapDay();
+  toast('Sitio eliminado');
+}
+$('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
 
 /* ================================================================
    RUTAS REALES (OSRM sobre OpenStreetMap)
@@ -1737,7 +1885,7 @@ const fmtDateShort = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-E
 
 function dayCosts(day){
   let entr = 0, trans = 0;
-  day.stops.forEach(s => { const p = PLACES[s.pid]; if(p && p.yen) entr += p.yen; });
+  day.stops.forEach(s => { const p = placeById(s.pid); if(p && p.yen) entr += p.yen; });
   const addT = t => { if(t && t.opts[t.sel] && t.opts[t.sel].y) trans += t.opts[t.sel].y; };
   day.trans.forEach(addT); addT(day.pre); addT(day.post);
   return {entr, trans};
@@ -1845,7 +1993,7 @@ function transferHTML(t, a, b, dayIdx, gapIdx, label){
   </div>`;
 }
 function stopHTML(s, idx, dayIdx){
-  const p = PLACES[s.pid] || {name: '(sitio eliminado)', cat: 'otro'};
+  const p = placeById(s.pid) || {name: '(sitio eliminado)', cat: 'otro'};
   const c = catOf(p);
   return `<div class="stop ${s.done ? 'done' : ''}" data-day="${dayIdx}" data-stop="${idx}">
     <div class="dotn">${idx + 1}</div>
@@ -1909,13 +2057,13 @@ function renderItinerary(){
 
   html += '<div class="timeline">';
   if(d.pre){
-    const first = PLACES[d.stops[0] && d.stops[0].pid];
+    const first = placeById(d.stops[0] && d.stops[0].pid);
     html += transferHTML(d.pre, null, null, curDay, 'pre', '🚄 Cómo llegar');
   }
   d.stops.forEach((s, i) => {
     html += stopHTML(s, i, curDay);
     if(i < d.stops.length - 1){
-      const a = PLACES[s.pid], b = PLACES[d.stops[i + 1].pid];
+      const a = placeById(s.pid), b = placeById(d.stops[i + 1].pid);
       html += transferHTML(d.trans[i], a, b, curDay, i, '');
     }
   });
@@ -1956,7 +2104,7 @@ function refreshWalkEstimates(day){
   day.trans.forEach((t, i) => {
     const w = t.opts.find(o => o.m === 'walk' && o.auto);
     if(!w) return;
-    const a = PLACES[day.stops[i].pid], b = PLACES[day.stops[i + 1].pid];
+    const a = placeById(day.stops[i].pid), b = placeById(day.stops[i + 1].pid);
     if(!a || !b) return;
     if(haversine(a, b) > 8) return;
     osrm(a, b, 'foot').then(r => {
@@ -1980,11 +2128,12 @@ function openModal(html){
 function closeModal(){
   $('#modalBg').classList.remove('open');
   document.body.style.overflow = '';
+  if(miniMap){ miniMap.remove(); miniMap = null; miniPin = null; }
 }
 $('#modalBg').addEventListener('click', e => { if(e.target === $('#modalBg')) closeModal(); });
 
 function openPlace(pid){
-  const p = PLACES[pid];
+  const p = placeById(pid);
   if(!p) return;
   const c = catOf(p);
   const dayOpts = state.days.map((d, i) => d.flight ? '' : `<option value="${i}">${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('');
@@ -2005,6 +2154,7 @@ function openPlace(pid){
       ${p.web ? `<a class="btn ghost small" href="${esc(p.web)}" target="_blank" rel="noopener">🌐 Web oficial</a>` : ''}
       ${p.insta ? `<a class="btn ghost small" href="${esc(p.insta)}" target="_blank" rel="noopener">📸 Reel guardado</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Google Maps</a>
+      ${p.userPlace ? `<button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>` : ''}
     </div>
     <div class="form-row" style="margin-top:18px"><label>Añadir al itinerario</label>
       <div style="display:flex;gap:8px">
@@ -2016,8 +2166,8 @@ function openPlace(pid){
 function addPlaceToDay(pid){
   const i = +$('#addToDay').value;
   const day = state.days[i];
-  const p = PLACES[pid];
-  day.stops.push({id: uid(), pid, time: '', dur: p.dur || 60, note: '', done: false});
+  const p = placeById(pid);
+  day.stops.push({id: uid(), pid, time: '', dur: (p && p.dur) || 60, note: '', done: false});
   fixTransfers(day);
   commit(); closeModal();
   curDay = i; showTab('itinerario'); renderItinerary();
@@ -2025,7 +2175,8 @@ function addPlaceToDay(pid){
 }
 function openAddStop(dayIdx){
   const list = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
-    .filter(x => x.p.region !== 'Ideas');
+    .filter(x => x.p.region !== 'Ideas')
+    .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})));
   openModal(`
     <h3>＋ Añadir parada</h3>
     <input type="search" id="addSearch" placeholder="Buscar sitio…" style="width:100%;margin-top:8px">
@@ -2044,8 +2195,8 @@ function openAddStop(dayIdx){
       }).join('');
     $$('#addList .search-item').forEach(el => el.addEventListener('click', () => {
       const day = state.days[dayIdx];
-      const p = PLACES[el.dataset.pid];
-      day.stops.push({id: uid(), pid: el.dataset.pid, time: '', dur: p.dur || 60, note: '', done: false});
+      const p = placeById(el.dataset.pid);
+      day.stops.push({id: uid(), pid: el.dataset.pid, time: '', dur: (p && p.dur) || 60, note: '', done: false});
       fixTransfers(day);
       commit(); closeModal(); renderItinerary();
       toast('Parada añadida');
@@ -2056,7 +2207,7 @@ function openAddStop(dayIdx){
 }
 function openStopEdit(dayIdx, stopIdx){
   const day = state.days[dayIdx], s = day.stops[stopIdx];
-  const p = PLACES[s.pid] || {name: '?'};
+  const p = placeById(s.pid) || {name: '?'};
   openModal(`
     <h3>✎ ${esc(p.name)}</h3>
     <div class="form-grid" style="margin-top:12px">
@@ -2172,18 +2323,19 @@ async function renderMapDay(){
   mapLayers.forEach(l => map.removeLayer(l));
   mapLayers = [];
   const day = state.days[mapDay];
-  const stops = day.stops.map(s => ({s, p: PLACES[s.pid]})).filter(x => x.p && x.p.lat);
+  const stops = day.stops.map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat);
   const usedModes = new Set();
 
   if(poisOn){
-    Object.keys(PLACES).forEach(pid => {
-      const p = PLACES[pid];
+    const pois = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
+      .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})));
+    pois.forEach(({pid, p}) => {
       if(!p.lat || p.region === 'Ideas') return;
       if(day.stops.some(s => s.pid === pid)) return;
       const c = catOf(p);
-      const mk = L.marker([p.lat, p.lng], {icon: L.divIcon({className: 'poi-icon', html: '', iconSize: [10, 10]}), opacity: .8});
-      const circle = L.circleMarker([p.lat, p.lng], {radius: 5, color: '#fff', weight: 1.5, fillColor: c.color, fillOpacity: .8});
-      circle.bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
+      const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: '#fff',
+        weight: 1.5, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
+      circle.bindPopup(`<b>${esc(p.name)}</b>${p.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
       circle.addTo(map); mapLayers.push(circle);
     });
   }
@@ -2246,6 +2398,7 @@ let placeQ = '', placeRegion = '', placeCat = '';
 function renderSitios(){
   const regions = [];
   Object.values(PLACES).forEach(p => { if(!regions.includes(p.region)) regions.push(p.region); });
+  userPlaces().forEach(p => { const r = p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
   $('#regionChips').innerHTML = `<button class="fchip ${!placeRegion ? 'active' : ''}" data-r="">Todas</button>` +
     regions.map(r => `<button class="fchip ${placeRegion === r ? 'active' : ''}" data-r="${esc(r)}">${esc(r)}</button>`).join('');
   $('#catChips').innerHTML = `<button class="fchip ${!placeCat ? 'active' : ''}" data-c="">Todo</button>` +
@@ -2255,6 +2408,7 @@ function renderSitios(){
 
   const items = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
     .filter(x => x.p.cat !== 'transporte' && x.p.cat !== 'alojamiento')
+    .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})))
     .filter(x => !placeRegion || x.p.region === placeRegion)
     .filter(x => !placeCat || x.p.cat === placeCat)
     .filter(x => !placeQ || (x.p.name + ' ' + x.p.desc + ' ' + x.p.region).toLowerCase().includes(placeQ));
@@ -2267,6 +2421,7 @@ function renderSitios(){
         <div style="flex:1;min-width:0"><b>${esc(x.p.name)}</b>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">${esc(x.p.region)}</div>
         </div>
+        ${x.p.userPlace ? '<span class="pill blue" title="Sitio añadido por vosotros">★ mío</span>' : ''}
         ${inPlan ? '<span class="pill green" title="Ya está en el itinerario">✓ en plan</span>' : ''}
       </div>
       <div class="desc">${esc(x.p.desc)}</div>
