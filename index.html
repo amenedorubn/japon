@@ -6,6 +6,17 @@
 <title>Japón 2027 · Planificador de viaje</title>
 <meta name="description" content="Planificador del viaje a Japón · 8–28 abril 2027">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23fff'/%3E%3Ccircle cx='50' cy='50' r='26' fill='%23cf3f2a'/%3E%3C/svg%3E">
+<script>
+(function(){
+  // Aplica el tema (claro/oscuro) antes de pintar, para evitar parpadeos.
+  // Misma clave que la app original: la preferencia se comparte entre ambas.
+  try{
+    var saved = localStorage.getItem('japon27_theme');
+    var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@600;900&display=swap" rel="stylesheet">
@@ -20,15 +31,15 @@
   --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   --serif:'Noto Serif JP',serif;
 }
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#141319; --card:#1d1c24; --card2:#232230; --ink:#ece7db; --muted:#a29b8c; --line:#2e2c38;
-    --accent:#e5573f; --accent-soft:#3a231f; --indigo:#7c9fd4; --indigo-soft:#232c3d;
-    --gold:#d3a53a; --green:#6db08b; --green-soft:#1f2e26; --teal:#5db6c9;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
-  }
-  .leaflet-container{filter:brightness(.9) saturate(.9);}
+/* Tema oscuro: el script de <head> fija siempre data-theme (guardado o
+   sistema), así que basta con la variante explícita. El botón 🌙 alterna. */
+:root[data-theme="dark"]{
+  --bg:#141319; --card:#1d1c24; --card2:#232230; --ink:#ece7db; --muted:#a29b8c; --line:#2e2c38;
+  --accent:#e5573f; --accent-soft:#3a231f; --indigo:#7c9fd4; --indigo-soft:#232c3d;
+  --gold:#d3a53a; --green:#6db08b; --green-soft:#1f2e26; --teal:#5db6c9;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
 }
+:root[data-theme="dark"] .leaflet-container{filter:brightness(.9) saturate(.9);}
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
@@ -61,6 +72,23 @@ a{color:var(--indigo);}
 .icon-btn{width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);
   display:flex;align-items:center;justify-content:center;font-size:16px;}
 .icon-btn.on{border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft);}
+.icon-btn svg{width:18px;height:18px;display:block;}
+a.icon-btn{text-decoration:none;color:inherit;}
+/* Toggle de tema: el head fija siempre data-theme, el CSS elige el icono */
+.theme-toggle .icon-sun,.theme-toggle .icon-moon{display:none;}
+[data-theme="light"] .theme-toggle .icon-sun{display:block;}
+[data-theme="dark"] .theme-toggle .icon-moon{display:block;}
+.notify-btn.enabled{border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft);}
+.notify-btn.unsupported{opacity:.4;cursor:default;}
+/* Título del viaje editable (compartido con la app original vía Firebase) */
+.logo h1[contenteditable]{outline:none;border-radius:6px;padding:0 4px;margin:0 -4px;min-width:60px;cursor:text;}
+.logo h1[contenteditable]:focus{background:var(--card2);box-shadow:0 0 0 2px var(--accent-soft);}
+/* En pantallas estrechas: exportar/importar siguen disponibles en Guía */
+@media(max-width:560px){
+  #btnExport,#btnImport{display:none;}
+  .icon-btn{width:32px;height:32px;border-radius:10px;}
+  .top-actions{gap:4px;}
+}
 
 /* ---------- Bottom tab bar (mobile) ---------- */
 .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:1200;display:flex;
@@ -292,10 +320,21 @@ table.phr tr:last-child td{border-bottom:none;}
   <div class="topbar-in">
     <div class="logo">
       <div class="dot">日</div>
-      <div><h1>Japón 2027</h1><small>8 – 28 de abril · 21 días</small></div>
+      <div><h1 id="tripTitle" contenteditable="true" spellcheck="false">Japón 2027</h1><small>8 – 28 de abril · 21 días</small></div>
     </div>
     <nav class="topnav" id="topnav"></nav>
     <div class="top-actions">
+      <a class="icon-btn" id="btnDrive" title="Drive del viaje" aria-label="Abrir Drive del viaje" href="https://drive.google.com/drive/folders/14-sXN4Kt_lESHyxo7kiXAfC4J-xHnCxB" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3.5h6.8L22 15.2l-3.4 5.8-3.3-5.6L8.6 3.5Z" fill="#FFCF63"/><path d="M8.6 3.5 2 15.2l3.4 5.8 6.6-11.3-3.4-6.2Z" fill="#11A861"/><path d="M5.4 21h13.2l3.4-5.8H8.8L5.4 21Z" fill="#4688F4" opacity=".92"/></svg>
+      </a>
+      <a class="icon-btn" id="btnSpotify" title="Playlist oficial del viaje" aria-label="Abrir playlist oficial del viaje en Spotify" href="https://open.spotify.com/playlist/7LWnw6OnesKSgJ3kkFTzfY?si=55466387716c405a" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1DB954"/><path d="M17.7 16.8c-.2.3-.6.4-.9.2-2.5-1.5-5.6-1.8-9.3-1-.3.1-.7-.1-.8-.5-.1-.4.1-.7.5-.8 4-.9 7.5-.5 10.2 1.1.3.2.4.6.3 1zm1.2-2.7c-.2.4-.7.5-1.1.3-2.8-1.7-7.1-2.2-10.4-1.2-.4.1-.8-.1-1-.5-.1-.4.1-.8.5-1 3.8-1.1 8.5-.6 11.7 1.4.4.2.5.7.3 1zm.1-2.8c-3.4-2-9-2.2-12.2-1.2-.5.1-1-.1-1.1-.6-.1-.5.1-1 .6-1.1 3.6-1.1 9.7-.9 13.6 1.4.4.3.6.8.3 1.2-.2.4-.8.6-1.2.3z" fill="#fff"/></svg>
+      </a>
+      <button class="icon-btn notify-btn" id="btnNotify" title="Activar notificaciones de cambios" aria-label="Activar notificaciones de cambios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M9.5 18a2.5 2.5 0 0 0 5 0"/></svg></button>
+      <button class="icon-btn theme-toggle" id="btnTheme" title="Cambiar tema" aria-label="Cambiar tema claro u oscuro">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>
+      </button>
       <button class="icon-btn" id="btnSync" title="Sincronización en la nube">☁️</button>
       <button class="icon-btn" id="btnExport" title="Exportar copia de seguridad">⬇️</button>
       <button class="icon-btn" id="btnImport" title="Importar copia">⬆️</button>
@@ -1401,9 +1440,10 @@ function fixTransfers(day){
    FIREBASE (sincronización opcional entre viajeros)
    Ruta compartida con la app original: proyectos/viaje-japon
    (o #hash de la URL, igual que la app original).
-   REGLA DE ORO: esta app solo escribe su itinerario bajo state/v2.
-   Los campos de la app original (days, places, transfers, tripTitle)
-   se leen y se conservan; NUNCA se sobrescriben desde aquí.
+   REGLA DE ORO: esta app solo escribe su itinerario bajo state/v2 y,
+   desde la fase 2, la hoja escalar tripTitle (que la app original
+   también escribe). Los campos estructurados de la app original
+   (days, places, transfers) NUNCA se sobrescriben desde aquí.
 ================================================================ */
 let fb = null, fbReady = false, applyingRemote = false;
 let syncOn = localStorage.getItem('jp27_sync') !== '0';
@@ -1414,10 +1454,12 @@ function updateSyncBtn(){
   b.title = !syncOn ? 'Nube desactivada (solo este dispositivo). Toca para activar.' :
             fbReady ? 'Sincronizado en la nube con el resto de viajeros' : 'Conectando con la nube…';
 }
+let lastLocalSaveAt = 0, seenFirstSnapshot = false;
 function pushRemote(){
   if(!fb || !syncOn || applyingRemote) return;
+  lastLocalSaveAt = Date.now();
   // set() SOLO sobre el hijo state/v2: por construcción es imposible
-  // tocar days/places/transfers/tripTitle de la app original.
+  // tocar days/places/transfers de la app original.
   fb.set(fb.v2Node, {
     v: state.v || SEED_VERSION,
     days: state.days,
@@ -1485,8 +1527,9 @@ async function initFirebase(){
     const db = dbM.getDatabase(app);
     fb = {
       set: dbM.set,
-      rootNode: dbM.ref(db, FB_PROJECT_PATH),           // lectura: payload completo
-      v2Node: dbM.ref(db, FB_PROJECT_PATH + '/state/v2') // escritura: SOLO nuestro hijo
+      rootNode: dbM.ref(db, FB_PROJECT_PATH),             // lectura: payload completo
+      v2Node: dbM.ref(db, FB_PROJECT_PATH + '/state/v2'), // escritura: nuestro hijo
+      titleNode: dbM.ref(db, FB_PROJECT_PATH + '/tripTitle') // hoja escalar compartida
     };
     dbM.onValue(fb.rootNode, snap => {
       const remote = snap.val();
@@ -1495,6 +1538,11 @@ async function initFirebase(){
       const res = adoptRemote(remote);
       applyingRemote = false;
       if(res.changed) renderAll();
+      applyTripTitle();
+      // Notificar cambios remotos reales: nunca el primer snapshot ni el
+      // eco (<2,5 s) de un guardado propio. Misma heurística que la app original.
+      if(seenFirstSnapshot && res.changed && Date.now() - lastLocalSaveAt > 2500) notifyRemoteChange();
+      seenFirstSnapshot = true;
       // Nodo sin v2 todavía (o proyecto vacío): sembrar solo state/v2.
       if(!remote || res.v2Missing) pushRemote();
     }, () => { fbReady = false; updateSyncBtn(); });
@@ -1506,6 +1554,81 @@ $('#btnSync').addEventListener('click', () => {
   if(syncOn && !fb){ initFirebase(); } else { updateSyncBtn(); }
   toast(syncOn ? 'Nube activada: el plan se comparte' : 'Nube desactivada: solo este dispositivo');
 });
+
+/* ================================================================
+   CABECERA: tema, título editable y notificaciones de cambios
+   (paridad con la app original)
+================================================================ */
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try{ localStorage.setItem('japon27_theme', theme); }catch(e){}
+}
+$('#btnTheme').addEventListener('click', () => {
+  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+/* --- Título del viaje: editable, compartido con la app original --- */
+function applyTripTitle(){
+  const el = $('#tripTitle');
+  // No pisar el texto mientras se edita (saltaría el cursor).
+  if(!el || document.activeElement === el) return;
+  el.textContent = state.tripTitle || "Japón '27";
+}
+let titleTimer = null;
+function pushTitle(){
+  if(!fb || !syncOn) return;
+  clearTimeout(titleTimer);
+  titleTimer = setTimeout(() => {
+    lastLocalSaveAt = Date.now();
+    fb.set(fb.titleNode, state.tripTitle).catch(() => {});
+  }, 600);
+}
+$('#tripTitle').addEventListener('keydown', ev => {
+  if(ev.key === 'Enter'){ ev.preventDefault(); ev.currentTarget.blur(); }
+});
+$('#tripTitle').addEventListener('blur', ev => {
+  const v = ev.currentTarget.textContent.trim();
+  if(!v){ applyTripTitle(); return; } // vacío: restaurar, no guardar
+  if(v !== state.tripTitle){
+    state.tripTitle = v;
+    persistLocal();
+    pushTitle();
+    toast('Título guardado');
+  }
+});
+
+/* --- Notificaciones locales de cambios remotos --- */
+let notificationsEnabled = localStorage.getItem('japon27_notifications') === '1';
+function updateNotifyButton(){
+  const btn = $('#btnNotify');
+  if(!btn) return;
+  const supported = 'Notification' in window;
+  btn.classList.toggle('unsupported', !supported);
+  btn.classList.toggle('enabled', supported && notificationsEnabled && Notification.permission === 'granted');
+  btn.title = !supported ? 'Este navegador no soporta notificaciones'
+    : (Notification.permission === 'granted' && notificationsEnabled)
+      ? 'Notificaciones activadas' : 'Activar notificaciones de cambios';
+}
+async function requestChangeNotifications(){
+  if(!('Notification' in window)){ toast('Este navegador no soporta notificaciones'); return; }
+  try{
+    const permission = await Notification.requestPermission();
+    notificationsEnabled = permission === 'granted';
+    localStorage.setItem('japon27_notifications', notificationsEnabled ? '1' : '0');
+    updateNotifyButton();
+    toast(notificationsEnabled ? 'Notificaciones activadas' : 'No se han activado las notificaciones');
+  }catch(e){ toast('No se pudieron activar las notificaciones'); }
+}
+function notifyRemoteChange(){
+  if(!notificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+  try{
+    new Notification("Japón 2027 actualizado", {
+      body: 'Alguien ha cambiado el viaje compartido.',
+      tag: 'japon27-change'
+    });
+  }catch(e){}
+}
+$('#btnNotify').addEventListener('click', requestChangeNotifications);
 
 /* ================================================================
    RUTAS REALES (OSRM sobre OpenStreetMap)
@@ -2231,6 +2354,8 @@ function renderAll(){
 }
 buildNav();
 renderAll();
+applyTripTitle();
+updateNotifyButton();
 tickCountdown();
 setInterval(tickCountdown, 1000);
 const hashTab = (location.hash.replace('#/', '') || 'inicio');
