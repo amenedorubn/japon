@@ -213,6 +213,17 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);}
   font-weight:600;font-size:13.5px;margin-top:4px;}
 .add-stop:hover{border-color:var(--accent);color:var(--accent);}
 
+/* ---------- Reordenar paradas arrastrando ---------- */
+.stop{user-select:none;touch-action:pan-y;}
+.stop input,.stop textarea{user-select:text;}
+.stop .dotn{cursor:grab;}
+.stop.dragging{opacity:.45;}
+.stop.drop-before .stop-card{box-shadow:0 -3px 0 0 var(--accent);}
+.stop.drop-after .stop-card{box-shadow:0 3px 0 0 var(--accent);}
+.drag-ghost{position:fixed;left:0;top:0;z-index:4000;background:var(--ink);color:var(--bg);
+  padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;pointer-events:none;
+  box-shadow:var(--shadow);max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 .flight-day{padding:20px;text-align:center;}
 .flight-day .big{font-size:42px;}
 
@@ -1399,7 +1410,7 @@ function gapWalkEstimate(day, i){
 }
 function normTransfer(t, walkMin){
   const nt = {sel: t && typeof t.sel === 'number' ? t.sel : 0, opts: []};
-  (t && t.opts ? t.opts : []).forEach(o => nt.opts.push({id: uid(), m: o.m, t: o.t, d: o.d, y: o.y, l: o.l || '', n: o.n || '', auto: !!o.auto}));
+  (t && t.opts ? t.opts : []).forEach(o => nt.opts.push({id: uid(), m: o.m, t: o.t, d: o.d, y: o.y, l: o.l || '', n: o.n || '', w: o.w || '', auto: !!o.auto}));
   if(walkMin != null && !nt.opts.some(o => o.m === 'walk')){
     nt.opts.push({id: uid(), m: 'walk', t: 'A pie', d: walkMin, y: 0, l: '', n: '', auto: true});
   }
@@ -2268,7 +2279,58 @@ function bindDayPanel(){
     el.querySelector('.dur').addEventListener('change', ev => { s.dur = Math.max(5, +ev.target.value || 30); commit(); });
     el.querySelector('.b-done').addEventListener('click', () => { s.done = !s.done; commit(); renderItinerary(); });
     el.querySelector('.b-edit').addEventListener('click', () => openStopEdit(+el.dataset.day, +el.dataset.stop));
-    el.querySelector('.pname').addEventListener('click', () => openPlace(s.pid));
+    el.querySelector('.pname').addEventListener('click', () => { if(!suppressStopClick) openPlace(s.pid); });
+
+    /* --- Arrastrar con ratón (HTML5 DnD) --- */
+    // Activable solo si el gesto no empieza en un control (inputs siguen usables)
+    el.addEventListener('mousedown', ev => {
+      el.draggable = !(ev.target.closest && ev.target.closest('input,textarea,select,button,a'));
+    });
+    el.addEventListener('dragstart', ev => {
+      dragStopState = {dayIdx: +el.dataset.day, stopIdx: +el.dataset.stop};
+      if(ev.dataTransfer){ ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', el.dataset.stop); }
+      setTimeout(() => el.classList.add('dragging'), 0);
+    });
+    el.addEventListener('dragover', ev => {
+      if(!dragStopState || +el.dataset.stop === dragStopState.stopIdx) return;
+      ev.preventDefault();
+      if(ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+      clearDropMarks();
+      const r = el.getBoundingClientRect();
+      el.classList.add(ev.clientY > r.top + r.height / 2 ? 'drop-after' : 'drop-before');
+    });
+    el.addEventListener('drop', ev => {
+      ev.preventDefault();
+      if(!dragStopState) return;
+      const d = dragStopState; dragStopState = null;
+      clearDropMarks();
+      if(+el.dataset.stop !== d.stopIdx) reorderStop(d.dayIdx, d.stopIdx, dropIndexFromRow(el, ev.clientY));
+    });
+    el.addEventListener('dragend', () => {
+      dragStopState = null;
+      el.classList.remove('dragging');
+      clearDropMarks();
+    });
+
+    /* --- Arrastrar con el dedo: pulsación larga (portado de la original) --- */
+    el.addEventListener('pointerdown', ev => {
+      if(ev.pointerType === 'mouse') return; // el ratón usa HTML5 DnD
+      if(ev.target.closest && ev.target.closest('input,textarea,select,button,a')) return;
+      touchDrag = {dayIdx: +el.dataset.day, stopIdx: +el.dataset.stop, row: el, pointerId: ev.pointerId,
+        startX: ev.clientX, startY: ev.clientY, x: ev.clientX, y: ev.clientY, started: false};
+      touchDrag.timer = setTimeout(startTouchDrag, 420);
+    });
+    el.addEventListener('pointermove', ev => {
+      if(!touchDrag || touchDrag.row !== el) return;
+      touchDrag.x = ev.clientX; touchDrag.y = ev.clientY;
+      const moved = Math.hypot(touchDrag.x - touchDrag.startX, touchDrag.y - touchDrag.startY);
+      if(!touchDrag.started && moved > 12) startTouchDrag(); // como la app original
+      if(touchDrag.started){ ev.preventDefault(); updateTouchGhost(touchDrag.x, touchDrag.y); }
+    });
+    el.addEventListener('pointerup', ev => { if(touchDrag && touchDrag.row === el) endTouchDrag(ev); });
+    el.addEventListener('pointercancel', () => {
+      if(touchDrag && touchDrag.row === el){ clearTimeout(touchDrag.timer); if(touchDrag.ghost) touchDrag.ghost.remove(); touchDrag.row.classList.remove('dragging'); clearDropMarks(); touchDrag = null; }
+    });
   });
   $$('#dayPanel .transfer').forEach(el => {
     const day = state.days[+el.dataset.day];
@@ -2392,6 +2454,94 @@ function openAddStop(dayIdx){
   render('');
   $('#addSearch').addEventListener('input', e => render(e.target.value));
 }
+/* ================================================================
+   REORDENAR PARADAS (fase 6) — arrastrar con ratón (HTML5 DnD) y
+   con el dedo (pulsación larga), portado de la app original y
+   adaptado al modelo de días de esta app.
+================================================================ */
+function reorderStop(dayIdx, fromIdx, insertIdx){
+  const day = state.days[dayIdx];
+  if(fromIdx < 0 || fromIdx >= day.stops.length) return;
+  let to = insertIdx > fromIdx ? insertIdx - 1 : insertIdx;
+  to = Math.max(0, Math.min(to, day.stops.length - 1));
+  if(to === fromIdx) return;
+  const [moving] = day.stops.splice(fromIdx, 1);
+  day.stops.splice(to, 0, moving);
+  fixTransfers(day);
+  commit(); renderItinerary();
+}
+function clearDropMarks(){
+  $$('#dayPanel .stop.drop-before,#dayPanel .stop.drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+}
+/* Índice de inserción a partir de la fila objetivo y la Y del puntero */
+function dropIndexFromRow(row, clientY){
+  const idx = +row.dataset.stop;
+  const r = row.getBoundingClientRect();
+  return clientY > r.top + r.height / 2 ? idx + 1 : idx;
+}
+let dragStopState = null;   // ratón (HTML5 DnD)
+let touchDrag = null;       // táctil (pulsación larga)
+let suppressStopClick = false;
+function startTouchDrag(){
+  if(!touchDrag || touchDrag.started) return;
+  touchDrag.started = true;
+  suppressStopClick = true;
+  touchDrag.row.classList.add('dragging');
+  try{ touchDrag.row.setPointerCapture && touchDrag.row.setPointerCapture(touchDrag.pointerId); }catch(e){}
+  const p = placeById(state.days[touchDrag.dayIdx].stops[touchDrag.stopIdx].pid);
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.textContent = p ? p.name : 'Parada';
+  document.body.appendChild(ghost);
+  touchDrag.ghost = ghost;
+  updateTouchGhost(touchDrag.x, touchDrag.y);
+}
+function updateTouchGhost(x, y){
+  if(!touchDrag) return;
+  if(touchDrag.ghost) touchDrag.ghost.style.transform = `translate(${x + 12}px, ${y + 14}px)`;
+  clearDropMarks();
+  const el = document.elementFromPoint(x, y);
+  const row = el && el.closest ? el.closest('#dayPanel .stop') : null;
+  if(row && +row.dataset.stop !== touchDrag.stopIdx){
+    const r = row.getBoundingClientRect();
+    row.classList.add(y > r.top + r.height / 2 ? 'drop-after' : 'drop-before');
+  }
+}
+function endTouchDrag(ev){
+  if(!touchDrag) return;
+  clearTimeout(touchDrag.timer);
+  const d = touchDrag;
+  touchDrag = null;
+  if(d.ghost) d.ghost.remove();
+  d.row.classList.remove('dragging');
+  clearDropMarks();
+  if(!d.started) return;
+  ev.preventDefault();
+  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+  const row = el && el.closest ? el.closest('#dayPanel .stop') : null;
+  if(row && +row.dataset.stop !== d.stopIdx){
+    reorderStop(d.dayIdx, d.stopIdx, dropIndexFromRow(row, ev.clientY));
+  }
+  setTimeout(() => { suppressStopClick = false; }, 250);
+}
+/* Mover una parada a otro día (equivalente a assignPlace de la original) */
+function moveStopToDay(dayIdx, stopIdx, targetIdx){
+  targetIdx = +targetIdx;
+  if(targetIdx === dayIdx || !state.days[targetIdx]){ closeModal(); return; }
+  const day = state.days[dayIdx], target = state.days[targetIdx];
+  const [s] = day.stops.splice(stopIdx, 1);
+  target.stops.push(s);
+  fixTransfers(day); fixTransfers(target);
+  commit(); closeModal(); renderItinerary();
+  toast('Movido a ' + fmtDateShort(target.date));
+}
+/* Puntos intermedios "lat,lng" por línea (portado de la app original) */
+function parseWaypoints(text){
+  return String(text || '').split(/\n+/).map(l => l.trim()).filter(Boolean)
+    .map(l => l.split(',').map(Number))
+    .filter(pt => pt.length === 2 && pt.every(Number.isFinite));
+}
+
 function openStopEdit(dayIdx, stopIdx){
   const day = state.days[dayIdx], s = day.stops[stopIdx];
   const p = placeById(s.pid) || {name: '?'};
@@ -2402,6 +2552,13 @@ function openStopEdit(dayIdx, stopIdx){
       <div class="form-row" style="margin:0"><label>Duración (min)</label><input type="number" id="esDur" min="5" step="5" value="${s.dur}"></div>
     </div>
     <div class="form-row"><label>Nota</label><textarea id="esNote" rows="3">${esc(s.note)}</textarea></div>
+    <div class="form-row"><label>Mover a otro día</label>
+      <div style="display:flex;gap:8px">
+        <select id="esMoveDay" style="flex:1">${state.days.map((d, i) =>
+          d.flight ? '' : `<option value="${i}" ${i === dayIdx ? 'selected' : ''}>${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('')}</select>
+        <button class="btn small ghost" onclick="moveStopToDay(${dayIdx},${stopIdx},$('#esMoveDay').value)">Mover</button>
+      </div>
+    </div>
     <div class="btn-row">
       <button class="btn" onclick="saveStopEdit(${dayIdx},${stopIdx})">Guardar</button>
       <button class="btn ghost" onclick="moveStop(${dayIdx},${stopIdx},-1)">⬆️ Subir</button>
@@ -2451,6 +2608,8 @@ function openTransferEdit(dayIdx, gap){
         </div>
         <div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:var(--muted)">CONEXIONES / LÍNEAS</label><input class="o-l" value="${esc(o.l)}" placeholder="ej. Asakusa G19 → Ueno G16, sin transbordos"></div>
         <div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:var(--muted)">NOTA</label><input class="o-n" value="${esc(o.n)}"></div>
+        <div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:var(--muted)">PUNTOS INTERMEDIOS DEL MAPA (lat,lng por línea · opcional)</label>
+          <textarea class="o-w" rows="2" placeholder="35.7101,139.8107&#10;35.7000,139.7900" style="font-family:ui-monospace,monospace;font-size:12px">${esc(o.w || '')}</textarea></div>
       </div>`).join('')}
     </div>
     <div class="btn-row">
@@ -2477,6 +2636,7 @@ function openTransferEdit(dayIdx, gap){
       o.y = el.querySelector('.o-y').value === '' ? null : Math.max(0, +el.querySelector('.o-y').value);
       o.l = el.querySelector('.o-l').value.trim();
       o.n = el.querySelector('.o-n').value.trim();
+      o.w = el.querySelector('.o-w').value.trim();
       o.auto = false;
       if(el.querySelector('input[name=tsel]').checked) t.sel = i;
     });
@@ -2729,6 +2889,12 @@ async function renderMapDay(){
       line.bindPopup(`${mode.emoji} <b>${esc(opt.t || mode.label)}</b>${lineName ? '<br>🚉 ' + esc(lineName) : ''}${opt.d ? '<br>⏱️ ' + fmtMin(opt.d) : ''}${opt.y ? '<br>💴 ' + fmtYen(opt.y) : ''}${opt.l ? '<br>🔀 ' + esc(opt.l) : ''}`);
       line.addTo(map); mapLayers.push(line);
     };
+    // Puntos intermedios manuales: mandan sobre cualquier ruta calculada
+    const wps = parseWaypoints(opt.w);
+    if(wps.length){
+      drawLine([[a.lat, a.lng], ...wps, [b.lat, b.lng]]);
+      continue;
+    }
     if(RAIL_MODES.has(opt.m) && km <= 120){
       // Tren/metro: geometría ferroviaria real (Overpass), con caché compartida
       const rKey = railCacheKey(a, b);
