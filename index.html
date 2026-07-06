@@ -230,6 +230,14 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);}
 .leaflet-popup-content b{font-size:14px;}
 .map-toggles{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;}
 
+/* ---------- Capas de origen en el mapa (Nosotros / Dani / Insta) ---------- */
+.src-chip b{font-weight:800;margin-right:2px;}
+.src-chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.src-chip.src-dani.active{background:#223A5E;border-color:#223A5E;color:#fff;}
+.src-chip.src-insta.active{background:#C13584;border-color:#C13584;color:#fff;}
+.zone-tooltip{background:transparent;border:none;box-shadow:none;color:var(--ink);
+  font-weight:700;font-size:11.5px;text-shadow:0 1px 2px var(--bg);}
+
 /* ---------- Sitios ---------- */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .filter-bar input[type=search]{flex:1;min-width:180px;}
@@ -381,7 +389,9 @@ table.phr tr:last-child td{border-bottom:none;}
   <section class="view" id="view-mapa">
     <div class="day-chips" id="mapDayChips"></div>
     <div class="map-toggles">
-      <button class="fchip" id="togglePois">📍 Ver también sitios guardados</button>
+      <button class="fchip src-chip" id="srcNos" title="Sitios del catálogo y añadidos por vosotros"><b>N</b> Nosotros</button>
+      <button class="fchip src-chip src-dani" id="srcDani" title="Sitios de la ruta Dani"><b>D</b> Dani</button>
+      <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
     <div id="map"></div>
@@ -1661,9 +1671,11 @@ function userPlaces(){
 /* Adaptador de esquema original → tarjeta de esta app.
    Los campos de hotel (nombres de la app original) pasan tal cual. */
 function userPlaceView(p){
+  const isUser = p.source === 'user' && !p.catalogItem;
   return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
     lat: p.lat, lng: p.lng, dur: 60, yen: null, price: '', hours: '', web: '',
-    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: true, id: p.id,
+    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: isUser, id: p.id,
+    source: p.source || (p.catalogItem ? 'catalog' : 'user'), dani: !!p.dani,
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
     hotelWebsite: p.hotelWebsite || ''};
@@ -1679,11 +1691,23 @@ function daysBetween(checkIn, checkOut){
 function userHotels(){
   return state.places.filter(p => p && p.source === 'user' && !p.dani && p.category === 'alojamiento' && p.lat != null);
 }
-/* Resolución unificada: catálogo (PLACES) o sitio propio (state.places) */
+/* Resolución unificada: catálogo (PLACES) o cualquier lugar compartido
+   de state.places (propio, Dani, Insta o catálogo de la app original). */
 function placeById(pid){
   if(PLACES[pid]) return PLACES[pid];
-  const p = state.places.find(x => x && x.id === pid && x.source === 'user');
+  const p = state.places.find(x => x && x.id === pid);
   return p ? userPlaceView(p) : null;
+}
+/* Adoptar un sitio de Dani/Insta a "nuestros" (portado de la app original) */
+function adoptPlace(pid){
+  const p = state.places.find(x => x && x.id === pid);
+  if(!p) return;
+  const from = p.source === 'insta' ? 'Instagram' : 'la ruta Dani';
+  p.source = 'user'; p.dani = false; p.daniAdopted = true; p.catalogItem = false;
+  if(!p.notes) p.notes = 'Importado desde ' + from + '.';
+  pushPlaces();
+  closeModal(); renderSitios(); renderHoteles(); if(curTab === 'mapa') renderMapDay();
+  toast('Añadido a nuestros sitios ★');
 }
 let placesTimer = null;
 function pushPlaces(){
@@ -1925,6 +1949,52 @@ async function runQueue(){
   }catch(e){ job.reject(e); }
   setTimeout(() => { queueBusy = false; runQueue(); }, 250);
 }
+/* --- Rutas de tren/metro reales (Overpass) — portado de la app original.
+   Misma clave de caché ('viaje-japon-rail-v1:'), así se reutiliza lo que
+   la app original ya descargó en este dispositivo. --- */
+const RAIL_MODES = new Set(['metro', 'train', 'shinkansen', 'tram']);
+const railInFlight = new Set();
+function railCacheKey(a, b){
+  return 'viaje-japon-rail-v1:' + a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '>' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+}
+function getStoredRail(key){
+  try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function storeRail(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){} }
+function haversineMeters(a, b){
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function nearestOnLine(point, coords){
+  let best = {dist: Infinity, index: 0};
+  coords.forEach((c, i) => { const d = haversineMeters(point, c); if(d < best.dist) best = {dist: d, index: i}; });
+  return best;
+}
+async function fetchRailRoute(from, to){
+  const pad = 0.03;
+  const minLat = Math.min(from.lat, to.lat) - pad, maxLat = Math.max(from.lat, to.lat) + pad;
+  const minLng = Math.min(from.lng, to.lng) - pad, maxLng = Math.max(from.lng, to.lng) + pad;
+  const q = `[out:json][timeout:20];way["railway"~"^(rail|subway|light_rail|monorail|tram)$"](${minLat},${minLng},${maxLat},${maxLng});out geom;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {method: 'POST', body: new URLSearchParams({data: q})});
+  const data = await res.json();
+  const ways = ((data && data.elements) || []).filter(el => el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length > 1);
+  if(!ways.length) return null;
+  let best = null;
+  ways.forEach(way => {
+    const coords = way.geometry.map(g => [g.lat, g.lon]);
+    const nf = nearestOnLine([from.lat, from.lng], coords);
+    const nt = nearestOnLine([to.lat, to.lng], coords);
+    if(nf.dist > 1200 || nt.dist > 1200) return;
+    const score = nf.dist + nt.dist;
+    if(!best || score < best.score) best = {score, coords, i1: nf.index, i2: nt.index, name: (way.tags && (way.tags.name || way.tags.ref)) || null};
+  });
+  if(!best) return null;
+  const segment = best.i1 <= best.i2 ? best.coords.slice(best.i1, best.i2 + 1) : best.coords.slice(best.i2, best.i1 + 1).reverse();
+  return segment.length < 2 ? null : {points: segment, lineName: best.name};
+}
+
 function cachedRoute(a, b, profile){
   return routeCache[profile + ':' + a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + ';' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4)] || null;
 }
@@ -2271,6 +2341,7 @@ function openPlace(pid){
       ${p.insta ? `<a class="btn ghost small" href="${esc(p.insta)}" target="_blank" rel="noopener">📸 Reel guardado</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Google Maps</a>
       ${p.userPlace ? `<button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>` : ''}
+      ${(p.dani || p.source === 'insta') ? `<button class="btn small" onclick="adoptPlace('${p.id}')">★ Adoptar a nuestros sitios</button>` : ''}
     </div>
     <div class="form-row" style="margin-top:18px"><label>Añadir al itinerario</label>
       <div style="display:flex;gap:8px">
@@ -2425,12 +2496,175 @@ function initMapView(){
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
     }).addTo(map);
+    // Las zonas dependen del nivel de zoom: redibujar al hacer zoom
+    let zoomT = null;
+    map.on('zoomend', () => { clearTimeout(zoomT); zoomT = setTimeout(renderZones, 120); });
   }
   renderDayChips('#mapDayChips', mapDay, i => { mapDay = i; renderMapDay(); });
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
 }
-let poisOn = false;
-$('#togglePois').addEventListener('click', () => { poisOn = !poisOn; $('#togglePois').classList.toggle('active', poisOn); renderMapDay(); });
+/* --- Capas de origen: Nosotros / Dani / Insta (persistidas) --- */
+let srcState = {n: true, d: false, i: false}; // como la app original: "Nosotros" activo
+try{ srcState = Object.assign(srcState, JSON.parse(localStorage.getItem('jp27_map_sources') || '{}')); }catch(e){}
+function syncSrcChips(){
+  $('#srcNos').classList.toggle('active', srcState.n);
+  $('#srcDani').classList.toggle('active', srcState.d);
+  $('#srcInsta').classList.toggle('active', srcState.i);
+}
+[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i']].forEach(([sel, key]) => {
+  $(sel).addEventListener('click', () => {
+    srcState[key] = !srcState[key];
+    try{ localStorage.setItem('jp27_map_sources', JSON.stringify(srcState)); }catch(e){}
+    syncSrcChips(); renderMapDay();
+  });
+});
+syncSrcChips();
+
+/* --- Zonas y límites de barrios (portado de la app original) ---
+   Polígonos fijos del catálogo + límites reales de Nominatim con caché
+   en localStorage (misma clave 'viaje-japon-boundary-v3:' que la app
+   original: la caché ya descargada en el dispositivo se reutiliza). */
+const catOfShared = p => CATS[p.category] || CATS.otro;
+const boundaryRequests = new Set();
+const boundaryQueue = [];
+let boundaryQueueRunning = false;
+function cacheKeyForBoundary(query){ return 'viaje-japon-boundary-v3:' + query.toLowerCase(); }
+function isUsableGeoJSON(g){ return g && (g.type === 'Polygon' || g.type === 'MultiPolygon'); }
+function getBoundaryQueries(p){
+  if(Array.isArray(p.boundaryQueries) && p.boundaryQueries.length) return p.boundaryQueries;
+  return p.boundaryQuery ? [p.boundaryQuery] : [];
+}
+function getStoredBoundary(query){
+  try{
+    const raw = localStorage.getItem(cacheKeyForBoundary(query));
+    if(!raw) return null;
+    const g = JSON.parse(raw);
+    return isUsableGeoJSON(g) ? g : null;
+  }catch(e){ return null; }
+}
+function storeBoundary(query, geojson){
+  try{ localStorage.setItem(cacheKeyForBoundary(query), JSON.stringify(geojson)); }catch(e){}
+}
+function hasAllBoundaries(p){
+  const qs = getBoundaryQueries(p);
+  if(!qs.length) return !!p.geojson;
+  if(qs.length === 1) return !!p.geojson || (p.geojsons && !!p.geojsons[qs[0]]);
+  return !!p.geojsons && qs.every(q => !!p.geojsons[q]);
+}
+function requestBoundary(p){
+  if(!p || p.boundaryStatus === 'no_encontrado') return;
+  const qs = getBoundaryQueries(p);
+  if(!qs.length || hasAllBoundaries(p)) return;
+  if(!p.geojsons) p.geojsons = {};
+  let queued = false;
+  qs.forEach(query => {
+    if(p.geojsons[query] || (qs.length === 1 && p.geojson)) return;
+    const cached = getStoredBoundary(query);
+    if(cached){ p.geojsons[query] = cached; if(qs.length === 1) p.geojson = cached; return; }
+    const reqKey = p.id + '|' + query;
+    if(boundaryRequests.has(reqKey)) return;
+    boundaryRequests.add(reqKey);
+    boundaryQueue.push({placeId: p.id, query});
+    queued = true;
+  });
+  if(queued) runBoundaryQueue();
+}
+async function fetchBoundaryGeoJSON(query){
+  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=8&polygon_geojson=1&polygon_threshold=0&addressdetails=0&q=' + encodeURIComponent(query);
+  const res = await fetch(url, {headers: {'Accept': 'application/json'}});
+  const data = await res.json();
+  const usable = (data || []).filter(r => isUsableGeoJSON(r.geojson));
+  const hit = usable.find(r => r.class === 'boundary')
+    || usable.find(r => /administrative|boundary|park|garden|neighbourhood|quarter|suburb/i.test(String(r.type || '') + ' ' + String(r.class || '')))
+    || usable[0];
+  return hit ? hit.geojson : null;
+}
+async function runBoundaryQueue(){
+  if(boundaryQueueRunning) return;
+  boundaryQueueRunning = true;
+  while(boundaryQueue.length){
+    const item = boundaryQueue.shift();
+    const p = state.places.find(x => x && x.id === item.placeId);
+    if(!p) continue;
+    if(!p.geojsons) p.geojsons = {};
+    if(p.geojsons[item.query]) continue;
+    try{
+      const g = await fetchBoundaryGeoJSON(item.query);
+      if(g){
+        p.geojsons[item.query] = g;
+        if(getBoundaryQueries(p).length === 1) p.geojson = g;
+        storeBoundary(item.query, g);
+        if(curTab === 'mapa') renderZones();
+      } else if(!Object.keys(p.geojsons).length){
+        p.boundaryStatus = 'no_encontrado';
+      }
+    }catch(e){}
+    await new Promise(r => setTimeout(r, 1150)); // política de uso de Nominatim
+  }
+  boundaryQueueRunning = false;
+}
+function isBaseCityZone(p){
+  return !!p && (p.baseLayer || p.cityBase || ['catalog_tokio','catalog_kioto','catalog_osaka'].includes(p.id));
+}
+function zonePolygonZoomThreshold(p){
+  if(isBaseCityZone(p)) return 0;
+  if(Number.isFinite(p.polygonZoom)) return p.polygonZoom;
+  if(['catalog_narai_juku','catalog_takeshita','catalog_pontocho','catalog_sannenzaka'].includes(p.id)) return 15;
+  if(['catalog_nara','catalog_ueno','catalog_yoyogi','catalog_arashiyama'].includes(p.id)) return 12;
+  if(p.category === 'naturaleza') return 12;
+  if(p.category === 'zona') return 11;
+  return 10;
+}
+function zoneStyle(p, cat){
+  if(isBaseCityZone(p)){
+    return {color: p.id === 'catalog_tokio' ? '#223A5E' : '#6B6152',
+      weight: p.id === 'catalog_tokio' ? 0.8 : 1.2,
+      opacity: p.id === 'catalog_tokio' ? .24 : .34,
+      fillColor: p.id === 'catalog_tokio' ? '#223A5E' : '#7C6A46',
+      fillOpacity: p.id === 'catalog_tokio' ? .14 : .09, lineCap: 'round', interactive: true};
+  }
+  return {color: cat.color, weight: 2, opacity: .72, fillColor: cat.color,
+    fillOpacity: p.category === 'zona' ? .13 : .10, lineCap: 'round', lineJoin: 'round', interactive: true};
+}
+function zoneLatLngs(p){
+  if(Array.isArray(p.polygon) && p.polygon.length >= 3) return p.polygon;
+  if(p.allowFallback !== false && Array.isArray(p.fallbackPolygon) && p.fallbackPolygon.length >= 3) return p.fallbackPolygon;
+  return null;
+}
+let zonesLayer = null;
+function renderZones(){
+  if(!map) return;
+  if(zonesLayer){ map.removeLayer(zonesLayer); }
+  zonesLayer = L.layerGroup().addTo(map);
+  const zoom = map.getZoom();
+  state.places.forEach(p => {
+    if(!p || p.dani) return;
+    const isZone = Array.isArray(p.polygon) || Array.isArray(p.fallbackPolygon) || p.boundaryQuery || p.boundaryQueries || p.geojson || p.geojsons;
+    if(!isZone) return;
+    const base = isBaseCityZone(p);
+    if(!base && !srcState.n) return;                       // zonas de barrio: solo con "Nosotros"
+    if(!base && zoom < zonePolygonZoomThreshold(p)) return; // gating por zoom
+    if(!base && !p.fixedPolygon && !hasAllBoundaries(p)) requestBoundary(p);
+    const cat = catOfShared(p);
+    const geoms = [];
+    if(isUsableGeoJSON(p.geojson)) geoms.push(p.geojson);
+    if(p.geojsons) Object.values(p.geojsons).forEach(g => { if(isUsableGeoJSON(g) && !geoms.includes(g)) geoms.push(g); });
+    const style = zoneStyle(p, cat);
+    if(geoms.length){
+      geoms.forEach(g => {
+        const layer = L.geoJSON(g, {style}).addTo(zonesLayer);
+        layer.bindTooltip(esc(p.name), {direction: 'center', className: 'zone-tooltip'});
+        layer.on('click', () => openPlace(p.id));
+      });
+      return;
+    }
+    const pts = zoneLatLngs(p);
+    if(!pts) return;
+    const poly = L.polygon(pts, style).addTo(zonesLayer);
+    poly.bindTooltip(esc(p.name), {direction: 'center', className: 'zone-tooltip'});
+    poly.on('click', () => openPlace(p.id));
+  });
+}
 let mapRenderToken = 0;
 async function renderMapDay(){
   if(!map) return;
@@ -2442,19 +2676,30 @@ async function renderMapDay(){
   const stops = day.stops.map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat);
   const usedModes = new Set();
 
-  if(poisOn){
-    const pois = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
-      .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})));
-    pois.forEach(({pid, p}) => {
-      if(!p.lat || p.region === 'Ideas') return;
-      if(day.stops.some(s => s.pid === pid)) return;
-      const c = catOf(p);
-      const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: '#fff',
-        weight: 1.5, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
-      circle.bindPopup(`<b>${esc(p.name)}</b>${p.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
-      circle.addTo(map); mapLayers.push(circle);
-    });
+  renderZones();
+  // Capas por origen: N (catálogo + nuestros), D (ruta Dani), I (Instagram)
+  const pois = [];
+  if(srcState.n){
+    Object.keys(PLACES).forEach(pid => pois.push({pid, p: PLACES[pid], ring: '#fff', badge: ''}));
+    userPlaces().forEach(up => pois.push({pid: up.id, p: userPlaceView(up), ring: '#fff', badge: ' <span style="color:var(--indigo)">★</span>'}));
   }
+  if(srcState.d){
+    state.places.forEach(sp => { if(sp && sp.dani && sp.lat != null)
+      pois.push({pid: sp.id, p: userPlaceView(sp), ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'}); });
+  }
+  if(srcState.i){
+    state.places.forEach(sp => { if(sp && sp.source === 'insta' && sp.lat != null)
+      pois.push({pid: sp.id, p: userPlaceView(sp), ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'}); });
+  }
+  pois.forEach(({pid, p, ring, badge}) => {
+    if(!p.lat || p.region === 'Ideas') return;
+    if(day.stops.some(s => s.pid === pid)) return;
+    const c = catOf(p);
+    const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: ring,
+      weight: ring === '#fff' ? 1.5 : 2, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
+    circle.bindPopup(`<b>${esc(p.name)}</b>${badge}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
+    circle.addTo(map); mapLayers.push(circle);
+  });
 
   stops.forEach((x, i) => {
     const mk = L.marker([x.p.lat, x.p.lng], {
@@ -2478,12 +2723,30 @@ async function renderMapDay(){
     usedModes.add(opt.m);
     const style = {color: mode.color, weight: opt.m === 'shinkansen' ? 4 : 3.5, opacity: .85, dashArray: mode.dash};
     const km = haversine(a, b);
-    const drawLine = pts => {
+    const drawLine = (pts, lineName) => {
       if(token !== mapRenderToken) return;
       const line = L.polyline(pts, style);
-      line.bindPopup(`${mode.emoji} <b>${esc(opt.t || mode.label)}</b>${opt.d ? '<br>⏱️ ' + fmtMin(opt.d) : ''}${opt.y ? '<br>💴 ' + fmtYen(opt.y) : ''}${opt.l ? '<br>🔀 ' + esc(opt.l) : ''}`);
+      line.bindPopup(`${mode.emoji} <b>${esc(opt.t || mode.label)}</b>${lineName ? '<br>🚉 ' + esc(lineName) : ''}${opt.d ? '<br>⏱️ ' + fmtMin(opt.d) : ''}${opt.y ? '<br>💴 ' + fmtYen(opt.y) : ''}${opt.l ? '<br>🔀 ' + esc(opt.l) : ''}`);
       line.addTo(map); mapLayers.push(line);
     };
+    if(RAIL_MODES.has(opt.m) && km <= 120){
+      // Tren/metro: geometría ferroviaria real (Overpass), con caché compartida
+      const rKey = railCacheKey(a, b);
+      const rail = getStoredRail(rKey);
+      if(rail && rail.points && rail.points.length > 1){
+        drawLine(rail.points, rail.lineName);
+        continue;
+      }
+      drawLine([[a.lat, a.lng], [b.lat, b.lng]]); // provisional mientras llega
+      if(!railInFlight.has(rKey)){
+        railInFlight.add(rKey);
+        fetchRailRoute(a, b)
+          .then(r => { if(r){ storeRail(rKey, r); if(token === mapRenderToken) renderMapDay(); } })
+          .catch(() => {})
+          .finally(() => railInFlight.delete(rKey));
+      }
+      continue;
+    }
     if(mode.profile === 'line' || km > 600){
       drawLine([[a.lat, a.lng], [b.lat, b.lng]]);
     } else {
