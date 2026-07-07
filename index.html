@@ -6,6 +6,43 @@
 <title>Japón 2027 · Planificador de viaje</title>
 <meta name="description" content="Planificador del viaje a Japón · 8–28 abril 2027">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23fff'/%3E%3Ccircle cx='50' cy='50' r='26' fill='%23cf3f2a'/%3E%3C/svg%3E">
+<!-- PWA (paridad M12 con la app original): instalable en pantalla de inicio -->
+<meta name="theme-color" content="#f6f4ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Japón 2027">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Japón 2027">
+<meta name="msapplication-TileColor" content="#f6f4ee">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23fff'/%3E%3Ccircle cx='90' cy='90' r='47' fill='%23cf3f2a'/%3E%3C/svg%3E">
+<script>
+// Manifest dinámico (mismo mecanismo que la app original): un solo archivo,
+// sin manifest.json externo. Branding actual de esta app.
+(function(){
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#ffffff"/><circle cx="256" cy="256" r="128" fill="#cf3f2a"/></svg>`;
+  const iconUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(iconSvg);
+  const manifest = {
+    name: 'Japón 2027',
+    short_name: 'Japón 2027',
+    description: 'Planificador compartido del viaje a Japón · 8–28 abril 2027.',
+    start_url: location.pathname + location.search + location.hash,
+    scope: location.pathname.replace(/[^/]*$/, ''),
+    display: 'standalone',
+    display_override: ['standalone', 'fullscreen', 'minimal-ui', 'browser'],
+    background_color: '#f6f4ee',
+    theme_color: '#f6f4ee',
+    orientation: 'portrait',
+    icons: [
+      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    ]
+  };
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'}));
+  document.head.appendChild(link);
+})();
+</script>
 <script>
 (function(){
   // Aplica el tema (claro/oscuro) antes de pintar, para evitar parpadeos.
@@ -397,9 +434,10 @@ table.phr tr:last-child td{border-bottom:none;}
   <!-- ============ ITINERARIO ============ -->
   <section class="view" id="view-itinerario">
     <div class="filter-bar" style="justify-content:space-between">
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="fchip active" id="itinModeOurs">Nuestro plan</button>
         <button class="fchip" id="itinModeDani">Ruta Dani</button>
+        <button class="fchip" id="itinModeOrig" title="Itinerario de la app original, solo lectura">App original</button>
       </div>
       <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
     </div>
@@ -1660,7 +1698,9 @@ $('#btnSync').addEventListener('click', () => {
 function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('japon27_theme', theme); }catch(e){}
-  // Igual que la app original: el mapa y el mini-mapa cambian de teselas
+  // Igual que la app original: barra del sistema y teselas siguen al tema
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if(metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#141319' : '#f6f4ee');
   if(map) applyMapTheme(map);
   if(miniMap) applyMapTheme(miniMap);
 }
@@ -1836,7 +1876,9 @@ function setMiniPin(lat, lng, pan){
   if(st){ st.textContent = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`; st.style.color = 'var(--green)'; }
 }
 async function nominatimSearch(q){
-  const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=es&q=' + encodeURIComponent(q));
+  // viewbox=Japón + bounded=0: prioriza resultados japoneses sin excluir
+  // el resto (portado de la app original); jsonv2/accept-language se quedan.
+  const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=es&viewbox=122,46,146,20&bounded=0&q=' + encodeURIComponent(q));
   if(!r.ok) throw 0;
   return r.json();
 }
@@ -1901,7 +1943,11 @@ function openPlaceForm(placeId, presetCat){
     if(!q) return;
     $('#fpResults').innerHTML = '<div style="padding:8px;color:var(--muted);font-size:13px">Buscando…</div>';
     try{
-      const rs = await nominatimSearch(q);
+      let rs = await nominatimSearch(q);
+      // Reintento ", Japan" de la app original cuando no hay resultados
+      if(!rs.length && !/jap[oó]n|japan|tokyo|tokio|kyoto|kioto|osaka/i.test(q)){
+        rs = await nominatimSearch(q + ', Japan');
+      }
       $('#fpResults').innerHTML = rs.length ? rs.map((r, i) => `
         <div class="search-item" data-i="${i}">
           <div class="emoji">📍</div>
@@ -2339,14 +2385,62 @@ function stopHTML(s, idx, dayIdx){
 /* --- Vista "Ruta Dani" (paridad con la app original, fase 7b) ---
    Muestra los 14 días de DANI_ROUTE_GROUPS en modo solo lectura, con el
    botón ★ Pasar (adoptPlace) y el documento original (DANI_PDF_URL). */
-let itinDani = false;
-function setItinMode(dani){
-  itinDani = dani;
-  $('#itinModeOurs').classList.toggle('active', !dani);
-  $('#itinModeDani').classList.toggle('active', dani);
-  $('#btnDaniPdf').style.display = dani ? '' : 'none';
-  $('#dayChips').style.display = dani ? 'none' : '';
+let itinMode = 'ours'; // 'ours' | 'dani' | 'orig' (P1: app original, solo lectura)
+function setItinMode(mode){
+  itinMode = mode;
+  $('#itinModeOurs').classList.toggle('active', mode === 'ours');
+  $('#itinModeDani').classList.toggle('active', mode === 'dani');
+  $('#itinModeOrig').classList.toggle('active', mode === 'orig');
+  $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
+  $('#dayChips').style.display = mode === 'ours' ? '' : 'none';
   renderItinerary();
+}
+/* P1 · Itinerario de la app original, SOLO LECTURA: espejo de state.origDays
+   (llega por la nube o al importar su copia) + lugares asignados por dayId,
+   ordenados como allí (order → hora → nombre). Aquí no se edita nada del
+   modelo original: se consulta y, como mucho, se abre la ficha del lugar. */
+function renderOrigItinerary(){
+  const days = normArr(state.origDays).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  if(!days.length){
+    $('#dayPanel').innerHTML = `<div class="card" style="padding:16px;font-size:13.5px;color:var(--muted)">
+      La app original todavía no ha compartido su itinerario en este dispositivo.
+      Se recibe automáticamente con la nube activada (☁️) o al importar una copia suya.</div>`;
+    return;
+  }
+  const stopsFor = dayId => state.places
+    .filter(p => p && p.dayId === dayId)
+    .sort((a, b) => {
+      const ao = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+      const bo = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+      if(ao !== bo) return ao - bo;
+      const t = String(a.time || '').localeCompare(String(b.time || ''));
+      if(t) return t;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+  $('#dayPanel').innerHTML =
+    `<div class="card" style="padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px">
+      Itinerario de la app original (solo lectura). Se edita allí; aquí se ve tal cual llega por la nube.
+    </div>` +
+    days.map(d => {
+      const stops = stopsFor(d.id);
+      const rows = stops.map(p => {
+        const c = catOfShared(p);
+        return `<div class="dani-row" onclick="openPlace('${p.id}')">
+          <div class="emoji" style="background:${c.color}22">${c.emoji || '📍'}</div>
+          <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.name)}</b>
+            ${p.region ? `<div style="font-size:12px;color:var(--muted)">${esc(p.region)}</div>` : ''}</div>
+          ${p.time ? `<span class="pill" style="flex:none">🕐 ${esc(p.time)}</span>` : ''}
+        </div>`;
+      }).join('') || `<div style="font-size:12.5px;color:var(--muted);padding:6px 0">Sin paradas este día</div>`;
+      return `<div class="card" style="padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
+          <span class="pill" style="flex:none">${d.isFlightDay ? '✈️' : (parseInt(String(d.date || '').split('-')[2], 10) || '·')}</span>
+          <b>${esc(d.label || d.date || '')}</b>
+          ${d.date ? `<span style="font-size:12px;color:var(--muted)">${esc(d.date)}</span>` : ''}
+        </div>
+        <div>${rows}</div>
+      </div>`;
+    }).join('');
 }
 function renderDaniItinerary(){
   const byId = new Map(state.places.map(p => [p && p.id, p]));
@@ -2386,7 +2480,8 @@ function renderDaniItinerary(){
     }).join('');
 }
 function renderItinerary(){
-  if(itinDani){ renderDaniItinerary(); return; }
+  if(itinMode === 'dani'){ renderDaniItinerary(); return; }
+  if(itinMode === 'orig'){ renderOrigItinerary(); return; }
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
   fixTransfers(d);
@@ -2592,11 +2687,12 @@ function addPlaceToDay(pid){
   const i = +$('#addToDay').value;
   const day = state.days[i];
   const p = placeById(pid);
-  day.stops.push({id: uid(), pid, time: '', dur: (p && p.dur) || 60, note: '', done: false});
+  day.stops.push({id: uid(), pid, time: inferTimeForInsert(day.stops, day.stops.length, null),
+    dur: (p && p.dur) || 60, note: '', done: false});
   fixTransfers(day);
   commit(); closeModal();
   curDay = i; showTab('itinerario');
-  setItinMode(false); // salir de la vista Dani para ver el día editado
+  setItinMode('ours'); // salir de la vista Dani/original para ver el día editado
   toast('Añadido a ' + fmtDateShort(day.date));
 }
 function openAddStop(dayIdx){
@@ -2622,7 +2718,8 @@ function openAddStop(dayIdx){
     $$('#addList .search-item').forEach(el => el.addEventListener('click', () => {
       const day = state.days[dayIdx];
       const p = placeById(el.dataset.pid);
-      day.stops.push({id: uid(), pid: el.dataset.pid, time: '', dur: (p && p.dur) || 60, note: '', done: false});
+      day.stops.push({id: uid(), pid: el.dataset.pid, time: inferTimeForInsert(day.stops, day.stops.length, null),
+        dur: (p && p.dur) || 60, note: '', done: false});
       fixTransfers(day);
       commit(); closeModal(); renderItinerary();
       toast('Parada añadida');
@@ -2636,6 +2733,35 @@ function openAddStop(dayIdx){
    con el dedo (pulsación larga), portado de la app original y
    adaptado al modelo de días de esta app.
 ================================================================ */
+/* M11 · Inferencia de hora al mover/insertar paradas (funciones puras
+   portadas literales de la app original). */
+function parseTimeToMinutes(time){
+  if(!time || !/^\d{1,2}:\d{2}$/.test(time)) return null;
+  const [h,m] = time.split(':').map(n=>parseInt(n,10));
+  if(!Number.isFinite(h) || !Number.isFinite(m) || h<0 || h>23 || m<0 || m>59) return null;
+  return h*60 + m;
+}
+function formatMinutes(mins){
+  mins = Math.max(0, Math.min(23*60+55, Math.round(mins/5)*5));
+  const h = Math.floor(mins/60);
+  const m = mins % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+function inferTimeForInsert(targetStops, insertIndex, moving){
+  const prev = targetStops[insertIndex - 1];
+  const next = targetStops[insertIndex];
+  const prevMin = prev ? parseTimeToMinutes(prev.time) : null;
+  const nextMin = next ? parseTimeToMinutes(next.time) : null;
+  const currentMin = parseTimeToMinutes(moving && moving.time);
+  if(prevMin != null && nextMin != null){
+    if(nextMin > prevMin + 10) return formatMinutes((prevMin + nextMin) / 2);
+    return formatMinutes(prevMin + 5);
+  }
+  if(prevMin != null) return formatMinutes(prevMin + 60);
+  if(nextMin != null) return formatMinutes(nextMin - 60);
+  if(currentMin != null) return formatMinutes(currentMin);
+  return '10:00';
+}
 function reorderStop(dayIdx, fromIdx, insertIdx){
   const day = state.days[dayIdx];
   if(fromIdx < 0 || fromIdx >= day.stops.length) return;
@@ -2643,6 +2769,7 @@ function reorderStop(dayIdx, fromIdx, insertIdx){
   to = Math.max(0, Math.min(to, day.stops.length - 1));
   if(to === fromIdx) return;
   const [moving] = day.stops.splice(fromIdx, 1);
+  moving.time = inferTimeForInsert(day.stops, to, moving); // M11: hora coherente con sus vecinos
   day.stops.splice(to, 0, moving);
   fixTransfers(day);
   commit(); renderItinerary();
@@ -2707,6 +2834,7 @@ function moveStopToDay(dayIdx, stopIdx, targetIdx){
   if(targetIdx === dayIdx || !state.days[targetIdx]){ closeModal(); return; }
   const day = state.days[dayIdx], target = state.days[targetIdx];
   const [s] = day.stops.splice(stopIdx, 1);
+  s.time = inferTimeForInsert(target.stops, target.stops.length, s); // M11
   target.stops.push(s);
   fixTransfers(day); fixTransfers(target);
   commit(); closeModal(); renderItinerary();
@@ -2754,7 +2882,9 @@ function moveStop(dayIdx, stopIdx, dir){
   const day = state.days[dayIdx];
   const j = stopIdx + dir;
   if(j < 0 || j >= day.stops.length) return;
-  [day.stops[stopIdx], day.stops[j]] = [day.stops[j], day.stops[stopIdx]];
+  const [moving] = day.stops.splice(stopIdx, 1);
+  moving.time = inferTimeForInsert(day.stops, j, moving); // M11
+  day.stops.splice(j, 0, moving);
   commit(); closeModal(); renderItinerary();
 }
 function deleteStop(dayIdx, stopIdx){
@@ -3428,8 +3558,9 @@ function renderAll(){
   if(curTab === 'mapa') renderMapDay();
 }
 buildNav();
-$('#itinModeOurs').addEventListener('click', () => setItinMode(false));
-$('#itinModeDani').addEventListener('click', () => setItinMode(true));
+$('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
+$('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
+$('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
 applyTripTitle();
