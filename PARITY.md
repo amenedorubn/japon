@@ -101,7 +101,7 @@ Además: comprobación de sintaxis del script completo y smoke HTTP
 - **Fase 9** — rediseño visual completo (Apple HIG + minimalismo japonés); absorbe P3 (UX de
   arrastre entre días) y D5 (plantillas sin onclick inline).
 - **Fase 10** — consolidación: un único modelo de itinerario/transfers con migración (P2/D4),
-  fusión real de catálogos (D1), service worker offline (R4). Solo cuando ambos viajeros usen esta app.
+  fusión real de catálogos (D1), service worker offline (R4). Solo cuando los tres viajeros usen esta app.
 - **Fase 11** — calidad de código: D2, D3, nombres, docs, rendimiento; sin cambios visuales/funcionales.
 
 ## 6. Riesgos conocidos

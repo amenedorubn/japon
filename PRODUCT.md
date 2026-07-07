@@ -6,11 +6,11 @@ product
 
 ## Users
 
-Dos viajeros españoles (pareja) planificando y viviendo su viaje a Japón del 8 al 28 de abril de 2027. Contexto real: móviles (iPhone, ~390 px) por la noche planificando en el sofá, y a pie por Japón con una mano ocupada. Ocasionalmente en portátil para sesiones largas de planificación. El trabajo a hacer: decidir qué ver cada día, cómo moverse entre sitios, cuánto costará, y tener toda la información del viaje (vuelos, hoteles, reservas) a un toque, compartida entre los dos en tiempo real.
+Tres amigos españoles planificando y viviendo juntos su viaje a Japón del 8 al 28 de abril de 2027. Contexto real: móviles (~390 px) por la noche planificando cada uno desde su casa, y a pie por Japón con una mano ocupada. Ocasionalmente en portátil para sesiones largas de planificación. El trabajo a hacer: decidir entre los tres qué ver cada día, cómo moverse entre sitios, cuánto costará por persona, y tener toda la información del viaje (vuelos, hoteles, reservas) a un toque, compartida entre los tres móviles en tiempo real.
 
 ## Product Purpose
 
-Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Reemplaza y convive con la "app original" de los viajeros: misma base de datos, cero riesgo para sus datos. Éxito = la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados, presupuesto automático, y sincronización silenciosa entre ambos móviles.
+Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Reemplaza y convive con la "app original" de los viajeros: misma base de datos, cero riesgo para sus datos. Éxito = los tres la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados, presupuesto automático por persona, y sincronización silenciosa entre los tres móviles.
 
 ## Brand Personality
 
