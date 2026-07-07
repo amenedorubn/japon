@@ -427,6 +427,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <input type="search" id="placeSearch" placeholder="Buscar sitio… (templo, ramen, mirador)">
       <button class="btn small" id="btnAddPlace">＋ Añadir sitio</button>
     </div>
+    <div class="filter-bar" id="srcChips"></div>
     <div class="filter-bar" id="regionChips"></div>
     <div class="filter-bar" id="catChips"></div>
     <div class="places-grid" id="placesGrid"></div>
@@ -438,6 +439,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <h2 class="section" style="margin:0">🏨 Alojamientos <small id="hotelCount"></small></h2>
       <button class="btn small" id="btnAddHotel">＋ Añadir hotel</button>
     </div>
+    <div class="filter-bar" id="hotelSrcChips" style="margin-top:10px"></div>
     <div class="grid2" id="hotelsList" style="margin-top:12px"></div>
     <h2 class="section">📋 Bases por reservar <small>sugerencias del plan</small></h2>
     <div class="grid2" id="hotelPlaceholders"></div>
@@ -520,6 +522,7 @@ const CATS = {
   compras:     {label:'Compras',              emoji:'🛍️', color:'#cf3f2a'},
   naturaleza:  {label:'Naturaleza',           emoji:'🌿', color:'#4c8a3f'},
   zona:        {label:'Barrios y zonas',      emoji:'🏮', color:'#7c6a46'},
+  excursion:   {label:'Excursiones',          emoji:'🗾', color:'#8a5a44'},
   mirador:     {label:'Miradores',            emoji:'🌆', color:'#8a4a8a'},
   museo:       {label:'Museos y cultura',     emoji:'🏛️', color:'#57534a'},
   alojamiento: {label:'Alojamiento',          emoji:'🏨', color:'#a97b12'},
@@ -1420,6 +1423,31 @@ function applyCatalogUpdate(){
 
 
 /* ================================================================
+   D1 · CAPA DE ALIAS: catálogo compartido → catálogo curado
+   Un mismo sitio real existe con dos ids: catalog_* dentro de
+   state.places (esquema de la app original, viaja por Firebase) y su
+   clave curada en PLACES (ficha rica: precio, horario, web, consejo).
+   En las listas gana la versión curada; la entrada compartida NUNCA se
+   toca ni se renombra (fusionar ids rompería la app original — la
+   fusión real es Fase 10). Las entradas sin gemelo curado se listan
+   tal cual (Harajuku, Shinjuku, Namba, excursiones-concepto…).
+================================================================ */
+const CATALOG_ALIAS = {
+  catalog_sensoji: 'sensoji', catalog_ueno: 'ueno_park', catalog_ginza: 'ginza',
+  catalog_odaiba: 'odaiba', catalog_meiji: 'meiji', catalog_takeshita: 'takeshita',
+  catalog_akihabara: 'akihabara', catalog_shibuya: 'shibuya',
+  catalog_tokyo_metropolitan: 'tocho', catalog_mori_tower: 'mori',
+  catalog_kinkakuji: 'kinkakuji', catalog_sannenzaka: 'sannenzaka',
+  catalog_yasaka: 'yasaka', catalog_gion: 'gion', catalog_pontocho: 'pontocho',
+  catalog_denden_town: 'denden', catalog_nijo_castle: 'nijo',
+  catalog_shijo_kawaramachi: 'teramachi', catalog_arashiyama: 'bamboo',
+  catalog_nara: 'nara_park', catalog_kanazawa: 'kanazawa',
+  catalog_uji_excursion: 'uji', catalog_hakone_fuji_excursion: 'hakone',
+  catalog_takayama_kamikochi_excursion: 'takayama',
+  airport_narita_llegada: 'nrt', airport_narita_salida: 'nrt'
+};
+
+/* ================================================================
    ESTADO
 ================================================================ */
 const LS_KEY = 'japon27_app_v1';
@@ -1738,6 +1766,27 @@ function sourceValueForPlace(p){
   if(p.source === 'insta') return 'insta';
   return 'user';
 }
+/* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
+function sourceMatchesFilter(p, filter){
+  const source = sourceValueForPlace(p);
+  if(filter === 'ours') return source === 'user';
+  if(filter === 'dani') return source === 'dani';
+  if(filter === 'insta') return source === 'insta';
+  return true;
+}
+/* Lugares compartidos que van a listas: fuera los que tienen gemelo curado
+   (CATALOG_ALIAS: ya los lista PLACES), las capas base de ciudad, los
+   aeropuertos y los hoteles (tienen su propia pestaña). */
+function sharedListables(){
+  return state.places.filter(p => p && p.lat != null &&
+    !CATALOG_ALIAS[p.id] && !p.baseLayer && !p.cityBase && !p.airport &&
+    p.category !== 'alojamiento');
+}
+const SRC_FILTER_OPTS = [['ours','Nuestros'],['dani','Dani'],['insta','Insta'],['all','Todos']];
+function srcChipsHTML(active){
+  return SRC_FILTER_OPTS.map(([v, l]) =>
+    `<button class="fchip ${active === v ? 'active' : ''}" data-s="${v}">${l}</button>`).join('');
+}
 /* Adoptar un sitio de Dani/Insta a "nuestros" (portado de la app original) */
 function adoptPlace(pid){
   const p = state.places.find(x => x && x.id === pid);
@@ -1931,13 +1980,17 @@ function hotelBasePlaceholders(){
 function hotelCardHTML(p){
   const nights = daysBetween(p.checkIn, p.checkOut);
   const website = p.hotelWebsite && /^https?:\/\//i.test(p.hotelWebsite) ? p.hotelWebsite : '';
+  const src = sourceValueForPlace(p);
+  const srcPill = src === 'dani' ? '<span class="pill" style="color:#223A5E">D Dani</span>'
+    : src === 'insta' ? '<span class="pill" style="color:#C13584">I Insta</span>'
+    : '<span class="pill green">✓ Reservado</span>';
   return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px">
     <div style="display:flex;gap:10px;align-items:flex-start">
       <div style="font-size:24px">🏨</div>
       <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(p.name)}</b>
         <div style="font-size:12px;color:var(--muted)">${esc(p.hotelArea || p.region || '')}</div>
       </div>
-      <span class="pill green">✓ Reservado</span>
+      ${srcPill}
     </div>
     <div class="info-rows" style="margin:0">
       ${p.checkIn ? `<div class="info-row"><span class="k">📅 Fechas</span><span class="v">${esc(p.checkIn)} → ${esc(p.checkOut)}${nights ? ' · ' + nights : ''}</span></div>` : ''}
@@ -1953,11 +2006,20 @@ function hotelCardHTML(p){
     </div>
   </div>`;
 }
+let hotelSrc = 'ours';
 function renderHoteles(){
-  const hotels = userHotels();
-  $('#hotelCount').textContent = hotels.length ? hotels.length + ' reservado' + (hotels.length === 1 ? '' : 's') : '';
+  $('#hotelSrcChips').innerHTML = srcChipsHTML(hotelSrc);
+  $$('#hotelSrcChips .fchip').forEach(b => b.addEventListener('click', () => { hotelSrc = b.dataset.s; renderHoteles(); }));
+  // Con "Nuestros" son las reservas reales (userHotels); los demás filtros
+  // muestran también los alojamientos de la ruta Dani / Insta compartidos.
+  const hotels = state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null && sourceMatchesFilter(p, hotelSrc));
+  const countLabel = {ours: n => n + ' reservado' + (n === 1 ? '' : 's'), dani: n => n + ' de Dani', insta: n => n + ' de Insta', all: n => n + ' en total'}[hotelSrc];
+  $('#hotelCount').textContent = hotels.length ? countLabel(hotels.length) : '';
+  const emptyMsg = hotelSrc === 'ours'
+    ? 'Todavía no hay hoteles reservados. Usa <b>＋ Añadir hotel</b> cuando tengáis la primera reserva: dirección, fechas, nº de reserva y teléfono quedarán guardados y sincronizados.'
+    : 'No hay alojamientos con este filtro.';
   $('#hotelsList').innerHTML = hotels.map(hotelCardHTML).join('')
-    || `<div class="card" style="padding:18px;color:var(--muted);font-size:13.5px">Todavía no hay hoteles reservados. Usa <b>＋ Añadir hotel</b> cuando tengáis la primera reserva: dirección, fechas, nº de reserva y teléfono quedarán guardados y sincronizados.</div>`;
+    || `<div class="card" style="padding:18px;color:var(--muted);font-size:13.5px">${emptyMsg}</div>`;
   $('#hotelPlaceholders').innerHTML = hotelBasePlaceholders().map(({pid, p}) => `
     <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${pid}')">
       <div style="font-size:22px">🏨</div>
@@ -3059,11 +3121,25 @@ async function renderMapDay(){
 /* ================================================================
    SITIOS
 ================================================================ */
-let placeQ = '', placeRegion = '', placeCat = '';
+let placeQ = '', placeRegion = '', placeCat = '', placeSrc = 'ours';
 function renderSitios(){
+  $('#srcChips').innerHTML = srcChipsHTML(placeSrc);
+  $$('#srcChips .fchip').forEach(b => b.addEventListener('click', () => { placeSrc = b.dataset.s; renderSitios(); }));
+
+  // Unión sin duplicados: catálogo curado (cuenta como "Nuestros") + lugares
+  // compartidos listables (la capa de alias D1 excluye los gemelos curados).
+  const curated = (placeSrc === 'ours' || placeSrc === 'all')
+    ? Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
+        .filter(x => x.p.cat !== 'transporte' && x.p.cat !== 'alojamiento')
+    : [];
+  const shared = sharedListables()
+    .filter(p => sourceMatchesFilter(p, placeSrc))
+    .map(p => ({pid: p.id, p: userPlaceView(p)}));
+  const all = curated.concat(shared);
+
   const regions = [];
-  Object.values(PLACES).forEach(p => { if(!regions.includes(p.region)) regions.push(p.region); });
-  userPlaces().forEach(p => { const r = p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
+  all.forEach(x => { const r = x.p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
+  if(placeRegion && !regions.includes(placeRegion)) placeRegion = '';
   $('#regionChips').innerHTML = `<button class="fchip ${!placeRegion ? 'active' : ''}" data-r="">Todas</button>` +
     regions.map(r => `<button class="fchip ${placeRegion === r ? 'active' : ''}" data-r="${esc(r)}">${esc(r)}</button>`).join('');
   $('#catChips').innerHTML = `<button class="fchip ${!placeCat ? 'active' : ''}" data-c="">Todo</button>` +
@@ -3071,9 +3147,7 @@ function renderSitios(){
   $$('#regionChips .fchip').forEach(b => b.addEventListener('click', () => { placeRegion = b.dataset.r; renderSitios(); }));
   $$('#catChips .fchip').forEach(b => b.addEventListener('click', () => { placeCat = b.dataset.c; renderSitios(); }));
 
-  const items = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
-    .filter(x => x.p.cat !== 'transporte' && x.p.cat !== 'alojamiento')
-    .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})))
+  const items = all
     .filter(x => !placeRegion || x.p.region === placeRegion)
     .filter(x => !placeCat || x.p.cat === placeCat)
     .filter(x => !placeQ || (x.p.name + ' ' + x.p.desc + ' ' + x.p.region).toLowerCase().includes(placeQ));
@@ -3087,6 +3161,8 @@ function renderSitios(){
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">${esc(x.p.region)}</div>
         </div>
         ${x.p.userPlace ? '<span class="pill blue" title="Sitio añadido por vosotros">★ mío</span>' : ''}
+        ${x.p.source === 'dani' ? '<span class="pill" style="color:#223A5E" title="Sitio de la ruta Dani">D Dani</span>' : ''}
+        ${x.p.source === 'insta' ? '<span class="pill" style="color:#C13584" title="Sitio guardado de Instagram">I Insta</span>' : ''}
         ${inPlan ? '<span class="pill green" title="Ya está en el itinerario">✓ en plan</span>' : ''}
       </div>
       <div class="desc">${esc(x.p.desc)}</div>
