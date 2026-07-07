@@ -24,6 +24,10 @@ La app está evolucionando de ser solo un planificador de itinerario a un **comp
 
 No es una petición de rediseño ahora: es la filosofía de producto a largo plazo que guía cada iteración. Antes de añadir una función, la pregunta es "¿a qué capa pertenece?". Si no encaja limpiamente en una de las tres, probablemente aún no pertenece al producto.
 
+## Dirección de rediseño (antes de la Fase 12)
+
+El rediseño visual de la Fase 9 se considera **demasiado conservador**: la app todavía se parece a una versión limpia de la app original. Antes de implementar la Fase 12 haremos una iteración DEDICADA de rediseño de producto/UX con las cuatro Skills de diseño (animation-vocabulary, design-taste-frontend, emil-design-eng, impeccable), con el mandato de **retar la interfaz, no pulirla**: jerarquía e información, modelo de interacción, animación con propósito, estados de **día vacío** y **día completado** (deliberadamente sin definir: los diseña la Skill), transiciones y divulgación progresiva. Objetivo: que se sienta como un producto de viaje premium moderno, no como el rediseño anterior.
+
 ## Procedencia y separación conceptual
 
 Dos ejes independientes gobiernan cada lugar del viaje.
@@ -32,16 +36,16 @@ Dos ejes independientes gobiernan cada lugar del viaje.
 - **Nuestros** (`ours`): de nuestros documentos de planificación o añadidos por nosotros.
 - **Dani** (`dani`): recomendaciones de Dani.
 - **Instagram** (`instagram`): inspiración guardada.
-- **Exploración** (`ai`): ideas generadas durante el desarrollo de la app. No son recomendaciones ni forman parte del viaje real hasta que decidimos incluirlas.
+- **IA** (`ai`): ideas generadas durante el desarrollo de la app. No son recomendaciones ni forman parte del viaje real hasta que decidimos incluirlas. (Ojo: **Exploración** es el nombre de una CAPA, no la etiqueta de esta procedencia.)
 
-La procedencia es historia: adoptar o planificar un lugar no la cambia. Un lugar de Dani sigue siendo de Dani; uno de Exploración sigue siendo de Exploración. Lo que cambia es si decidimos incluirlo en el viaje, no de dónde vino.
+La procedencia es historia: adoptar o planificar un lugar no la cambia. Un lugar de Dani sigue siendo de Dani; uno de IA sigue siendo de IA. Lo que cambia es si decidimos incluirlo en el viaje, no de dónde vino.
 
-**Estado (dinámico, eje aparte).** Qué hacemos con un lugar. Por ahora solo existe "planificado" (está en el itinerario). Deliberadamente NO añadimos favourite / visited / want todavía: el modelo se mantiene mínimo y ampliable.
+**Estado / capa (dinámico, eje aparte).** Qué hacemos con un lugar y cómo de avanzado está: **planificado** (está en el itinerario) y **confirmado** (marcado a propósito como cierto). Deliberadamente NO añadimos favourite / visited / want todavía: el modelo se mantiene mínimo y ampliable.
 
 **Tres modelos mentales, siempre visualmente separados:**
-- **Confirmado**: vuelos y hoteles reservados. Información cierta.
-- **Planificación**: el itinerario que decidimos los tres, procedente de nuestros documentos de Google Drive. La app se pone al día a mano.
-- **Exploración**: lo de Exploración (`ai`), Dani e Instagram, mientras no lo programemos a propósito.
+- **Confirmado**: hoy SOLO vuelos y los dos hoteles reservados. Información cierta. Confirmar es una ACCIÓN DELIBERADA (marcamos algo como confirmado al editarlo); nada llega a Confirmado por sí solo. Los hoteles se tratan como los vuelos: hechos, no lugares normales.
+- **Planificación**: el itinerario que decidimos los tres, procedente de nuestros documentos de Google Drive. La app se pone al día a mano. Nada aquí está necesariamente confirmado.
+- **Exploración**: lo de IA (`ai`), Dani e Instagram, mientras no lo programemos a propósito.
 
 El itinerario sembrado en desarrollo pertenece a Exploración: se mantiene visible (la app nunca queda vacía) y desaparece día a día según entra nuestro plan real. Nunca es una capa permanente ni se presenta como el viaje.
 
@@ -64,6 +68,7 @@ Sereno, artesanal, fiable. Sensación de app de pago premium: Apple HIG encontr�
 4. **Un acento, con intención.** El rojo torii marca acción primaria, selección y "hoy"; todo lo demás es papel y tinta.
 5. **Los datos de los viajeros son sagrados.** Nada visual puede costar funcionalidad verificada: paridad (PARITY.md) y política de escritura v2 son invariantes.
 6. **Confirmado, planificación y exploración no se mezclan.** Cada cosa se muestra en su registro: lo confirmado (vuelos, hoteles reservados) transmite certeza; la planificación es editable y nuestra; la exploración recede (sin acento, claramente "todavía no es el viaje"). La procedencia de un lugar es historia estable y se distingue de si lo hemos incluido en el plan.
+7. **Los precios no dominan.** Costes de transporte y entradas no se muestran de forma constante; el presupuesto vive bajo demanda (divulgación progresiva), no en cada pantalla.
 
 ## Accessibility & Inclusion
 

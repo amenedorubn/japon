@@ -87,7 +87,8 @@ state = {
   monótona); el espejo local `state.transfers` ya no existe.
 - **Procedencia de un lugar** (campo `provenance`, estable e histórico, Fase 12): `ours` | `dani`
   | `instagram` | `ai`. Es de dónde salió el lugar y NO cambia nunca (ni al adoptar, ni al
-  planificar): la procedencia es historia. El valor `ai` (etiqueta de UI **Exploración**) marca
+  planificar): la procedencia es historia. El valor `ai` (etiqueta de UI **IA**; "Exploración"
+  queda reservado para la CAPA, no para la procedencia) marca
   los lugares generados durante el desarrollo (catálogo semilla y propuesta de itinerario). Es un
   campo ADITIVO: la app original lo ignora; el `source` heredado (`user`/`dani`/`insta`) se
   mantiene tal cual para el esquema compartido. `foldCurated` preserva `provenance` al re-sembrar,
@@ -95,8 +96,10 @@ state = {
   - Backfill único desde flags estables: `source:'dani'`→`dani`; `source:'insta'`→`instagram`;
     reservas confirmadas y lugares creados por un viajero (`id_*`)→`ours`; el resto de la semilla
     (curado + catálogo, placeholders "por reservar")→`ai`.
-- **Estado** (eje distinto de la procedencia): si un lugar está PLANIFICADO se deriva de si aparece
-  en el itinerario; favourite/visited/want se dejan fuera a propósito por ahora (modelo mínimo, §8).
+- **Estado / capa** (eje distinto de la procedencia): PLANIFICADO se deriva de si el lugar está en
+  el itinerario; CONFIRMADO es un flag EXPLÍCITO que se pone con una acción deliberada (marcar como
+  confirmado al editar). Vuelos y los DOS hoteles reservados son Confirmado por naturaleza; hoy nada
+  más está confirmado. favourite/visited/want siguen fuera a propósito (modelo mínimo, §8).
 - `sourceValueForPlace` → `user` | `dani` | `insta` sigue existiendo para la re-siembra
   (flags `dani`, `daniAdopted`, `catalogItem` gobiernan `applyCatalogUpdate`).
 
@@ -245,6 +248,31 @@ Alcance técnico aprobado:
    el viaje (estado), no de dónde vino el lugar.
 Sin nuevos estados (favourite/visited/want) por ahora: modelo mínimo (§8).
 
+**Correcciones de esta sesión (canónicas, 2026-07-07):**
+- **Confirmado es estrecho y se gana**: hoy SOLO vuelos + los dos hoteles reservados están
+  confirmados; todo lo demás (incluido `Itinerario.docx`) es planificación o exploración. Confirmar
+  es una ACCIÓN DELIBERADA (flag `confirmed` explícito al editar), no un efecto colateral.
+- **Etiqueta de procedencia `ai` = "IA"** (no "Exploración", que es una CAPA).
+- **Hoteles se tratan como los vuelos** (hechos de Confirmado, no lugares normales).
+- **Los precios NO dominan la UI**: nada de costes de transporte/entradas siempre visibles;
+  presupuesto bajo demanda (divulgación progresiva).
+- **`Itinerario.docx` es una LISTA DE DESEOS**, no un itinerario: listas por región + excursiones;
+  añade destinos nuevos que la semilla no tenía (Kanazawa, Takayama/Kamikochi + ryokan, Fukuoka,
+  Narai-juku, Uji). Alimenta el tablero de Exploración con intención `ours`.
+- **El rediseño de la Fase 9 se considera visualmente DEMASIADO CONSERVADOR.** Antes de implementar
+  la Fase 12 se hará una iteración DEDICADA de rediseño de producto/UX con las cuatro Skills
+  (animation-vocabulary, design-taste-frontend, emil-design-eng, impeccable) con mandato de RETAR
+  la interfaz (no pulirla): jerarquía, interacción, animación, estados de día vacío y día completado
+  (sin definir a propósito: los diseña la Skill), transiciones, divulgación progresiva; producto de
+  viaje premium moderno.
+- **Propuesta de implementación presentada, PENDIENTE de aprobación** (aún NO canónica): IA de 5
+  pestañas (Hoy/Plan/Ideas/Mapa/Guía) con hoteles dentro de Confirmado/Hoy y Sitios→Ideas; matar la
+  fila de tarjetas de coste del Home y las rejillas de tarjetas iguales; interacciones con nombre
+  (pluck-and-place Exploración→Planificación, hold-to-seal Planificación→Confirmado, segmented day
+  scrub). Decisiones pendientes: aprobar IA; etiqueta "IA"; `confirmed` como segundo estado; alta de
+  destinos nuevos como Ideas `ours`; y si construir un prototipo visual (Artifact) antes de tocar
+  `index.html`.
+
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
 `node tests/run-all.js [volcado-firebase.json]` — extrae el JS de `index.html`, hace
@@ -273,6 +301,15 @@ son la fuente de verdad) y **exploración** (lo `ai`/Dani/Instagram hasta que se
 Exploración se presenta como parte del viaje real hasta que los viajeros lo deciden; la propuesta
 `ai` es andamiaje de desarrollo que desaparece a medida que entra el plan real y nunca es capa
 permanente.
+
+**Correcciones canónicas (Fase 12, esta sesión):** Confirmado es estrecho (hoy solo vuelos + los
+dos hoteles reservados) y confirmar es una acción deliberada; la procedencia `ai` se etiqueta "IA"
+(no "Exploración", que es capa); los hoteles se tratan como los vuelos; los precios no dominan la
+UI (presupuesto bajo demanda). El rediseño visual de la Fase 9 se considera **demasiado
+conservador**: antes de la Fase 12 se hará una iteración de rediseño de producto/UX con las cuatro
+Skills que RETE la interfaz en vez de pulirla (día vacío, día completado, jerarquía, interacción,
+animación, divulgación progresiva; producto de viaje premium moderno). `Itinerario.docx` es lista
+de deseos, no itinerario.
 
 **Sistema visual** (DESIGN.md, Fase 9): *papel washi, tinta sumi, un rojo torii*. Tokens en
 `:root` de index.html; doble tema de primera clase; Inter para toda la UI + Noto Serif JP solo
