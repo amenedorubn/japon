@@ -12,7 +12,7 @@ while ($listener.IsListening) {
     if ((Test-Path $file) -and (Get-Item $file).PSIsContainer -eq $false) {
       $bytes = [IO.File]::ReadAllBytes($file)
       $ext = [IO.Path]::GetExtension($file).ToLower()
-      $mime = @{'.html'='text/html; charset=utf-8'; '.js'='text/javascript'; '.css'='text/css'; '.json'='application/json'; '.png'='image/png'; '.svg'='image/svg+xml'}[$ext]
+      $mime = @{'.html'='text/html; charset=utf-8'; '.js'='text/javascript'; '.css'='text/css'; '.json'='application/json'; '.png'='image/png'; '.svg'='image/svg+xml'; '.pdf'='application/pdf'}[$ext]
       if (-not $mime) { $mime = 'application/octet-stream' }
       $ctx.Response.ContentType = $mime
       $ctx.Response.ContentLength64 = $bytes.Length
