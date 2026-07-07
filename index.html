@@ -671,6 +671,11 @@ uji:            P('Uji (té verde)','zona','Ideas',34.8895,135.8077,0,null,'',''
    ITINERARIO SUGERIDO (editable en la app)
    S(sitio, hora, minutos de visita, nota)
    T entre paradas: O(modo, título, min, ¥, líneas/conexiones, nota)
+
+   Decisión de diseño (Fase 7a): el viaje es FIJO de 21 días
+   (8–28 de abril de 2027, delimitado por los vuelos reservados).
+   A diferencia de la app original, aquí no se pueden añadir ni
+   eliminar días: descartado a propósito (auditoría, ítem M10).
 ================================================================ */
 const SEED_VERSION = 'v1-2026-07-06';
 const S = (pid, time, dur, note) => ({pid, time, dur, note: note || ''});
@@ -3007,7 +3012,10 @@ $('#rateInput').addEventListener('change', e => {
    EXPORT / IMPORT / RESET
 ================================================================ */
 function doExport(){
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  // Mismo envoltorio {tripTitle, state} que exporta la app original:
+  // cada app puede leer la copia de seguridad de la otra.
+  const payload = {tripTitle: state.tripTitle || "Japón '27", state};
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'japon2027-plan.json';
@@ -3016,17 +3024,60 @@ function doExport(){
   toast('Plan exportado');
 }
 function doImport(){ $('#importFile').click(); }
+/* Importa una copia de seguridad. Acepta los tres formatos que existen:
+   A) app original: {tripTitle, state:{days(label/fecha), places, transfers}}
+   B) esta app, copias antiguas (fases 1–6): estado plano {days(v2), places…}
+   C) esta app, formato actual: {tripTitle, state:{days(v2), places…}}
+   Fusionar añade lo que falte sin borrar nada; Reemplazar sustituye el plan.
+   Una copia con menos lugares que el plan actual NUNCA los reduce sin una
+   confirmación expresa (mismo principio que el guard de adoptRemote). */
 $('#importFile').addEventListener('change', async e => {
   const f = e.target.files[0];
   if(!f) return;
   try{
     const data = JSON.parse(await f.text());
-    if(!Array.isArray(data.days)) throw 0;
-    state = data;
+    const s = (data && data.state && typeof data.state === 'object') ? data.state : data;
+    const inDays = normArr(s.days);
+    const inPlaces = normArr(s.places);
+    if(!inDays.length && !inPlaces.length){ toast('Archivo con formato inesperado'); e.target.value = ''; return; }
+    // Días v2 (con paradas/título) frente a días de la app original (label/fecha)
+    const v2Days = inDays.length && inDays.some(d => d && (d.stops || d.trans || d.title)) ? inDays : null;
+    if(v2Days) v2Days.forEach(d => {
+      d.stops = normArr(d.stops);
+      d.trans = normArr(d.trans);
+      d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
+    });
+    const merge = confirm('Aceptar = FUSIONAR la copia con el plan actual (añade los lugares que falten, no borra nada).\nCancelar = REEMPLAZAR el plan por la copia.');
+    let placesChanged = false, daysChanged = false;
+    if(merge){
+      const known = new Set(state.places.map(p => p && p.id));
+      inPlaces.forEach(p => { if(p && p.id && !known.has(p.id)){ state.places.push(p); placesChanged = true; } });
+    } else {
+      if(inPlaces.length < state.places.length &&
+         !confirm(`La copia tiene ${inPlaces.length} lugares y el plan actual ${state.places.length}. ¿Reemplazar igualmente? Se perderán los lugares que no estén en la copia.`)){
+        e.target.value = ''; return;
+      }
+      if(inPlaces.length){ state.places = inPlaces; placesChanged = true; }
+      state.transfers = normArr(s.transfers);
+      if(s.catalogVersion) state.catalogVersion = s.catalogVersion;
+      if(v2Days){
+        state.days = v2Days;
+        state.rate = s.rate || state.rate;
+        state.check = s.check || {};
+        daysChanged = true;
+      } else {
+        state.origDays = inDays; // copia de la app original: su itinerario es solo espejo
+      }
+      const title = (data && data.tripTitle) || s.tripTitle;
+      if(title){ state.tripTitle = title; pushTitle(); }
+    }
     ensureSharedShape(state);
     applyCatalogUpdate(); // copias antiguas sin catálogo: se re-siembra
-    commit(); renderAll();
-    toast('Plan importado ✓');
+    applyTripTitle();
+    if(daysChanged) commit(); else persistLocal();
+    if(placesChanged) pushPlaces();
+    renderAll();
+    toast(merge ? 'Copia fusionada ✓' : 'Plan reemplazado ✓');
   }catch(err){ toast('Archivo no válido'); }
   e.target.value = '';
 });
