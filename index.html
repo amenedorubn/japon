@@ -331,6 +331,10 @@ table.phr tr:last-child td{border-bottom:none;}
   .card{box-shadow:none;break-inside:avoid;}
   .view{display:block!important;}
 }
+/* Vista "Ruta Dani" del itinerario (fase 7b) */
+.dani-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.dani-row:first-child{border-top:none}
+.dani-row .emoji{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
 </style>
 </head>
 <body>
@@ -392,6 +396,13 @@ table.phr tr:last-child td{border-bottom:none;}
 
   <!-- ============ ITINERARIO ============ -->
   <section class="view" id="view-itinerario">
+    <div class="filter-bar" style="justify-content:space-between">
+      <div style="display:flex;gap:6px">
+        <button class="fchip active" id="itinModeOurs">Nuestro plan</button>
+        <button class="fchip" id="itinModeDani">Ruta Dani</button>
+      </div>
+      <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
+    </div>
     <div class="day-chips" id="dayChips"></div>
     <div id="dayPanel"></div>
   </section>
@@ -1720,6 +1731,13 @@ function placeById(pid){
   const p = state.places.find(x => x && x.id === pid);
   return p ? userPlaceView(p) : null;
 }
+/* Origen efectivo de un lugar compartido (portado de la app original) */
+function sourceValueForPlace(p){
+  if(!p) return 'user';
+  if(p.source === 'dani' || p.dani) return 'dani';
+  if(p.source === 'insta') return 'insta';
+  return 'user';
+}
 /* Adoptar un sitio de Dani/Insta a "nuestros" (portado de la app original) */
 function adoptPlace(pid){
   const p = state.places.find(x => x && x.id === pid);
@@ -1729,6 +1747,7 @@ function adoptPlace(pid){
   if(!p.notes) p.notes = 'Importado desde ' + from + '.';
   pushPlaces();
   closeModal(); renderSitios(); renderHoteles(); if(curTab === 'mapa') renderMapDay();
+  if(curTab === 'itinerario') renderItinerary(); // vista Dani: ★ Pasar → ✓ nuestro
   toast('Añadido a nuestros sitios ★');
 }
 let placesTimer = null;
@@ -1772,6 +1791,10 @@ function openPlaceForm(placeId, presetCat){
       <div class="form-row"><label>Categoría</label><select id="fpCat">${catOpts}</select></div>
       <div class="form-row"><label>Zona / región</label><input id="fpRegion" value="${p ? esc(p.region || '') : ''}" placeholder="Ej. Tokio"></div>
     </div>
+    <div class="form-row"><label>Origen</label><select id="fpSource">
+      ${[['user','Nosotros'],['dani','Dani'],['insta','Insta']].map(([v, l]) =>
+        `<option value="${v}" ${sourceValueForPlace(p) === v ? 'selected' : ''}>${l}</option>`).join('')}
+    </select></div>
     <div class="form-row"><label>Buscar dirección o lugar</label>
       <div style="display:flex;gap:8px">
         <input id="fpSearch" style="flex:1" placeholder="Ej. Nakameguro, Tokyo">
@@ -1844,7 +1867,9 @@ function savePlaceForm(placeId){
   if(pendingLat == null){ toast('Busca una dirección o toca el mini-mapa'); return; }
   const video = $('#fpVideo').value.trim();
   if(video && !/^https?:\/\//i.test(video)){ toast('El enlace del vídeo no es una URL válida'); return; }
+  const sourceVal = $('#fpSource').value || 'user';
   const data = {name, category: $('#fpCat').value, region: $('#fpRegion').value.trim() || 'Mis sitios',
+    source: sourceVal, dani: sourceVal === 'dani',
     notes: $('#fpNotes').value.trim(), video, lat: pendingLat, lng: pendingLng,
     // Campos de hotel: mismos nombres que la app original
     address: $('#fpAddress').value.trim(), hotelArea: $('#fpHotelArea').value.trim(),
@@ -1853,9 +1878,16 @@ function savePlaceForm(placeId){
     hotelWebsite: $('#fpHotelWebsite').value.trim()};
   if(placeId){
     const p = state.places.find(x => x.id === placeId);
-    if(p) Object.assign(p, data);
+    if(p){
+      Object.assign(p, data);
+      // Misma contabilidad que la app original: pasar a "Nosotros" marca
+      // daniAdopted (mergeCatalogPlace respeta la adopción en ambas apps)
+      // y salir de Dani/Insta lo saca del catálogo re-sembrable.
+      if(sourceVal === 'user') p.daniAdopted = true;
+      if(sourceVal !== 'dani' && sourceVal !== 'insta') p.catalogItem = false;
+    }
   } else {
-    state.places.push(Object.assign({id: placeUid(), source: 'user', dani: false,
+    state.places.push(Object.assign({id: placeUid(),
       catalogItem: false, dayId: null, time: ''}, data));
   }
   pushPlaces();
@@ -1864,7 +1896,13 @@ function savePlaceForm(placeId){
   toast(placeId ? 'Sitio actualizado' : 'Sitio añadido ✓');
 }
 function deleteUserPlace(placeId){
-  if(!confirm('¿Eliminar este sitio? También se quitará de los días del itinerario donde aparezca.')) return;
+  // Los sitios del catálogo compartido o de Dani pueden reaparecer si sube
+  // la versión del catálogo (applyCatalogUpdate los re-siembra): avisar.
+  const seeded = /^(catalog_|dani_|airport_)/.test(placeId);
+  const warn = seeded
+    ? '¿Eliminar este sitio del catálogo compartido? Ojo: una futura actualización del catálogo puede volver a añadirlo. También se quitará de los días del itinerario donde aparezca.'
+    : '¿Eliminar este sitio? También se quitará de los días del itinerario donde aparezca.';
+  if(!confirm(warn)) return;
   state.places = state.places.filter(p => p.id !== placeId);
   // Quitar las paradas del itinerario v2 que lo referencien
   state.days.forEach(day => {
@@ -2221,7 +2259,57 @@ function stopHTML(s, idx, dayIdx){
     </div>
   </div>`;
 }
+/* --- Vista "Ruta Dani" (paridad con la app original, fase 7b) ---
+   Muestra los 14 días de DANI_ROUTE_GROUPS en modo solo lectura, con el
+   botón ★ Pasar (adoptPlace) y el documento original (DANI_PDF_URL). */
+let itinDani = false;
+function setItinMode(dani){
+  itinDani = dani;
+  $('#itinModeOurs').classList.toggle('active', !dani);
+  $('#itinModeDani').classList.toggle('active', dani);
+  $('#btnDaniPdf').style.display = dani ? '' : 'none';
+  $('#dayChips').style.display = dani ? 'none' : '';
+  renderItinerary();
+}
+function renderDaniItinerary(){
+  const byId = new Map(state.places.map(p => [p && p.id, p]));
+  $('#dayPanel').innerHTML =
+    `<div class="card" style="padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px">
+      Ruta importada del documento de Dani (viaje de junio 2025). Es solo de consulta:
+      con <b>★ Pasar</b> cualquier sitio se convierte en vuestro y aparece en Sitios y en el mapa.
+    </div>` +
+    DANI_ROUTE_GROUPS.map((route, idx) => {
+      const rows = route.placeIds.map(id => {
+        const p = byId.get(id);
+        if(!p) return '';
+        const c = catOfShared(p);
+        const adopted = p.source === 'user';
+        const extra = [
+          p.address ? '📍 ' + esc(p.address) : '',
+          (p.checkIn || p.checkOut) ? '📅 ' + esc([p.checkIn, p.checkOut].filter(Boolean).join(' → ')) : '',
+          p.bookingRef ? '🎫 ' + esc(p.bookingRef) : ''
+        ].filter(Boolean).join(' · ');
+        return `<div class="dani-row" onclick="openPlace('${p.id}')">
+          <div class="emoji" style="background:${c.color}22">${c.emoji || 'D'}</div>
+          <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.name)}</b>
+            ${p.notes ? `<div style="font-size:12px;color:var(--muted)">${esc(p.notes)}</div>` : ''}
+            ${extra ? `<div style="font-size:12px;color:var(--muted)">${extra}</div>` : ''}
+          </div>
+          ${adopted ? '<span class="pill green" style="flex:none">✓ nuestro</span>'
+                    : `<button class="btn small ghost" style="flex:none" onclick="event.stopPropagation();adoptPlace('${p.id}')">★ Pasar</button>`}
+        </div>`;
+      }).join('');
+      return `<div class="card" style="padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
+          <span class="pill" style="color:${route.color};border-color:${route.color};font-weight:800;flex:none">D${idx + 1}</span>
+          <b>${esc(route.label)}</b>
+        </div>
+        <div>${rows}</div>
+      </div>`;
+    }).join('');
+}
 function renderItinerary(){
+  if(itinDani){ renderDaniItinerary(); return; }
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
   fixTransfers(d);
@@ -2413,7 +2501,7 @@ function openPlace(pid){
       ${p.web ? `<a class="btn ghost small" href="${esc(p.web)}" target="_blank" rel="noopener">🌐 Web oficial</a>` : ''}
       ${p.insta ? `<a class="btn ghost small" href="${esc(p.insta)}" target="_blank" rel="noopener">📸 Reel guardado</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Google Maps</a>
-      ${p.userPlace ? `<button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>` : ''}
+      ${p.id ? `<button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>` : ''}
       ${(p.dani || p.source === 'insta') ? `<button class="btn small" onclick="adoptPlace('${p.id}')">★ Adoptar a nuestros sitios</button>` : ''}
     </div>
     <div class="form-row" style="margin-top:18px"><label>Añadir al itinerario</label>
@@ -2430,7 +2518,8 @@ function addPlaceToDay(pid){
   day.stops.push({id: uid(), pid, time: '', dur: (p && p.dur) || 60, note: '', done: false});
   fixTransfers(day);
   commit(); closeModal();
-  curDay = i; showTab('itinerario'); renderItinerary();
+  curDay = i; showTab('itinerario');
+  setItinMode(false); // salir de la vista Dani para ver el día editado
   toast('Añadido a ' + fmtDateShort(day.date));
 }
 function openAddStop(dayIdx){
@@ -2836,6 +2925,25 @@ function renderZones(){
     poly.on('click', () => openPlace(p.id));
   });
 }
+/* Rutas de la capa Dani: una polilínea discontinua por día (D1–D14),
+   portado casi literal de la app original (drawDaniRoutes). */
+function drawDaniRoutes(){
+  const byId = new Map(state.places.map(p => [p && p.id, p]));
+  DANI_ROUTE_GROUPS.forEach((route, idx) => {
+    const pts = route.placeIds.map(id => byId.get(id))
+      .filter(p => p && p.lat != null && p.lng != null).map(p => [p.lat, p.lng]);
+    if(pts.length < 2) return;
+    const line = L.polyline(pts, {color: route.color || '#C1440E', weight: 3, opacity: .66, dashArray: '8 8', lineCap: 'round'});
+    line.bindTooltip(route.label, {direction: 'top'});
+    line.addTo(map); mapLayers.push(line);
+    const mid = pts[Math.floor(pts.length / 2)];
+    const badge = L.marker(mid, {icon: L.divIcon({className: '', html:
+      `<div style="background:var(--card,#fff);border:1px solid ${route.color};border-radius:999px;padding:3px 7px;font-size:11px;font-weight:900;color:${route.color};box-shadow:0 2px 6px rgba(34,32,28,.22)">D${idx + 1}</div>`,
+      iconSize: [30, 22], iconAnchor: [15, 11]})});
+    badge.bindTooltip(route.label, {direction: 'top'});
+    badge.addTo(map); mapLayers.push(badge);
+  });
+}
 let mapRenderToken = 0;
 async function renderMapDay(){
   if(!map) return;
@@ -2871,6 +2979,7 @@ async function renderMapDay(){
     circle.bindPopup(`<b>${esc(p.name)}</b>${badge}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
     circle.addTo(map); mapLayers.push(circle);
   });
+  if(srcState.d) drawDaniRoutes();
 
   stops.forEach((x, i) => {
     const mk = L.marker([x.p.lat, x.p.lng], {
@@ -3110,6 +3219,9 @@ function renderAll(){
   if(curTab === 'mapa') renderMapDay();
 }
 buildNav();
+$('#itinModeOurs').addEventListener('click', () => setItinMode(false));
+$('#itinModeDani').addEventListener('click', () => setItinMode(true));
+$('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
 applyTripTitle();
 updateNotifyButton();
