@@ -3895,6 +3895,13 @@ setInterval(tickCountdown, 1000);
 const hashTab = (location.hash.replace('#/', '') || 'inicio');
 showTab(TABS.some(t => t[0] === hashTab) ? hashTab : 'inicio');
 initFirebase();
+// Fase 10c: service worker offline (cache-first + refresco en segundo
+// plano, ver sw.js). La app queda usable sin conexión por Japón; las
+// novedades se estrenan al volver a abrir. Sin soporte (o en file://),
+// simplemente no hace nada.
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
