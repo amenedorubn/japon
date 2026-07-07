@@ -18,6 +18,8 @@ const fakeLine = () => ({ bindTooltip(){ return this; }, addTo(){ layers.push('l
 const fakeMarker = () => ({ bindTooltip(){ return this; }, addTo(){ layers.push('badge'); return this; } });
 const sandbox = {
   $: () => dom,
+  $$: () => [],                 // sin DOM real: el enlazado post-render es no-op
+  bindPlaceOpen: () => {},      // idem (helper de enlazado de clicks)
   esc: s => String(s == null ? '' : s),
   CATS: { templo: { emoji: '⛩️', color: '#123' }, otro: { emoji: '📍', color: '#456' } },
   catOfShared: p => (p.category === 'templo' ? { emoji: '⛩️', color: '#123' } : { emoji: '📍', color: '#456' }),
@@ -51,8 +53,8 @@ api.renderDaniItinerary();
 const h = dom.innerHTML;
 console.log('hasD1=', h.includes('>D1<'), 'hasD2=', h.includes('>D2<'));
 console.log('hasTemploA=', h.includes('Templo A'), 'hasNota=', h.includes('nota A'));
-console.log('pasarForDani=', h.includes("adoptPlace('dani_a')"));
-console.log('adoptedPill=', /✓ nuestro/.test(h) && !h.includes("adoptPlace('dani_b')"));
+console.log('pasarForDani=', h.includes('b-pasar" data-pid="dani_a"'));
+console.log('adoptedPill=', /✓ nuestro/.test(h) && !h.includes('b-pasar" data-pid="dani_b"'));
 console.log('hotelExtra=', h.includes('Calle 1') && h.includes('REF9') && h.includes('2025-06-09'));
 console.log('missingSkipped=', !h.includes('dani_missing'));
 

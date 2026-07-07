@@ -50,10 +50,10 @@ este documento cierra cada uno de sus ítems.
 | Ítem | Estado | Fase | Nota |
 |---|---|---|---|
 | D1 Dos catálogos solapados | ✅ Completado (fusión real) | 7c/10a | Catálogo único en `state.places` (`foldCurated`); `CATALOG_ALIAS` eliminado; ediciones de usuario protegidas campo a campo |
-| D2 Código muerto | ⏳ Fase 11 | — | `TOKYO_SPECIAL_WARDS` (muerto también en la original); `DANI_ROUTE_GROUPS` y `origDays` ya están vivos |
-| D3 Helpers duplicados | ⏳ Fase 11 | — | haversine/haversineMeters, uid/placeUid, esc |
+| D2 Código muerto | ✅ Completado | 11 | Borrados `TOKYO_SPECIAL_WARDS` e `isAirportPlace`; `DANI_ROUTE_GROUPS` y `origDays` están vivos |
+| D3 Helpers duplicados | ✅ Completado | 11 | `haversineMeters` deriva de `haversine`; `placeUid` de `uid`; `esc` era único |
 | D4 Dos modelos de transfers | ✅ Completado | 10b | = P2; el espejo `state.transfers` ya no existe en el modelo vivo |
-| D5 onclick inline globales | ⏳ Fase 11 | — | Limpieza de plantillas pendiente |
+| D5 onclick inline globales | ✅ Completado | 11 | Cero handlers inline: `data-pid`/ids + `addEventListener` tras cada render |
 | D6 Restos en el repo | ✅ Completado | 7a | `index - pre.html` eliminado; `index-pre-source.html` se queda como referencia permanente |
 | D7 Categoría `excursion` sin mapear | ✅ Completado | 7c | Añadida a `CATS` |
 
@@ -102,8 +102,10 @@ Además: comprobación de sintaxis del script completo y smoke HTTP
 - **Fase 10** — consolidación (gate aprobado 2026-07-07, los tres viajeros usan solo esta app):
   HECHA. 10a fusión real de catálogos (`7f63a63`), 10b modelo único de itinerario/transfers con
   migración única (`3f82943`), 10c service worker offline (`6b40e34`).
-- **Fase 11** — calidad de código: D2, D3, D5, nombres, docs, rendimiento; sin cambios
-  visuales/funcionales. PENDIENTE.
+- **Fase 11** — calidad de código: HECHA. D2 (código muerto), D3 (helpers duplicados) y D5
+  (onclick inline globales) cerradas; `userPlaceView`→`placeView`, `userHotels`→`bookedHotels`;
+  em-dashes fuera de comentarios. Sin cambios visuales/funcionales (suite verde). Con esto, la
+  tabla de Deuda técnica (D1–D7) queda íntegramente en verde.
 
 ## 6. Riesgos conocidos (revisados tras la Fase 10)
 

@@ -43,7 +43,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
   ;return { state, PLACES, LEGACY_PID_MAP, CATALOG_VERSION,
-    placeById, userPlaceView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
+    placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
     renderSitios, renderHoteles, dayCosts, openAddStop, hotelBasePlaceholders,
     setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; } };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
@@ -119,7 +119,7 @@ check('budget: day-2 entradas > 0 via merged yen fields', c.entr > 0);
 // ---- 7) Sitios list: one source, no dups, right exclusions ----
 const gridIds = () => {
   const out = [];
-  const re = /openPlace\('([^']+)'\)/g;
+  const re = /class="card place-card" data-pid="([^"]+)"/g;
   let m; while ((m = re.exec(els['#placesGrid'].innerHTML))) out.push(m[1]);
   return out;
 };

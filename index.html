@@ -631,8 +631,12 @@ table.phr tr:last-child td{border-bottom:none;}
 /* ---------------- Utilidades ---------------- */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+/* Enlaza click si el nodo existe (botones condicionales de los modales) */
+const onClick = (sel, fn) => { const el = $(sel); if(el) el.addEventListener('click', fn); };
+/* Abre la ficha del lugar al pulsar cualquier tarjeta con data-pid (listas y modales) */
+const bindPlaceOpen = sel => $$(sel).forEach(el => el.addEventListener('click', () => openPlace(el.dataset.pid)));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const uid = () => 'u' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const uid = (prefix = 'u') => prefix + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 const fmtYen = n => n == null ? '' : '¥' + Math.round(n).toLocaleString('es-ES');
 const fmtMin = m => { m = Math.round(m); return m >= 60 ? Math.floor(m/60) + ' h ' + (m%60 ? (m%60)+' min' : '') : m + ' min'; };
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._h); toast._h = setTimeout(()=> t.style.display = 'none', 2200); }
@@ -1220,14 +1224,6 @@ function boundaryQuery(query, fallbackLatRadius, fallbackLngRadius, opts){
   }, opts || {});
 }
 
-const TOKYO_SPECIAL_WARDS = [
-  'Chiyoda City, Tokyo, Japan','Chuo City, Tokyo, Japan','Minato City, Tokyo, Japan','Shinjuku City, Tokyo, Japan',
-  'Bunkyo City, Tokyo, Japan','Taito City, Tokyo, Japan','Sumida City, Tokyo, Japan','Koto City, Tokyo, Japan',
-  'Shinagawa City, Tokyo, Japan','Meguro City, Tokyo, Japan','Ota City, Tokyo, Japan','Setagaya City, Tokyo, Japan',
-  'Shibuya City, Tokyo, Japan','Nakano City, Tokyo, Japan','Suginami City, Tokyo, Japan','Toshima City, Tokyo, Japan',
-  'Kita City, Tokyo, Japan','Arakawa City, Tokyo, Japan','Itabashi City, Tokyo, Japan','Nerima City, Tokyo, Japan',
-  'Adachi City, Tokyo, Japan','Katsushika City, Tokyo, Japan','Edogawa City, Tokyo, Japan'
-];
 function boundaryQueries(queries, fallbackLatRadius, fallbackLngRadius, opts){
   return Object.assign({
     boundaryQueries: queries,
@@ -1347,7 +1343,7 @@ const CATALOG_PLACES_RAW = [
 
 
 /* ============================================================
-   CAPA DANI — extraída del documento "JAPÓN DEFINITIVO".
+   CAPA DANI: extraída del documento "JAPÓN DEFINITIVO".
    No incluye vuelos internacionales; solo ruta y lugares de Japón.
 ============================================================ */
 function daniPlace(id, name, category, region, lat, lng, notes, extra){
@@ -1532,9 +1528,6 @@ function buildSeedPlaces(){
   return Array.from(byId.values());
 }
 
-function isAirportPlace(p){
-  return !!p && (p.airport || /narita/i.test(p.name || '') || /aeropuerto/i.test(p.name || ''));
-}
 function mergeCatalogPlace(existing, catalog){
   if(!existing) return Object.assign({}, catalog);
   const merged = Object.assign({}, catalog, existing);
@@ -2079,12 +2072,12 @@ $('#btnNotify').addEventListener('click', requestChangeNotifications);
    esquema que la app original (source:'user', category, notes, video…),
    así aparecen también en ella vía Firebase sin conversión alguna.
 ================================================================ */
-const placeUid = () => 'id_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+const placeUid = () => uid('id_'); // ids de usuario: prefijo id_ (contrato compartido con la app original)
 /* Adaptador de esquema almacenado → tarjeta/ficha de esta app. Desde la
    Fase 10 es EL adaptador del catálogo único: expone también los campos
    ricos fusionados (dur/yen/price/hours/web/tip). Los campos de hotel
    (nombres del esquema original) pasan tal cual. */
-function userPlaceView(p){
+function placeView(p){
   const isUser = p.source === 'user' && !p.catalogItem;
   return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
     lat: p.lat, lng: p.lng,
@@ -2108,14 +2101,14 @@ function hotelPlaceholderBase(p){
   return !!(p && p.catalog && p.category === 'alojamiento' && /por reservar/i.test(p.price || ''));
 }
 /* Hoteles reales: reservas propias + los reservados del catálogo (APA) */
-function userHotels(){
+function bookedHotels(){
   return state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null &&
     !p.dani && sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p));
 }
 /* Resolución del catálogo ÚNICO (Fase 10): todo lugar vive en state.places. */
 function placeById(pid){
   const p = state.places.find(x => x && x.id === pid);
-  return p ? userPlaceView(p) : null;
+  return p ? placeView(p) : null;
 }
 /* Origen efectivo de un lugar compartido (portado de la app original) */
 function sourceValueForPlace(p){
@@ -2192,7 +2185,6 @@ function openPlaceForm(placeId, presetCat){
   const catOpts = Object.keys(CATS).map(c =>
     `<option value="${c}" ${selCat === c ? 'selected' : ''}>${CATS[c].emoji} ${CATS[c].label}</option>`).join('');
   openModal(`
-    <button class="close-x" onclick="closeModal()">✕</button>
     <h3>${p ? '✏️ Editar sitio' : '📍 Nuevo sitio'}</h3>
     <div class="form-row"><label>Nombre *</label><input id="fpName" value="${p ? esc(p.name) : ''}" placeholder="Ej. Café con vistas al Fuji"></div>
     <div class="form-grid">
@@ -2230,10 +2222,13 @@ function openPlaceForm(placeId, presetCat){
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn" onclick="savePlaceForm(${p ? `'${p.id}'` : 'null'})">${p ? 'Guardar cambios' : 'Añadir sitio'}</button>
-      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
-      ${p ? `<button class="btn danger" onclick="deleteUserPlace('${p.id}')" style="margin-left:auto">🗑 Eliminar</button>` : ''}
+      <button class="btn" id="fpSave">${p ? 'Guardar cambios' : 'Añadir sitio'}</button>
+      <button class="btn ghost" id="fpCancel">Cancelar</button>
+      ${p ? `<button class="btn danger" id="fpDelete" style="margin-left:auto">🗑 Eliminar</button>` : ''}
     </div>`);
+  onClick('#fpSave', () => savePlaceForm(p ? p.id : null));
+  onClick('#fpCancel', closeModal);
+  onClick('#fpDelete', () => deleteUserPlace(p.id));
   pendingLat = p ? p.lat : null; pendingLng = p ? p.lng : null;
   if(miniMap){ miniMap.remove(); miniMap = null; miniPin = null; }
   miniMap = L.map('fpMiniMap', {zoomControl: false, attributionControl: false})
@@ -2338,7 +2333,7 @@ $('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
 ================================================================ */
 function hotelBasePlaceholders(){
   return state.places.filter(hotelPlaceholderBase)
-    .map(p => ({pid: p.id, p: userPlaceView(p)}));
+    .map(p => ({pid: p.id, p: placeView(p)}));
 }
 function hotelCardHTML(p){
   const nights = daysBetween(p.checkIn, p.checkOut);
@@ -2365,7 +2360,7 @@ function hotelCardHTML(p){
     <div class="btn-row" style="margin-top:2px">
       ${website ? `<a class="btn ghost small" href="${esc(website)}" target="_blank" rel="noopener">🌐 Web</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Maps</a>
-      <button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>
+      <button class="btn ghost small h-edit" data-pid="${p.id}">✏️ Editar</button>
     </div>
   </div>`;
 }
@@ -2385,14 +2380,16 @@ function renderHoteles(){
     : 'No hay alojamientos con este filtro.';
   $('#hotelsList').innerHTML = hotels.map(hotelCardHTML).join('')
     || `<div class="card" style="padding:18px;color:var(--muted);font-size:13.5px">${emptyMsg}</div>`;
+  $$('#hotelsList .h-edit').forEach(b => b.addEventListener('click', () => openPlaceForm(b.dataset.pid)));
   $('#hotelPlaceholders').innerHTML = hotelBasePlaceholders().map(({pid, p}) => `
-    <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${pid}')">
+    <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${pid}">
       <div style="font-size:22px">🏨</div>
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
         <div style="font-size:12.5px;color:var(--muted)">${esc(p.desc)}</div>
       </div>
       <span class="pill red">Por reservar</span>
     </div>`).join('');
+  bindPlaceOpen('#hotelPlaceholders .card[data-pid]');
 }
 $('#btnAddHotel').addEventListener('click', () => openPlaceForm(null, 'alojamiento'));
 
@@ -2436,7 +2433,7 @@ async function runQueue(){
   }catch(e){ job.reject(e); }
   setTimeout(() => { queueBusy = false; runQueue(); }, 250);
 }
-/* --- Rutas de tren/metro reales (Overpass) — portado de la app original.
+/* --- Rutas de tren/metro reales (Overpass), portado de la app original.
    Misma clave de caché ('viaje-japon-rail-v1:'), así se reutiliza lo que
    la app original ya descargó en este dispositivo. --- */
 const RAIL_MODES = new Set(['metro', 'train', 'shinkansen', 'tram']);
@@ -2448,12 +2445,8 @@ function getStoredRail(key){
   try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
 }
 function storeRail(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){} }
-function haversineMeters(a, b){
-  const R = 6371000, toRad = d => d * Math.PI / 180;
-  const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
-  const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLng/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
+/* Variante en metros sobre pares [lat,lng] (coordenadas GeoJSON de Overpass) */
+const haversineMeters = (a, b) => haversine({lat: a[0], lng: a[1]}, {lat: b[0], lng: b[1]}) * 1000;
 function nearestOnLine(point, coords){
   let best = {dist: Infinity, index: 0};
   coords.forEach((c, i) => { const d = haversineMeters(point, c); if(d < best.dist) best = {dist: d, index: i}; });
@@ -2593,9 +2586,9 @@ function renderInicio(){
 
   // Reservas reales (state.places, sincronizadas) + bases sugeridas del catálogo.
   const BASE_DATES = {hotel_tokyo: '9–16 y 22–25 abril (12 noches)', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
-  const bookedCards = userHotels().map(p => {
+  const bookedCards = bookedHotels().map(p => {
     const nights = daysBetween(p.checkIn, p.checkOut);
-    return `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${p.id}')">
+    return `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${p.id}">
       <div class="emoji" style="font-size:24px">🏨</div>
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
         <div style="font-size:12.5px;color:var(--muted)">${p.checkIn ? esc(p.checkIn) + ' → ' + esc(p.checkOut || '') + (nights ? ' (' + nights + ')' : '') : esc(p.hotelArea || p.region || '')}</div>
@@ -2604,7 +2597,7 @@ function renderInicio(){
     </div>`;
   });
   const baseCards = hotelBasePlaceholders().map(({pid, p}) =>
-    `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" onclick="openPlace('${pid}')">
+    `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${pid}">
       <div class="emoji" style="font-size:24px">🏨</div>
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
         <div style="font-size:12.5px;color:var(--muted)">${esc(BASE_DATES[pid] || '')}</div>
@@ -2612,6 +2605,7 @@ function renderInicio(){
       <span class="pill red">Por reservar</span>
     </div>`);
   $('#hotelCards').innerHTML = bookedCards.concat(baseCards).join('');
+  bindPlaceOpen('#hotelCards .card[data-pid]');
 }
 
 /* ================================================================
@@ -2732,7 +2726,7 @@ function renderOrigItinerary(){
       const stops = stopsFor(d.id);
       const rows = stops.map(p => {
         const c = catOfShared(p);
-        return `<div class="dani-row" onclick="openPlace('${p.id}')">
+        return `<div class="dani-row" data-pid="${p.id}">
           <div class="emoji" style="background:${c.color}22">${c.emoji || '📍'}</div>
           <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.name)}</b>
             ${p.region ? `<div style="font-size:12px;color:var(--muted)">${esc(p.region)}</div>` : ''}</div>
@@ -2748,6 +2742,7 @@ function renderOrigItinerary(){
         <div>${rows}</div>
       </div>`;
     }).join('');
+  bindPlaceOpen('#dayPanel .dani-row');
 }
 function renderDaniItinerary(){
   const byId = new Map(state.places.map(p => [p && p.id, p]));
@@ -2767,14 +2762,14 @@ function renderDaniItinerary(){
           (p.checkIn || p.checkOut) ? '📅 ' + esc([p.checkIn, p.checkOut].filter(Boolean).join(' → ')) : '',
           p.bookingRef ? '🎫 ' + esc(p.bookingRef) : ''
         ].filter(Boolean).join(' · ');
-        return `<div class="dani-row" onclick="openPlace('${p.id}')">
+        return `<div class="dani-row" data-pid="${p.id}">
           <div class="emoji" style="background:${c.color}22">${c.emoji || 'D'}</div>
           <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.name)}</b>
             ${p.notes ? `<div style="font-size:12px;color:var(--muted)">${esc(p.notes)}</div>` : ''}
             ${extra ? `<div style="font-size:12px;color:var(--muted)">${extra}</div>` : ''}
           </div>
           ${adopted ? '<span class="pill green" style="flex:none">✓ nuestro</span>'
-                    : `<button class="btn small ghost" style="flex:none" onclick="event.stopPropagation();adoptPlace('${p.id}')">★ Pasar</button>`}
+                    : `<button class="btn small ghost b-pasar" data-pid="${p.id}" style="flex:none">★ Pasar</button>`}
         </div>`;
       }).join('');
       return `<div class="card" style="padding:14px 16px;margin-bottom:12px">
@@ -2785,6 +2780,9 @@ function renderDaniItinerary(){
         <div>${rows}</div>
       </div>`;
     }).join('');
+  // ★ Pasar detiene la propagación para no abrir la ficha al adoptar
+  $$('#dayPanel .b-pasar').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); adoptPlace(b.dataset.pid); }));
+  bindPlaceOpen('#dayPanel .dani-row');
 }
 function renderItinerary(){
   if(itinMode === 'dani'){ renderDaniItinerary(); return; }
@@ -2842,8 +2840,9 @@ function renderItinerary(){
     html += transferHTML(d.post, null, null, curDay, 'post', '🔙 Vuelta');
   }
   html += '</div>';
-  html += `<button class="add-stop" onclick="openAddStop(${curDay})">＋ Añadir parada a este día</button>`;
+  html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
+  onClick('#dayPanel .add-stop', () => openAddStop(curDay));
   bindDayPanel();
   refreshWalkEstimates(d);
 }
@@ -2943,7 +2942,8 @@ function refreshWalkEstimates(day){
    MODALES
 ================================================================ */
 function openModal(html){
-  $('#modalBox').innerHTML = '<button class="close-x" onclick="closeModal()">✕</button>' + html;
+  $('#modalBox').innerHTML = '<button class="close-x">✕</button>' + html;
+  $('#modalBox .close-x').addEventListener('click', closeModal);
   $('#modalBg').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -2980,15 +2980,18 @@ function openPlace(pid){
       ${p.web ? `<a class="btn ghost small" href="${esc(p.web)}" target="_blank" rel="noopener">🌐 Web oficial</a>` : ''}
       ${p.insta ? `<a class="btn ghost small" href="${esc(p.insta)}" target="_blank" rel="noopener">📸 Reel guardado</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Google Maps</a>
-      ${p.id ? `<button class="btn ghost small" onclick="openPlaceForm('${p.id}')">✏️ Editar</button>` : ''}
-      ${(p.dani || p.source === 'insta') ? `<button class="btn small" onclick="adoptPlace('${p.id}')">★ Adoptar a nuestros sitios</button>` : ''}
+      ${p.id ? `<button class="btn ghost small" id="pfEdit">✏️ Editar</button>` : ''}
+      ${(p.dani || p.source === 'insta') ? `<button class="btn small" id="pfAdopt">★ Adoptar a nuestros sitios</button>` : ''}
     </div>
     <div class="form-row" style="margin-top:18px"><label>Añadir al itinerario</label>
       <div style="display:flex;gap:8px">
         <select id="addToDay" style="flex:1">${dayOpts}</select>
-        <button class="btn small" onclick="addPlaceToDay('${pid}')">Añadir</button>
+        <button class="btn small" id="pfAddDay">Añadir</button>
       </div>
     </div>`);
+  onClick('#pfEdit', () => openPlaceForm(p.id));
+  onClick('#pfAdopt', () => adoptPlace(p.id));
+  onClick('#pfAddDay', () => addPlaceToDay(pid));
 }
 function addPlaceToDay(pid){
   const i = +$('#addToDay').value;
@@ -3009,7 +3012,7 @@ function openAddStop(dayIdx){
   const list = state.places
     .filter(p => p && p.lat != null && p.region !== 'Ideas' &&
       !p.airport && !p.baseLayer && !p.cityBase && sourceValueForPlace(p) === 'user')
-    .map(p => ({pid: p.id, p: userPlaceView(p)}));
+    .map(p => ({pid: p.id, p: placeView(p)}));
   openModal(`
     <h3>＋ Añadir parada</h3>
     <input type="search" id="addSearch" placeholder="Buscar sitio…" style="width:100%;margin-top:8px">
@@ -3040,7 +3043,7 @@ function openAddStop(dayIdx){
   $('#addSearch').addEventListener('input', e => render(e.target.value));
 }
 /* ================================================================
-   REORDENAR PARADAS (fase 6) — arrastrar con ratón (HTML5 DnD) y
+   REORDENAR PARADAS (fase 6): arrastrar con ratón (HTML5 DnD) y
    con el dedo (pulsación larga), portado de la app original y
    adaptado al modelo de días de esta app.
 ================================================================ */
@@ -3172,15 +3175,20 @@ function openStopEdit(dayIdx, stopIdx){
       <div style="display:flex;gap:8px">
         <select id="esMoveDay" style="flex:1">${state.days.map((d, i) =>
           d.flight ? '' : `<option value="${i}" ${i === dayIdx ? 'selected' : ''}>${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('')}</select>
-        <button class="btn small ghost" onclick="moveStopToDay(${dayIdx},${stopIdx},$('#esMoveDay').value)">Mover</button>
+        <button class="btn small ghost" id="esMove">Mover</button>
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn" onclick="saveStopEdit(${dayIdx},${stopIdx})">Guardar</button>
-      <button class="btn ghost" onclick="moveStop(${dayIdx},${stopIdx},-1)">⬆️ Subir</button>
-      <button class="btn ghost" onclick="moveStop(${dayIdx},${stopIdx},1)">⬇️ Bajar</button>
-      <button class="btn danger" onclick="deleteStop(${dayIdx},${stopIdx})">🗑️ Quitar</button>
+      <button class="btn" id="esSave">Guardar</button>
+      <button class="btn ghost" id="esUp">⬆️ Subir</button>
+      <button class="btn ghost" id="esDown">⬇️ Bajar</button>
+      <button class="btn danger" id="esDelete">🗑️ Quitar</button>
     </div>`);
+  onClick('#esMove', () => moveStopToDay(dayIdx, stopIdx, $('#esMoveDay').value));
+  onClick('#esSave', () => saveStopEdit(dayIdx, stopIdx));
+  onClick('#esUp', () => moveStop(dayIdx, stopIdx, -1));
+  onClick('#esDown', () => moveStop(dayIdx, stopIdx, 1));
+  onClick('#esDelete', () => deleteStop(dayIdx, stopIdx));
 }
 function saveStopEdit(dayIdx, stopIdx){
   const s = state.days[dayIdx].stops[stopIdx];
@@ -3592,18 +3600,18 @@ async function renderMapDay(){
     state.places.forEach(sp => {
       if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
       if(sourceValueForPlace(sp) !== 'user') return;
-      const v = userPlaceView(sp);
+      const v = placeView(sp);
       pois.push({pid: sp.id, p: v, ring: '#fff',
         badge: v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''});
     });
   }
   if(srcState.d){
     state.places.forEach(sp => { if(sp && sp.dani && sp.lat != null)
-      pois.push({pid: sp.id, p: userPlaceView(sp), ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'}); });
+      pois.push({pid: sp.id, p: placeView(sp), ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'}); });
   }
   if(srcState.i){
     state.places.forEach(sp => { if(sp && sp.source === 'insta' && sp.lat != null)
-      pois.push({pid: sp.id, p: userPlaceView(sp), ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'}); });
+      pois.push({pid: sp.id, p: placeView(sp), ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'}); });
   }
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
@@ -3708,7 +3716,7 @@ function renderSitios(){
   // Catálogo único (Fase 10): una sola fuente, sin capa de alias.
   const all = listablePlaces()
     .filter(p => sourceMatchesFilter(p, placeSrc))
-    .map(p => ({pid: p.id, p: userPlaceView(p)}));
+    .map(p => ({pid: p.id, p: placeView(p)}));
 
   const regions = [];
   all.forEach(x => { const r = x.p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
@@ -3727,7 +3735,7 @@ function renderSitios(){
   $('#placesGrid').innerHTML = items.map(x => {
     const c = catOf(x.p);
     const inPlan = state.days.some(d => d.stops.some(s => s.pid === x.pid));
-    return `<div class="card place-card" onclick="openPlace('${x.pid}')">
+    return `<div class="card place-card" data-pid="${x.pid}">
       <div class="ph">
         <div class="emoji" style="background:${c.color}22">${c.emoji}</div>
         <div style="flex:1;min-width:0"><b>${esc(x.p.name)}</b>
@@ -3746,6 +3754,7 @@ function renderSitios(){
       </div>
     </div>`;
   }).join('') || '<p style="color:var(--muted)">Sin resultados.</p>';
+  bindPlaceOpen('#placesGrid .place-card');
 }
 $('#placeSearch').addEventListener('input', e => { placeQ = e.target.value.toLowerCase(); renderSitios(); });
 

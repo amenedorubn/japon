@@ -49,8 +49,10 @@ horas → modales → mapa → Sitios → Guía → export/import → init (incl
 arranque y registro del service worker).
 
 Render: funciones `renderX()` que reconstruyen `innerHTML` por sección; `renderAll()` para todo.
-Los manejadores de las plantillas son `onclick` inline sobre funciones globales (deuda D5,
-prevista para limpieza; los tests dependen de algunos de esos strings — ver §12).
+Los manejadores se enlazan tras cada render con `addEventListener` (helpers `onClick` y
+`bindPlaceOpen`, más bloques como `bindDayPanel`); las plantillas exponen `data-pid`/ids en vez
+de `onclick` inline (D5 cerrada en la Fase 11: cero handlers inline). Los tests dependen de esos
+ganchos del DOM (ver §12).
 
 ## 4. Modelo de datos (`state`, persistido en localStorage `japon27_app_v1`)
 
@@ -75,7 +77,8 @@ state = {
   `foldCurated` la fusiona en la semilla y en cada subida de `CATALOG_VERSION`, aportando los
   campos ricos (`dur/yen/price/hours/web/tip`) y ganando en los campos visibles SOLO si el valor
   sigue siendo el de la semilla (las ediciones de usuario nunca se pisan). `placeById` resuelve
-  únicamente `state.places` a través de la vista `userPlaceView`.
+  únicamente `state.places` a través de la vista `placeView` (renombrada desde `userPlaceView` en
+  la Fase 11).
 - **`LEGACY_PID_MAP` es permanente**: copias antiguas y v2 antiguos traen pids con clave curada
   (`sensoji` → `catalog_sensoji`); se canonicalizan en semilla, arranque, adoptRemote e import.
 - **Un solo modelo de trayectos** (Fase 10b): `day.trans` por hueco (+ `pre`/`post`). El modelo
@@ -156,7 +159,8 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 10a | `7f63a63` | **Fusión real del catálogo** (D1) | Catálogo único en `state.places`; `foldCurated` + `LEGACY_PID_MAP`; protección campo a campo de ediciones de usuario; `CATALOG_ALIAS` y doble resolución eliminados; producción 220→312 lugares al primer sync |
 | 10b | `3f82943` | **Modelo único de itinerario/trayectos** (P2/D4) | `maybeMigrateOriginal`: transfers por par → hueco v2 con mismos extremos, asignaciones dayId → paradas; marca `migratedOrig` en state/v2, monótona; espejo local `state.transfers` retirado; `localNewer` re-sube ediciones offline |
 | 10c | `6b40e34` | **Service worker offline** (R4) | `sw.js` cache-first del shell + CDNs versionadas, refresco silencioso en segundo plano; sin toasts de actualización; APIs vivas nunca interceptadas |
-| Docs | (este commit) | Fase 10 cerrada: gate aprobado, app original retirada del flujo soportado | — |
+| Docs | `71396f7` | Fase 10 cerrada: gate aprobado, app original retirada del flujo soportado | — |
+| 11 | (este commit) | **Calidad de código** (D2/D3/D5, nombres, comentarios) | Cero handlers `onclick` inline (`data-pid`/ids + `addEventListener`); helpers deduplicados (`haversineMeters`/`placeUid` sobre `haversine`/`uid`); código muerto borrado (`TOKYO_SPECIAL_WARDS`, `isAirportPlace`); `userPlaceView`→`placeView`, `userHotels`→`bookedHotels`; em-dashes fuera de comentarios; sin cambios visuales/funcionales (suite verde byte a byte) |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -181,13 +185,26 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 solo esta app). D1 (fusión real del catálogo), P2/D4 (modelo único de itinerario/trayectos con
 migración única) y R4 (service worker offline) cerrados.
 
-**Deuda consciente restante (Fase 11 — Calidad de código)**: `onclick` inline globales (D5) ·
-helpers duplicados `haversine`/`haversineMeters`, `uid`/`placeUid`, `esc` (D3) · código muerto
-`TOKYO_SPECIAL_WARDS` (muerto también en la original) (D2) · em-dashes solo en comentarios de
-código · nombres heredados (`userPlaceView`/`userHotels` sirven hoy a todo el catálogo) ·
-`hotelArea` no se edita en el formulario (campo del esquema original que sí se muestra).
-Fase 11: D2, D3, D5, nombres, docs, rendimiento; sin cambios visuales/funcionales. Resultado
-esperado: código de proyecto open-source profesional.
+**Fase 11 — Calidad de código: COMPLETADA.** Sin cambios visuales ni funcionales (suite verde,
+la misma cobertura); solo borrado/simplificación/renombrado. Cerrado:
+- **D5** (`onclick` inline globales): cero handlers inline. Las plantillas exponen `data-pid`/ids
+  y el enlazado ocurre tras cada render vía `addEventListener` (helpers `onClick`/`bindPlaceOpen`
+  y bloques como `bindDayPanel`). El botón "★ Pasar" conserva su `stopPropagation`.
+- **D3** (helpers duplicados): `haversineMeters` ahora deriva de `haversine`; `placeUid` de `uid`
+  (con parámetro de prefijo). `esc` era único ya. Sin duplicados.
+- **D2** (código muerto): borrados `TOKYO_SPECIAL_WARDS` (muerto también en la original) e
+  `isAirportPlace` (sin referencias). Barrido estático: 0 símbolos de nivel superior sin uso.
+- **Nombres heredados**: `userPlaceView`→`placeView`, `userHotels`→`bookedHotels` (hoy sirven a
+  todo el catálogo, no solo a los lugares de usuario).
+- **Comentarios**: em-dashes retirados de los tres comentarios que los tenían (los `–` restantes
+  son datos/copy visible: horarios y rangos de fecha, no se tocan).
+
+Corrección de doc: `hotelArea` **sí** se edita en el formulario (`#fpHotelArea`) y se guarda; la
+nota previa que lo daba por no editable era obsoleta.
+
+**Deuda restante conocida: ninguna de la lista D.** Posibles mejoras futuras (no bloqueantes, sin
+decisión pendiente): rendimiento de re-render por sección (hoy se reconstruye `innerHTML` entero),
+y `state/places` sigue siendo un nodo de escritura total (mitigado; ver PARITY §6).
 
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
@@ -237,8 +254,9 @@ pequeño en oscuro).
 3. **Nombres de token CSS = API interna**: las plantillas JS los usan inline (`--muted` 62 usos…).
    No renombrar tokens; añadir es seguro.
 4. **Los tests dependen del contrato del DOM**: ids (`#dayPanel`, `#placesGrid`, `#mapCatChips`…),
-   clases-gancho (`.fchip`, `.day-chip`, `.stop`, `.t-opt`, `.dani-row`, `add-stop`…) y algunos
-   strings de plantilla (`openPlace('id')`, `✓ nuestro`, `D Dani`, `🕐`, `Todos`). Si cambias
+   clases-gancho (`.fchip`, `.day-chip`, `.stop`, `.t-opt`, `.dani-row`, `.place-card`, `.b-pasar`,
+   `add-stop`…), el atributo `data-pid` de las tarjetas de lugar (los tests extraen ids de ahí desde
+   la Fase 11) y algunos strings de plantilla (`✓ nuestro`, `D Dani`, `🕐`, `Todos`). Si cambias
    plantillas, actualiza `tests/` en el MISMO commit y deja la suite en verde.
 5. **`index-pre-source.html` es permanente** (referencia + único embed del PDF).
 6. **Compatibilidad de copias** (§6) y **esquema de lugares compartidos** (nombres de campo de
