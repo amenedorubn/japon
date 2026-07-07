@@ -85,8 +85,20 @@ state = {
   original (`state.transfers` por par + asignaciones `dayId`/hora en lugares) se consolidó UNA
   vez dentro de v2 (`maybeMigrateOriginal`, marca `migratedOrig` compartida por state/v2 y
   monótona); el espejo local `state.transfers` ya no existe.
-- Origen de un lugar: `sourceValueForPlace` → `user` | `dani` | `insta`
-  (flags `dani`, `daniAdopted`, `catalogItem` gobiernan la re-siembra de `applyCatalogUpdate`).
+- **Procedencia de un lugar** (campo `provenance`, estable e histórico, Fase 12): `ours` | `dani`
+  | `instagram` | `ai`. Es de dónde salió el lugar y NO cambia nunca (ni al adoptar, ni al
+  planificar): la procedencia es historia. El valor `ai` (etiqueta de UI **Exploración**) marca
+  los lugares generados durante el desarrollo (catálogo semilla y propuesta de itinerario). Es un
+  campo ADITIVO: la app original lo ignora; el `source` heredado (`user`/`dani`/`insta`) se
+  mantiene tal cual para el esquema compartido. `foldCurated` preserva `provenance` al re-sembrar,
+  y viaja en export/import.
+  - Backfill único desde flags estables: `source:'dani'`→`dani`; `source:'insta'`→`instagram`;
+    reservas confirmadas y lugares creados por un viajero (`id_*`)→`ours`; el resto de la semilla
+    (curado + catálogo, placeholders "por reservar")→`ai`.
+- **Estado** (eje distinto de la procedencia): si un lugar está PLANIFICADO se deriva de si aparece
+  en el itinerario; favourite/visited/want se dejan fuera a propósito por ahora (modelo mínimo, §8).
+- `sourceValueForPlace` → `user` | `dani` | `insta` sigue existiendo para la re-siembra
+  (flags `dani`, `daniAdopted`, `catalogItem` gobiernan `applyCatalogUpdate`).
 
 ## 5. Firebase — estructura y POLÍTICA DE ESCRITURA (invariante crítico)
 
@@ -178,6 +190,11 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 - **Migrar pares de transfers sin hueco v2 equivalente**: descartado a propósito (Fase 10b).
   Solo se consolidan los pares cuyos extremos coinciden con un hueco del plan v2; el resto
   queda legible en el archivo de la nube y en las copias.
+- **Estados de lugar favourite/visited/want**: aplazados a propósito (Fase 12, decisión del
+  usuario). El modelo se mantiene mínimo: por ahora solo `provenance` (estable) + "planificado"
+  (derivado del itinerario). Ampliable más adelante sin rehacer el modelo.
+- **Importador de Google Drive**: descartado a propósito (Fase 12). Drive es la fuente de verdad,
+  pero el plan real se entra a mano dentro de la app; el producto solo hace esa entrada agradable.
 
 ## 9. Deuda técnica restante y fases futuras
 
@@ -206,6 +223,28 @@ nota previa que lo daba por no editable era obsoleta.
 decisión pendiente): rendimiento de re-render por sección (hoy se reconstruye `innerHTML` entero),
 y `state/places` sigue siendo un nodo de escritura total (mitigado; ver PARITY §6).
 
+**Fase 12 — Procedencia y separación conceptual (EN CURSO, arquitectura aprobada por el usuario).**
+No es limpieza: es modelo de producto. Documentación canónica primero (este cambio), implementación
+después. Objetivo: hacer visibles tres modelos mentales distintos (ver PRODUCT.md y §11):
+- **Confirmado**: vuelos y hoteles reservados. Información cierta.
+- **Planificación**: el itinerario que deciden los tres, procedente de sus documentos de Google
+  Drive (fuente de verdad). La app se pone al día a mano, sin importador.
+- **Exploración**: lugares de procedencia `ai`/`dani`/`instagram` mientras no se programen a propósito.
+
+Alcance técnico aprobado:
+1. Campo `provenance` estable (`ours`/`dani`/`instagram`/`ai`) + backfill único (§4). Aditivo y
+   compatible con la app original; `source` no se toca.
+2. UI que distingue las cuatro procedencias sin equipararlas: Exploración recede (sin acento,
+   etiqueta "Exploración"). Procedencia (historia) y estado (planificado) se muestran separados.
+3. El itinerario semilla (`ai`) permanece VISIBLE y se retira DÍA A DÍA a medida que entra el plan
+   real: nunca se vacía la app antes de tener plan, nunca un borrado global, nunca capa permanente.
+4. Higiene de hoteles: fusión del APA duplicado (`apa_asakusabashi` + gemelo `id_*` creado en el
+   formulario), alta de Louis House Otsuka Nishi (9–12 abr, 267,52 €); un hotel con reserva
+   confirmada es siempre `provenance: ours`.
+5. Adopción: deja de cambiar la procedencia (invariante §12.13). Lo que cambia es la inclusión en
+   el viaje (estado), no de dónde vino el lugar.
+Sin nuevos estados (favourite/visited/want) por ahora: modelo mínimo (§8).
+
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
 `node tests/run-all.js [volcado-firebase.json]` — extrae el JS de `index.html`, hace
@@ -224,6 +263,16 @@ aparece deuda que bloquee la visión final: parar, proponer el refactor y espera
 tarea; denso pero calmado; el movimiento comunica estado; un acento con intención; los datos de
 los viajeros son sagrados. **Anti-referencias**: SaaS genérico, webs de agencia, dashboards
 fríos, cualquier "tell" de IA.
+
+**Procedencia y separación conceptual (Fase 12, canónico en PRODUCT.md)**: cada lugar tiene una
+**procedencia** estable e histórica (`ours`/`dani`/`instagram`/`ai`=Exploración) que no cambia
+nunca; el ESTADO (planificado, y más adelante favourite/visited) es un eje aparte. El producto
+mantiene visibles tres modelos mentales distintos: **confirmado** (vuelos, hoteles reservados),
+**planificación** (el itinerario que deciden los tres, desde sus documentos de Google Drive, que
+son la fuente de verdad) y **exploración** (lo `ai`/Dani/Instagram hasta que se programa). Nada de
+Exploración se presenta como parte del viaje real hasta que los viajeros lo deciden; la propuesta
+`ai` es andamiaje de desarrollo que desaparece a medida que entra el plan real y nunca es capa
+permanente.
 
 **Sistema visual** (DESIGN.md, Fase 9): *papel washi, tinta sumi, un rojo torii*. Tokens en
 `:root` de index.html; doble tema de primera clase; Inter para toda la UI + Noto Serif JP solo
@@ -273,6 +322,16 @@ pequeño en oscuro).
 12. **`sw.js`**: el nombre de caché (`japon27-vN`) solo sube si cambia la lista `SHELL`; el
     contenido se refresca solo. Nunca interceptar APIs vivas (teselas, Nominatim, OSRM,
     Overpass, RTDB) ni cachear respuestas parciales (206).
+13. **La procedencia es historia (inmutable)**: `provenance` (`ours`/`dani`/`instagram`/`ai`) se
+    fija al entrar el lugar y NO cambia nunca. Adoptar o planificar un lugar NO altera su
+    procedencia (un lugar de Dani sigue siendo de Dani; uno de `ai` sigue siendo `ai`). Lo que
+    cambia es si se incluye en el viaje (estado), no de dónde vino. Es un eje distinto del estado.
+14. **Separación confirmado / planificación / exploración**: mantener los tres modelos mentales
+    visualmente distintos en todo el producto. Confirmado = vuelos + hoteles reservados;
+    planificación = itinerario decidido (desde Drive); exploración = `ai`/Dani/Instagram sin
+    programar. El itinerario semilla (`ai`) nunca se presenta como plan real ni se convierte en
+    capa permanente: se retira día a día según entra el plan real, nunca de golpe y nunca dejando
+    la app vacía.
 
 ## 13. Supuestos que el trabajo futuro no debe romper por accidente
 
