@@ -26,7 +26,7 @@ rediseño visual premium llegó en la Fase 9.
 |---|---|
 | `index.html` | LA app entera (~3.6k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
 | `index-pre-source.html` | App original descomprimida. **Referencia permanente, no borrar**: contiene además el único embed del PDF de Dani |
-| `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`) |
+| `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
 | `PROJECT.md` `PRODUCT.md` `DESIGN.md` `PARITY.md` | Documentación (este orden: continuidad → estrategia → visual → paridad) |
 | `tests/run-all.js` + `tests/test-*.js` | Suite de regresión completa (ver §10) |
 | `.claude/serve.ps1` | Servidor local de desarrollo (`http://localhost:8734/`) |
@@ -96,6 +96,10 @@ itinerario de la app original). Lectura: `onValue` sobre el nodo raíz → `adop
 guardas: un remoto sin lugares nunca borra los locales; v2 remoto solo gana si su `updatedAt`
 es mayor; arrays vacíos podados por Firebase se reparan con `normArr`; eco propio suprimido
 (2,5 s) para las notificaciones. La suite `test-8c-gate.js` verifica todo esto con un `fb` falso.
+
+Nota: en producción existe además un nodo hermano **legado** `proyectos/japon27-app-v2` (la ruta
+separada que usó esta app antes de la Fase 1). Ninguna de las dos apps lo lee ya; no confundirlo
+con datos activos ni borrarlo sin decisión explícita del usuario.
 
 ## 6. Export / Import (compatibilidad bidireccional)
 
