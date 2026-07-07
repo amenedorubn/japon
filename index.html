@@ -2697,7 +2697,7 @@ function renderInicio(){
     <div class="card stat"><div class="v">${fmtYen(trans)} <small style="font-size:12px;color:var(--muted)">≈ ${(trans/rate).toFixed(0)} €</small></div><div class="k">transporte en Japón · pp aprox.</div></div>`;
 
   $('#flightCards').innerHTML = FLIGHTS.map(f => `
-    <div class="card flight">
+    <div class="m-foil is-flight flight">
       <div class="route"><span>${esc(f.from.split(' (')[1].replace(')',''))}</span><div class="arrow"><span>✈️</span></div><span>${esc(f.to.split(' (')[1].replace(')',''))}</span></div>
       <div class="times">
         <div><b>${f.dep}</b><small>${esc(f.from)}</small></div>
@@ -2716,7 +2716,7 @@ function renderInicio(){
   const BASE_DATES = {hotel_tokyo: '9–16 y 22–25 abril (12 noches)', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
   const bookedCards = bookedHotels().map(p => {
     const nights = daysBetween(p.checkIn, p.checkOut);
-    return `<div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${p.id}">
+    return `<div class="m-foil" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${p.id}">
       <div class="emoji" style="font-size:24px">🏨</div>
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
         <div style="font-size:12.5px;color:var(--muted)">${p.checkIn ? esc(p.checkIn) + ' → ' + esc(p.checkOut || '') + (nights ? ' (' + nights + ')' : '') : esc(p.hotelArea || p.region || '')}</div>
