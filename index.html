@@ -84,6 +84,28 @@
   --ring:0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent);
   --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   --serif:'Noto Serif JP',serif;
+
+  /* ---- Fase 11.5: tokens estructurales nuevos (ADITIVOS, sin cambio visual).
+     Los consume la Fase 12; los nombres heredados NO se renombran (API interna). ---- */
+  /* Escala de espaciado (base 8, medio paso 4) */
+  --space-0:0; --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px; --space-16:64px;
+  /* Radio píldora (los 999px literales heredados siguen siendo válidos) */
+  --radius-pill:999px;
+  /* Escala z semántica: nombra los literales ya en uso (chips/barras/hoja/toast/arrastre) */
+  --z-chip:900; --z-bar:1200; --z-sheet:2000; --z-toast:3000; --z-drag:4000;
+  /* Movimiento: alias nombrados del sistema de diseño + duraciones de ceremonia nuevas.
+     --dur-press/-fast/-base equivalen a --dur-1/2/3 (que se conservan por compatibilidad). */
+  --dur-press:120ms; --dur-fast:180ms; --dur-base:240ms;
+  --dur-zoom:260ms; --dur-drawer:320ms; --dur-bloom:400ms; --dur-line:500ms; --dur-hold:1200ms;
+  --ease-drawer:cubic-bezier(.32,.72,0,1);
+  /* Alias de nombre del sistema de diseño → tokens de producción (no se renombra nada) */
+  --hairline:var(--line); --border:var(--line);
+  --accent-text:var(--accent); --scrim:rgba(19,18,23,.55);
+  /* Bordes de lámina (material Foil) */
+  --foil-edge-red:var(--accent); --foil-edge-gold:var(--gold);
+  /* Hilo de hoteles: rampa neutra de baja croma (NO es acento), asignada por orden de estancia */
+  --stay-1:#8a8172; --stay-2:#7c8580; --stay-3:#87807a; --stay-4:#7f8288;
 }
 /* Tema oscuro: el script de <head> fija siempre data-theme (guardado o
    sistema), así que basta con la variante explícita. El botón 🌙 alterna.
@@ -96,12 +118,15 @@
   --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.3);
   --shadow-lg:0 4px 12px rgba(0,0,0,.4),0 24px 60px rgba(0,0,0,.5);
   --ring:0 0 0 3px color-mix(in srgb,var(--accent) 38%,transparent);
+  /* Fase 11.5: overrides oscuros de los tokens nuevos (Sumi Night) */
+  --accent-text:#f08b72; --scrim:rgba(0,0,0,.6);
+  --stay-1:#6b6455; --stay-2:#646d68; --stay-3:#6a6560; --stay-4:#63666c;
 }
 :root[data-theme="dark"] .leaflet-container{filter:brightness(.9) saturate(.9);}
 /* En oscuro, el acento COMO TEXTO pequeño necesita más luz que el acento
    como fondo: tono elevado solo para esos usos (AA 4.5:1 sobre su soft). */
-:root[data-theme="dark"] .pill.red{color:#f08b72;}
-:root[data-theme="dark"] .btn.danger{color:#f08b72;border-color:var(--accent);}
+:root[data-theme="dark"] .pill.red{color:var(--accent-text);}
+:root[data-theme="dark"] .btn.danger{color:var(--accent-text);border-color:var(--accent);}
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
@@ -137,7 +162,7 @@ a{color:var(--indigo);}
 /* ---------- Header ----------
    Escala z (semántica): chips fijos 900 · barras 1200 · modal 2000 ·
    toast 3000 · drag-ghost 4000. No inventar valores fuera de esta escala. */
-.topbar{position:sticky;top:0;z-index:1200;background:color-mix(in srgb,var(--bg) 80%,transparent);
+.topbar{position:sticky;top:0;z-index:var(--z-bar);background:color-mix(in srgb,var(--bg) 80%,transparent);
   backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
   border-bottom:1px solid var(--line);}
 .topbar-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px;}
@@ -178,7 +203,7 @@ a.icon-btn{text-decoration:none;color:inherit;}
 
 /* ---------- Bottom tab bar (mobile) ----------
    Objetivo táctil ≥44px por pestaña; etiqueta 11px legible. */
-.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:1200;display:flex;
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:var(--z-bar);display:flex;
   background:color-mix(in srgb,var(--card) 88%,transparent);
   backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
   border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);}
@@ -253,7 +278,7 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 
 /* ---------- Day chips ----------
    Riel horizontal con scroll-snap: cada chip encaja al deslizar con el pulgar. */
-.day-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;position:sticky;top:57px;z-index:900;
+.day-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;position:sticky;top:57px;z-index:var(--z-chip);
   background:linear-gradient(var(--bg) 85%,transparent);
   scroll-snap-type:x proximity;scroll-padding-left:2px;scrollbar-width:none;}
 .day-chips::-webkit-scrollbar{display:none;}
@@ -329,7 +354,7 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .stop.dragging{opacity:.45;}
 .stop.drop-before .stop-card{box-shadow:0 -3px 0 0 var(--accent);}
 .stop.drop-after .stop-card{box-shadow:0 3px 0 0 var(--accent);}
-.drag-ghost{position:fixed;left:0;top:0;z-index:4000;background:var(--ink);color:var(--bg);
+.drag-ghost{position:fixed;left:0;top:0;z-index:var(--z-drag);background:var(--ink);color:var(--bg);
   padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;pointer-events:none;
   box-shadow:var(--shadow-lg);max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
@@ -404,7 +429,7 @@ table.phr tr:last-child td{border-bottom:none;}
    Vaul). Escritorio: escala 0.97→1 centrada (los modales no tienen trigger
    anclado: transform-origin center es correcto aquí). Cierre instantáneo a
    propósito: cerrar es la acción frecuente. */
-.modal-bg{position:fixed;inset:0;background:rgba(18,14,8,.45);z-index:2000;display:none;
+.modal-bg{position:fixed;inset:0;background:rgba(18,14,8,.45);z-index:var(--z-sheet);display:none;
   align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
 @media(min-width:640px){.modal-bg{align-items:center;padding:20px;}}
 .modal-bg.open{display:flex;animation:backdropin var(--dur-3) var(--ease);}
@@ -453,7 +478,7 @@ table.phr tr:last-child td{border-bottom:none;}
    instantánea; display:none reinicia la animación en cada aviso. */
 #toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
   background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;
-  z-index:3000;display:none;box-shadow:var(--shadow-lg);max-width:90vw;text-align:center;
+  z-index:var(--z-toast);display:none;box-shadow:var(--shadow-lg);max-width:90vw;text-align:center;
   animation:toastin var(--dur-3) var(--ease);}
 @keyframes toastin{from{opacity:0;transform:translateX(-50%) translateY(10px);}
   to{opacity:1;transform:translateX(-50%) translateY(0);}}
@@ -471,6 +496,50 @@ table.phr tr:last-child td{border-bottom:none;}
 .dani-row:first-child{border-top:none}
 @media(hover:hover){.dani-row:hover{background:var(--card2);}}
 .dani-row .emoji{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+/* ================================================================
+   FASE 11.5 · Sistema de materiales (Washi → Ink → Foil) y primitivas
+   de movimiento. Clases y utilidades NUEVAS, aún sin aplicar: la Fase 12
+   las consume al construir los componentes de producción. En esta fase
+   no se aplican a ningún nodo, así que el comportamiento no cambia.
+   La certeza se hace visible: cuanto más real, más se materializa.
+================================================================ */
+/* ---- Materiales ---- */
+.m-washi{position:relative;background:var(--card2);color:var(--muted);
+  border:.5px solid var(--hairline);border-radius:var(--radius);box-shadow:none;}
+.m-washi::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  opacity:.03;background-image:radial-gradient(var(--ink) .5px,transparent .5px);background-size:3px 3px;}
+.m-ink{position:relative;background:var(--card);color:var(--ink);
+  border-radius:var(--radius);box-shadow:var(--shadow);}
+.m-ink.is-today::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;
+  border-radius:2px;background:var(--accent);}
+.m-foil{position:relative;background:var(--card);color:var(--ink);border-radius:var(--radius);
+  box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,.6),inset 0 0 0 1px var(--foil-edge-red);}
+.m-foil.is-flight{box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,.6),inset 0 0 0 1px var(--foil-edge-gold);}
+:root[data-theme="dark"] .m-foil{box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px var(--foil-edge-red);}
+:root[data-theme="dark"] .m-foil.is-flight{box-shadow:var(--shadow-lg),inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px var(--foil-edge-gold);}
+.m-foil::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.08),transparent 42%);}
+/* ---- Primitivas de movimiento (solo transform/opacity/clip-path) ---- */
+/* Ink Bloom: el material pasa de Washi a Ink al plantar */
+.u-bloom{transition:background-color var(--dur-bloom) var(--ease),color var(--dur-bloom) var(--ease),
+  box-shadow var(--dur-bloom) var(--ease);}
+/* Foil Press: relleno del sello (clip-path, lineal, deliberado) */
+@keyframes foil-fill{from{clip-path:inset(0 100% 0 0);}to{clip-path:inset(0 0 0 0);}}
+.u-foil-fill{position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:color-mix(in srgb,var(--accent) 18%,transparent);clip-path:inset(0 100% 0 0);}
+.u-foil-fill.run{animation:foil-fill var(--dur-hold) linear forwards;}
+/* Trazo de línea (hilo del Cord, borde de lámina) */
+@keyframes line-draw{from{clip-path:inset(0 0 100% 0);}to{clip-path:inset(0 0 0 0);}}
+.u-line-draw{animation:line-draw var(--dur-line) var(--ease) forwards;}
+/* Escalonado de listas (rise-in) */
+@keyframes rise-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.u-stagger>*{opacity:0;animation:rise-in var(--dur-base) var(--ease) forwards;
+  animation-delay:calc(var(--i,0)*50ms);}
+/* Flotación sub-perceptible (estado de día vacío) */
+@keyframes float-idle{0%,100%{transform:translateY(-1px);}50%{transform:translateY(1px);}}
+.u-float{animation:float-idle 3s var(--ease-io) infinite;}
+/* Números tabulares (contadores, horas, precios) */
+.u-tabular{font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -647,6 +716,65 @@ function haversine(a, b){
   return 2 * R * Math.asin(Math.sqrt(h)); // km
 }
 const walkEstimate = km => Math.max(3, Math.round(km * 1.32 / 4.7 * 60)); // min, con factor calle
+
+/* ---------------- Primitivas de movimiento (Fase 11.5) ----------------
+   Capa reutilizable que consumirán los componentes de producción (Fase 12).
+   Solo animan transform/opacity/clip-path y respetan prefers-reduced-motion.
+   Se DEFINEN aquí; no se ejecuta nada en carga. */
+const Motion = {
+  reduced(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); },
+  /* FLIP: anima un elemento desde un rect de origen hasta su posición actual
+     (The Zoom entre altitudes, expandir un Foil Pass). Origen consciente. */
+  flip(el, fromRect, opts){
+    opts = opts || {};
+    if(!el || !fromRect || Motion.reduced()) return null;
+    const to = el.getBoundingClientRect();
+    const dx = fromRect.left - to.left, dy = fromRect.top - to.top;
+    const sx = fromRect.width / (to.width || 1), sy = fromRect.height / (to.height || 1);
+    return el.animate(
+      [{ transformOrigin:'top left', transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`, opacity: opts.fade ? 0 : 1 },
+       { transformOrigin:'top left', transform:'none', opacity:1 }],
+      { duration: opts.duration || 260, easing:'cubic-bezier(.23,1,.32,1)' });
+  },
+  /* Mantener para sellar (Foil Press): relleno lineal deliberado; completa al
+     llegar al final u onCancel si se suelta antes. Devuelve una función de limpieza. */
+  holdToConfirm(el, cfg){
+    cfg = cfg || {};
+    if(!el) return () => {};
+    const duration = cfg.duration || 1200;
+    let fill = el.querySelector('.u-foil-fill');
+    if(!fill){ fill = document.createElement('span'); fill.className = 'u-foil-fill'; el.appendChild(fill); }
+    let done = false, timer = null;
+    const cleanup = () => {
+      el.removeEventListener('pointerdown', start); el.removeEventListener('pointerup', stop);
+      el.removeEventListener('pointerleave', stop); el.removeEventListener('pointercancel', stop);
+    };
+    const finish = ok => {
+      if(done) return; done = true; clearTimeout(timer); cleanup();
+      if(ok){ cfg.onComplete && cfg.onComplete(); }
+      else { fill.classList.remove('run'); fill.style.clipPath = 'inset(0 100% 0 0)'; cfg.onCancel && cfg.onCancel(); }
+    };
+    function start(){ if(Motion.reduced()){ finish(true); return; } fill.classList.add('run'); timer = setTimeout(() => finish(true), duration); }
+    function stop(){ if(!done) finish(false); }
+    el.addEventListener('pointerdown', start); el.addEventListener('pointerup', stop);
+    el.addEventListener('pointerleave', stop); el.addEventListener('pointercancel', stop);
+    return cleanup;
+  },
+  /* Contador tabular: cuenta de `from` a `to` con ease-out (cuenta atrás, recap). */
+  ticker(el, from, to, cfg){
+    cfg = cfg || {};
+    if(!el) return;
+    if(Motion.reduced()){ el.textContent = String(to); return; }
+    const dur = Math.max(1, cfg.duration || 800);
+    const t0 = (typeof performance !== 'undefined' ? performance.now() : 0);
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur);
+      el.textContent = String(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+      if(k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },
+};
 
 /* ---------------- Vuelos ---------------- */
 const FLIGHTS = [
