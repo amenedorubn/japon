@@ -56,6 +56,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     api.state.days.every(d => Array.isArray(d.stops) && Array.isArray(d.trans)));
   check('live: tripTitle adopted', api.state.tripTitle === livePayload.tripTitle);
   check('live: seed count was ' + localBefore + ', no data invented', localBefore === 282);
+  // Fase 10b: la consolidación única corre al adoptar el payload real
+  check('live: original model consolidated exactly once (migratedOrig set)', !!api.state.migratedOrig);
+  check('live: no transfers mirror kept in the local model', !('transfers' in api.state));
+  const assigned = livePayload.state.places.filter(p => p && p.dayId && !/^airport_/.test(p.id) &&
+    !['catalog_tokio', 'catalog_kioto', 'catalog_osaka'].includes(p.id));
+  check('live: every migratable dayId assignment landed as a v2 stop (' + assigned.length + ')',
+    assigned.every(p => api.state.days.some(d => 'd_' + d.date === p.dayId && d.stops.some(s => s.pid === p.id))));
 
   // ---- (2) push audit with injected fake fb ----
   const writes = [];
@@ -68,7 +75,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   api.pushRemote();
   check('policy: pushRemote targets state/v2 only', writes.length === 1 && writes[0].node === 'NODE:state/v2');
   const v2keys = Object.keys(writes[0].payload).sort();
-  check('policy: v2 payload = {check,days,rate,updatedAt,v} exactly', JSON.stringify(v2keys) === JSON.stringify(['check','days','rate','updatedAt','v']));
+  check('policy: v2 payload = {check,days,migratedOrig,rate,updatedAt,v} exactly', JSON.stringify(v2keys) === JSON.stringify(['check','days','migratedOrig','rate','updatedAt','v']));
   check('policy: v2 payload has NO places/transfers/tripTitle/origDays',
     !('places' in writes[0].payload) && !('transfers' in writes[0].payload) &&
     !('tripTitle' in writes[0].payload) && !('origDays' in writes[0].payload));

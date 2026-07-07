@@ -17,9 +17,10 @@ function runCase(name, fileJson, confirms, initialState) {
   const sandbox = {
     state: initialState,
     normArr: v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === 'object') ? Object.values(v).filter(x => x != null) : [],
-    ensureSharedShape: s => { s.places = sandbox.normArr(s.places); s.transfers = sandbox.normArr(s.transfers); s.origDays = sandbox.normArr(s.origDays); if(!s.tripTitle) s.tripTitle = "Japón '27"; return s; },
+    ensureSharedShape: s => { s.places = sandbox.normArr(s.places); s.origDays = sandbox.normArr(s.origDays); if(!s.tripTitle) s.tripTitle = "Japón '27"; return s; },
     applyCatalogUpdate: () => false,
     canonicalizeDayPids: () => false,
+    maybeMigrateOriginal: () => false,
     applyTripTitle: () => {},
     commit: () => calls.commit++,
     persistLocal: () => calls.persistLocal++,

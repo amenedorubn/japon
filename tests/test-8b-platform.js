@@ -93,7 +93,7 @@ const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); 
 
   // ---- P1: read-only original itinerary ----
   api.setItinMode('orig');
-  check('P1: empty origDays shows explanation', els['#dayPanel'].innerHTML.includes('todavía no ha compartido'));
+  check('P1: empty origDays shows explanation', els['#dayPanel'].innerHTML.includes('Todavía no ha llegado'));
   api.state.origDays = [
     {id: 'd_2027-04-10', label: 'Día 10', date: '2027-04-10', isFlightDay: false},
     {id: 'd_2027-04-09', label: 'Día 9', date: '2027-04-09', isFlightDay: false},

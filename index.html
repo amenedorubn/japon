@@ -1564,8 +1564,6 @@ function applyCatalogUpdate(){
   });
   foldCurated(byId); // Fase 10: fusión real del catálogo curado (D1 resuelto)
   state.places = Array.from(byId.values());
-  const validIds = new Set(state.places.map(p=>p.id));
-  state.transfers = (Array.isArray(state.transfers) ? state.transfers : []).filter(t => validIds.has(t.fromPlaceId) && validIds.has(t.toPlaceId));
   canonicalizeDayPids(state.days); // los pids del itinerario v2 pasan a ids canónicos
   state.catalogVersion = CATALOG_VERSION;
   return true;
@@ -1652,6 +1650,132 @@ function foldCurated(byId){
 }
 
 /* ================================================================
+   CONSOLIDACIÓN DEL MODELO ORIGINAL (Fase 10b, cierra P2/D4)
+   El modelo v2 (days + trans por hueco + pre/post) es EL modelo de
+   itinerario y trayectos. Lo que la app original dejó en su modelo
+   (state.transfers por par de lugares y asignaciones dayId/hora en
+   los lugares) se incorpora UNA sola vez al plan v2:
+   - opciones de transporte → al hueco v2 con los mismos extremos;
+   - lugares con día asignado → parada nueva al final de ese día v2.
+   La marca migratedOrig viaja dentro de state/v2 y es monótona (nunca
+   se des-migra), así los tres móviles consolidan una única vez. Los
+   nodos originales de la nube (state/days, state/transfers) no se
+   tocan jamás: quedan como archivo para la vista "App original".
+================================================================ */
+const LEGACY_MODE_MAP = {car: 'taxi'}; // modos del original sin gemelo exacto
+function legacyMode(mode){
+  if(MODES[mode]) return mode;
+  return LEGACY_MODE_MAP[mode] || 'walk'; // el título conserva el texto original
+}
+function parseLegacyMinutes(text){
+  const s = String(text || '');
+  const h = s.match(/(\d+)\s*h(?:\D+(\d+))?/i);
+  if(h) return parseInt(h[1], 10) * 60 + (h[2] ? parseInt(h[2], 10) : 0);
+  const m = s.match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+function parseLegacyYen(text){
+  const s = String(text || '');
+  if(/gratis|incluido/i.test(s)) return 0;
+  const m = s.match(/[\d][\d.,]*/);
+  if(!m) return null;
+  const n = parseInt(m[0].replace(/[.,]/g, ''), 10);
+  return Number.isFinite(n) ? n : null;
+}
+/* Opción del modelo original (title/duration/price texto) → opción v2.
+   Lo que no se puede convertir a número se conserva legible en la nota. */
+function legacyOptionToV2(o){
+  const d = parseLegacyMinutes(o.duration);
+  const y = parseLegacyYen(o.price);
+  const notes = [o.notes || '']
+    .concat(y == null && o.price ? ['Precio: ' + o.price] : [])
+    .concat(d == null && o.duration ? ['Duración: ' + o.duration] : [])
+    .concat(o.url ? [o.url] : [])
+    .filter(Boolean).join(' · ');
+  return {id: uid(), m: legacyMode(o.mode), t: o.title || '', d, y,
+    l: o.lineName || '', n: notes, w: o.waypoints || '', auto: false};
+}
+/* Incorpora las opciones de state.transfers (modelo original) al hueco v2
+   con los mismos extremos. Idempotente: dedup por (modo + nombre); la
+   selección actual del hueco no cambia (el plan v2 manda). */
+function migrateLegacyTransfers(transfers){
+  const byPair = new Map();
+  normArr(transfers).forEach(t => {
+    const opts = normArr(t && t.options);
+    if(!t || !opts.length) return;
+    byPair.set(canonicalPid(t.fromPlaceId) + '>' + canonicalPid(t.toPlaceId), opts);
+  });
+  if(!byPair.size) return 0;
+  let added = 0;
+  state.days.forEach(day => {
+    (day.trans || []).forEach((tr, i) => {
+      const a = day.stops[i], b = day.stops[i + 1];
+      if(!a || !b || !tr) return;
+      const opts = byPair.get(a.pid + '>' + b.pid);
+      if(!opts) return;
+      const seen = new Set(tr.opts.map(o => o.m + '|' + String(o.t || '').toLowerCase()));
+      opts.forEach(o => {
+        const v2o = legacyOptionToV2(o);
+        const key = v2o.m + '|' + v2o.t.toLowerCase();
+        if(seen.has(key)) return;
+        seen.add(key);
+        tr.opts.push(v2o);
+        added++;
+      });
+    });
+  });
+  return added;
+}
+/* Lugares con día asignado en el modelo original que caben en un día v2.
+   Aeropuertos y capas base de ciudad no son paradas visitables: se omiten
+   (siguen visibles en la vista de archivo). Orden del original. */
+function migratableAssigned(){
+  const dayDates = new Set(state.days.map(d => d.date));
+  return state.places.filter(p => p && p.dayId && p.lat != null &&
+      !p.airport && !p.baseLayer && !p.cityBase &&
+      dayDates.has(String(p.dayId).replace(/^d_/, '')))
+    .sort((a, b) => {
+      const ao = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+      const bo = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+      if(ao !== bo) return ao - bo;
+      const t = String(a.time || '').localeCompare(String(b.time || ''));
+      if(t) return t;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+}
+function migrateAssignedPlaces(){
+  let added = 0;
+  migratableAssigned().forEach(p => {
+    const day = state.days.find(d => d.date === String(p.dayId).replace(/^d_/, ''));
+    if(!day || day.flight) return;
+    if(day.stops.some(s => s.pid === p.id)) return;
+    day.stops.push({id: uid(), pid: p.id,
+      time: p.time || inferTimeForInsert(day.stops, day.stops.length, null),
+      dur: p.dur || 60, note: '', done: false});
+    fixTransfers(day);
+    added++;
+  });
+  return added;
+}
+/* Migración ÚNICA del modelo original al canónico. Solo actúa si hay señal
+   (transfers con opciones o lugares con día asignado) y nunca dos veces. */
+function maybeMigrateOriginal(legacyTransfers){
+  if(!state || state.migratedOrig) return false;
+  const transfers = normArr(legacyTransfers);
+  const hasSignal = transfers.some(t => t && normArr(t.options).length) || migratableAssigned().length > 0;
+  if(!hasSignal) return false;
+  const opts = migrateLegacyTransfers(transfers);
+  const stops = migrateAssignedPlaces();
+  state.migratedOrig = new Date().toISOString().slice(0, 10);
+  commit();
+  if(opts || stops) toast('Plan de la app original incorporado: ' +
+    (stops ? stops + ' parada' + (stops === 1 ? '' : 's') : '') +
+    (stops && opts ? ' y ' : '') +
+    (opts ? opts + ' alternativa' + (opts === 1 ? '' : 's') + ' de transporte' : ''));
+  return true;
+}
+
+/* ================================================================
    ESTADO
 ================================================================ */
 const LS_KEY = 'japon27_app_v1';
@@ -1688,11 +1812,12 @@ function buildSeedState(){
   // updatedAt: 0 = "nunca editado". Así cualquier v2 remoto real gana a un
   // seed recién generado en un dispositivo nuevo (commit() pone timestamps).
   return {v: SEED_VERSION, days, rate: 170, check: {}, updatedAt: 0,
-    places, transfers: [], catalogVersion: CATALOG_VERSION,
+    places, catalogVersion: CATALOG_VERSION,
     tripTitle: "Japón '27", origDays: []};
 }
-/* Campos compartidos con la app original (places/transfers/catalogVersion/
-   tripTitle) + origDays (espejo de solo lectura del itinerario original). */
+/* Campos compartidos (places/catalogVersion/tripTitle) + origDays (archivo
+   de solo lectura del itinerario original). El espejo state.transfers
+   desapareció en la Fase 10b: sus datos se consolidan en day.trans. */
 function normArr(v){
   if(Array.isArray(v)) return v.filter(x => x != null);
   if(v && typeof v === 'object') return Object.values(v).filter(x => x != null);
@@ -1700,7 +1825,6 @@ function normArr(v){
 }
 function ensureSharedShape(s){
   s.places = normArr(s.places);
-  s.transfers = normArr(s.transfers);
   s.origDays = normArr(s.origDays);
   if(!s.tripTitle) s.tripTitle = "Japón '27";
   if(!('catalogVersion' in s)) s.catalogVersion = null;
@@ -1712,8 +1836,9 @@ if(!state || !Array.isArray(state.days)) state = buildSeedState();
 if(!state.check) state.check = {};
 if(!state.rate) state.rate = 170;
 ensureSharedShape(state);
-// Migración de arranque (no-op si catalogVersion ya es la actual). La subida
-// del catálogo fusionado a state/places la hace adoptRemote al sincronizar.
+// Migración de catálogo de arranque (no-op si la versión ya es la actual).
+// La subida del catálogo fusionado la hace adoptRemote al sincronizar.
+// La consolidación 10b del modelo original corre en INIT (final del script).
 if(applyCatalogUpdate()) persistLocal();
 
 function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
@@ -1762,6 +1887,7 @@ function pushRemote(){
     days: state.days,
     rate: state.rate || 170,
     check: state.check || {},
+    migratedOrig: state.migratedOrig || null, // marca de consolidación 10b
     updatedAt: state.updatedAt || 0
   }).catch(() => {});
 }
@@ -1781,7 +1907,6 @@ function adoptRemote(payload){
       state.catalogVersion = rs.catalogVersion || null;
       res.changed = true;
     }
-    state.transfers = normArr(rs.transfers);
     state.origDays = normArr(rs.days);
     if(payload.tripTitle) state.tripTitle = payload.tripTitle;
     // No-op mientras la versión coincida; si fusionó, el resultado se
@@ -1790,6 +1915,8 @@ function adoptRemote(payload){
     const v2 = rs.v2;
     if(v2 && typeof v2 === 'object'){
       res.v2Missing = false;
+      // La marca de consolidación es monótona: nunca se des-migra.
+      if(v2.migratedOrig && !state.migratedOrig) state.migratedOrig = v2.migratedOrig;
       const v2days = normArr(v2.days);
       // Firebase elimina arrays vacíos (stops/trans de los días de vuelo):
       // reponerlos para que el render no encuentre undefined.
@@ -1806,8 +1933,14 @@ function adoptRemote(payload){
         state.updatedAt = v2.updatedAt;
         res.changed = true;
         toast('☁️ Plan actualizado desde la nube');
+      } else if((state.updatedAt || 0) > (v2.updatedAt || 0)){
+        // Ediciones locales (u offline) más nuevas que la nube: re-subirlas
+        res.localNewer = true;
       }
     }
+    // Fase 10b: si la nube aún trae el modelo original sin consolidar,
+    // incorporarlo al plan v2 (una sola vez; el archivo remoto no se toca).
+    if(maybeMigrateOriginal(rs.transfers)) res.changed = true;
   }
   persistLocal();
   return res;
@@ -1847,7 +1980,9 @@ async function initFirebase(){
       if(seenFirstSnapshot && res.changed && Date.now() - lastLocalSaveAt > 2500) notifyRemoteChange();
       seenFirstSnapshot = true;
       // Nodo sin v2 todavía (o proyecto vacío): sembrar solo state/v2.
-      if(!remote || res.v2Missing) pushRemote();
+      // Y si lo local es más nuevo (ediciones offline, consolidación 10b
+      // recién hecha), re-subirlo: la nube converge al plan más reciente.
+      if(!remote || res.v2Missing || res.localNewer) pushRemote();
     }, () => { fbReady = false; updateSyncBtn(); });
   }catch(e){ fbReady = false; updateSyncBtn(); }
 }
@@ -2574,8 +2709,8 @@ function renderOrigItinerary(){
   const days = normArr(state.origDays).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
   if(!days.length){
     $('#dayPanel').innerHTML = `<div class="card" style="padding:16px;font-size:13.5px;color:var(--muted)">
-      La app original todavía no ha compartido su itinerario en este dispositivo.
-      Se recibe automáticamente con la nube activada (☁️) o al importar una copia suya.</div>`;
+      Aquí se conserva, en solo lectura, el itinerario tal como quedó en la app original.
+      Todavía no ha llegado a este dispositivo: se recibe con la nube activada (☁️) o al importar una copia suya.</div>`;
     return;
   }
   const stopsFor = dayId => state.places
@@ -2590,7 +2725,8 @@ function renderOrigItinerary(){
     });
   $('#dayPanel').innerHTML =
     `<div class="card" style="padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px">
-      Itinerario de la app original (solo lectura). Se edita allí; aquí se ve tal cual llega por la nube.
+      Archivo del itinerario de la app original (solo lectura). Sus paradas con día
+      asignado ya están incorporadas a vuestro plan; aquí se conserva el original.
     </div>` +
     days.map(d => {
       const stops = stopsFor(d.id);
@@ -3640,8 +3776,8 @@ $('#rateInput').addEventListener('change', e => {
    EXPORT / IMPORT / RESET
 ================================================================ */
 function doExport(){
-  // Mismo envoltorio {tripTitle, state} que exporta la app original:
-  // cada app puede leer la copia de seguridad de la otra.
+  // Mismo envoltorio {tripTitle, state} de siempre: las copias antiguas
+  // (de esta app y de la original) siguen siendo importables aquí.
   const payload = {tripTitle: state.tripTitle || "Japón '27", state};
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
@@ -3693,7 +3829,6 @@ $('#importFile').addEventListener('change', async e => {
         state.catalogVersion = s.catalogVersion || null; // la versión viaja con el array
         placesChanged = true;
       }
-      state.transfers = normArr(s.transfers);
       if(v2Days){
         state.days = v2Days;
         state.rate = s.rate || state.rate;
@@ -3708,6 +3843,9 @@ $('#importFile').addEventListener('change', async e => {
     ensureSharedShape(state);
     // Copias antiguas o de la app original: re-siembra y fusión del catálogo
     if(applyCatalogUpdate()) placesChanged = true;
+    // Consolidación 10b: si la copia trae el modelo original sin migrar,
+    // sus transfers y días asignados se incorporan al plan v2 (una vez).
+    maybeMigrateOriginal(s.transfers);
     applyTripTitle();
     if(daysChanged) commit(); else persistLocal();
     if(placesChanged) pushPlaces();
@@ -3722,10 +3860,10 @@ $('#btnImport').addEventListener('click', doImport);
 $('#btnImport2').addEventListener('click', doImport);
 $('#btnReset').addEventListener('click', () => {
   if(!confirm('Esto sustituye tu plan actual por el itinerario sugerido original. ¿Seguro?')) return;
-  // Restablecer solo resetea NUESTRO itinerario (v2); los campos compartidos
-  // con la app original (lugares, transfers, título) se conservan.
-  const shared = {places: state.places, transfers: state.transfers,
-    catalogVersion: state.catalogVersion, tripTitle: state.tripTitle, origDays: state.origDays};
+  // Restablecer solo resetea NUESTRO itinerario (v2); el catálogo, el título,
+  // el archivo original y la marca de consolidación se conservan.
+  const shared = {places: state.places, catalogVersion: state.catalogVersion,
+    tripTitle: state.tripTitle, origDays: state.origDays, migratedOrig: state.migratedOrig};
   state = Object.assign(buildSeedState(), shared);
   commit(); renderAll();
   toast('Plan restablecido');
@@ -3738,6 +3876,12 @@ function renderAll(){
   renderInicio(); renderItinerary(); renderSitios(); renderHoteles(); renderGuia();
   if(curTab === 'mapa') renderMapDay();
 }
+// Fase 10b: consolidar el modelo original guardado en este dispositivo y
+// retirar el espejo local state.transfers (la nube conserva su archivo).
+const _legacyTransfers = state.transfers;
+if('transfers' in state){ delete state.transfers; persistLocal(); }
+maybeMigrateOriginal(_legacyTransfers);
+
 buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
