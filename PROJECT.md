@@ -18,13 +18,17 @@ Historia: existía una **app original** (conservada como referencia de solo lect
 `index-pre-source.html`, 8.694 líneas) que los viajeros ya usaban con datos reales en Firebase.
 Este proyecto la fusionó con una arquitectura rediseñada **sin perder ninguna funcionalidad ni
 dato** (prioridad absoluta nº 1). La paridad funcional se alcanzó y verificó en la Fase 8c; el
-rediseño visual premium llegó en la Fase 9.
+rediseño visual premium llegó en la Fase 9. En la **Fase 10** (gate aprobado: los tres viajeros
+usan ya solo esta app) la app original quedó **retirada del flujo soportado**: su catálogo se
+fusionó de verdad, su modelo de itinerario/trayectos se consolidó una única vez dentro del
+modelo v2 y sus nodos en la nube quedaron como archivo de solo lectura.
 
 ## 2. Ficheros del repositorio
 
 | Fichero | Papel |
 |---|---|
-| `index.html` | LA app entera (~3.6k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
+| `index.html` | LA app entera (~3.8k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
+| `sw.js` | Service worker offline (Fase 10c): cache-first del shell + CDNs versionadas, refresco en segundo plano. Subir junto a index.html a GitHub Pages |
 | `index-pre-source.html` | App original descomprimida. **Referencia permanente, no borrar**: contiene además el único embed del PDF de Dani |
 | `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
 | `PROJECT.md` `PRODUCT.md` `DESIGN.md` `PARITY.md` | Documentación (este orden: continuidad → estrategia → visual → paridad) |
@@ -33,13 +37,16 @@ rediseño visual premium llegó en la Fase 9.
 
 ## 3. Arquitectura
 
-Un solo archivo, JS vanilla sin framework, Leaflet 1.9 por CDN. Secciones del script (en orden):
-utilidades → datos (`FLIGHTS`, `AIRPORTS`, `CATS`, `MODES`, catálogo curado `PLACES`, itinerario
-semilla `SEED_DAYS`, guía) → catálogo compartido portado de la app original (`CATALOG_PLACES_RAW`,
-`DANI_PLACES_RAW`, `DANI_ROUTE_GROUPS`, `applyCatalogUpdate`) → `CATALOG_ALIAS` → estado y
-persistencia → Firebase → cabecera/tema/título/notificaciones → sitios propios y formulario →
-hoteles → rutas reales (OSRM/Overpass) → navegación → Inicio → Itinerario (3 vistas) →
-reordenación e inferencia de horas → modales → mapa → Sitios → Guía → export/import → init.
+Un solo archivo (+`sw.js`), JS vanilla sin framework, Leaflet 1.9 por CDN. Secciones del script
+(en orden): utilidades → datos (`FLIGHTS`, `AIRPORTS`, `CATS`, `MODES`, ficha curada `PLACES`
+—solo materia prima de semilla—, itinerario semilla `SEED_DAYS`, guía) → catálogo compartido
+portado de la app original (`CATALOG_PLACES_RAW`, `DANI_PLACES_RAW`, `DANI_ROUTE_GROUPS`,
+`applyCatalogUpdate`) → fusión del catálogo (`LEGACY_PID_MAP`, `foldCurated`) → consolidación
+del modelo original (`maybeMigrateOriginal`) → estado y persistencia → Firebase →
+cabecera/tema/título/notificaciones → sitios y formulario → hoteles → rutas reales
+(OSRM/Overpass) → navegación → Inicio → Itinerario (3 vistas) → reordenación e inferencia de
+horas → modales → mapa → Sitios → Guía → export/import → init (incluye migración 10b de
+arranque y registro del service worker).
 
 Render: funciones `renderX()` que reconstruyen `innerHTML` por sección; `renderAll()` para todo.
 Los manejadores de las plantillas son `onclick` inline sobre funciones globales (deuda D5,
@@ -50,27 +57,32 @@ prevista para limpieza; los tests dependen de algunos de esos strings — ver §
 ```
 state = {
   v, updatedAt, rate (¥/€), check {i:bool},          // v2: SOLO de esta app
+  migratedOrig,                                       // marca de consolidación 10b (fecha ISO, monótona)
   days: [ { date, title, city, icon, flight:[ids]?,  // 21 días FIJOS (decisión M10)
             stops: [{id, pid, time, dur, note, done}],
             trans: [{sel, opts:[{id,m,t,d,y,l,n,w,auto}]}],  // 1 por hueco entre paradas
             pre?, post? } ],
   tripTitle,                                          // compartido (escalar)
-  places: [...],                                      // COMPARTIDO con la app original
-  transfers: [...],                                   // del modelo original: solo lectura aquí
-  origDays: [...],                                    // espejo solo-lectura de sus días
-  catalogVersion                                      // versionado del catálogo compartido
+  places: [...],                                      // CATÁLOGO ÚNICO (fusionado en Fase 10a)
+  origDays: [...],                                    // archivo solo-lectura de los días originales
+  catalogVersion                                      // versionado del catálogo (v10-fusion)
 }
 ```
 
-- **Dos catálogos coexisten**: `PLACES` (curado, claves tipo `sensoji`, ficha rica) y
-  `state.places` (esquema de la app original; ids `catalog_*`, `dani_*`, `airport_*`, `id_*` de
-  usuario). `placeById(pid)` resuelve ambos; `CATALOG_ALIAS` (26 entradas) evita listados
-  duplicados dejando ganar a la versión curada. La fusión REAL de ids es Fase 10: fusionar antes
-  rompería la app original.
-- **Dos modelos de trayectos**: `day.trans` (v2, por hueco) y `state.transfers` (original, por
-  par de lugares; solo lectura). Consolidación en Fase 10.
-- `stops[].pid` puede apuntar a cualquiera de los dos catálogos.
-- Origen de un lugar compartido: `sourceValueForPlace` → `user` | `dani` | `insta`
+- **Catálogo ÚNICO** (Fase 10a): todo lugar vive en `state.places` con los ids canónicos de
+  producción (`catalog_*`, `dani_*`, `airport_*`, `id_*` de usuario y claves curadas tipo
+  `nakamise` para las entradas sin gemelo). La ficha curada `PLACES` es solo materia prima:
+  `foldCurated` la fusiona en la semilla y en cada subida de `CATALOG_VERSION`, aportando los
+  campos ricos (`dur/yen/price/hours/web/tip`) y ganando en los campos visibles SOLO si el valor
+  sigue siendo el de la semilla (las ediciones de usuario nunca se pisan). `placeById` resuelve
+  únicamente `state.places` a través de la vista `userPlaceView`.
+- **`LEGACY_PID_MAP` es permanente**: copias antiguas y v2 antiguos traen pids con clave curada
+  (`sensoji` → `catalog_sensoji`); se canonicalizan en semilla, arranque, adoptRemote e import.
+- **Un solo modelo de trayectos** (Fase 10b): `day.trans` por hueco (+ `pre`/`post`). El modelo
+  original (`state.transfers` por par + asignaciones `dayId`/hora en lugares) se consolidó UNA
+  vez dentro de v2 (`maybeMigrateOriginal`, marca `migratedOrig` compartida por state/v2 y
+  monótona); el espejo local `state.transfers` ya no existe.
+- Origen de un lugar: `sourceValueForPlace` → `user` | `dani` | `insta`
   (flags `dani`, `daniAdopted`, `catalogItem` gobiernan la re-siembra de `applyCatalogUpdate`).
 
 ## 5. Firebase — estructura y POLÍTICA DE ESCRITURA (invariante crítico)
@@ -80,22 +92,29 @@ Base: `viaje-japon-8748a` (europe-west1). Ruta compartida `proyectos/viaje-japon
 
 ```
 proyectos/viaje-japon = {
-  tripTitle,                       ← escalar compartido (ambas apps escriben)
+  tripTitle,                       ← escalar compartido
   state: {
-    days, places, transfers, catalogVersion,   ← modelo de la APP ORIGINAL
-    v2: { v, days, rate, check, updatedAt }    ← nodo EXCLUSIVO de esta app
+    days, transfers,               ← ARCHIVO del modelo de la app original (congelado)
+    places, catalogVersion,        ← catálogo único (places lo escribe esta app)
+    v2: { v, days, rate, check, migratedOrig, updatedAt }  ← nodo EXCLUSIVO de esta app
   }
 }
 ```
 
-**Política v2-only (no negociable): exactamente 3 call-sites de `fb.set` y ningún otro.**
-`pushRemote → state/v2` (payload exacto `{v,days,rate,check,updatedAt}`, debounce 1.2 s) ·
-`pushPlaces → state/places` (array completo, debounce 800 ms) · `pushTitle → tripTitle`
-(debounce 600 ms). **Nada puede escribir jamás `state/days` ni `state/transfers`** (el
-itinerario de la app original). Lectura: `onValue` sobre el nodo raíz → `adoptRemote`, con
-guardas: un remoto sin lugares nunca borra los locales; v2 remoto solo gana si su `updatedAt`
-es mayor; arrays vacíos podados por Firebase se reparan con `normArr`; eco propio suprimido
-(2,5 s) para las notificaciones. La suite `test-8c-gate.js` verifica todo esto con un `fb` falso.
+**Política v2-only (no negociable, intacta tras la Fase 10): exactamente 3 call-sites de
+`fb.set` y ningún otro.** `pushRemote → state/v2` (payload exacto
+`{v,days,rate,check,migratedOrig,updatedAt}`, debounce 1.2 s) · `pushPlaces → state/places`
+(array completo, debounce 800 ms) · `pushTitle → tripTitle` (debounce 600 ms). **Nada escribe
+jamás `state/days` ni `state/transfers`**: aunque la app original está retirada, sus nodos
+quedan como archivo (alimentan la vista "App original" vía `origDays` y fueron la fuente de la
+migración única 10b). Nota: `state/catalogVersion` en la nube queda congelado en v9 (nadie lo
+escribe); la versión local viaja acompañando al array de places adoptado y `applyCatalogUpdate`
+re-fusiona idempotentemente cuando difiere. Lectura: `onValue` sobre el nodo raíz →
+`adoptRemote`, con guardas: un remoto sin lugares nunca borra los locales; v2 remoto solo gana
+si su `updatedAt` es mayor y, si lo local es más nuevo (ediciones offline), se re-sube
+(`localNewer`); arrays vacíos podados por Firebase se reparan con `normArr`; pids antiguos se
+canonicalizan; eco propio suprimido (2,5 s) para las notificaciones. Las suites
+`test-8c-gate.js` y `test-10b-consolidation.js` verifican todo esto con un `fb` falso.
 
 Nota: en producción existe además un nodo hermano **legado** `proyectos/japon27-app-v2` (la ruta
 separada que usó esta app antes de la Fase 1). Ninguna de las dos apps lo lee ya; no confundirlo
@@ -103,13 +122,15 @@ con datos activos ni borrarlo sin decisión explícita del usuario.
 
 ## 6. Export / Import (compatibilidad bidireccional)
 
-Export: envoltorio `{tripTitle, state}` — el mismo de la app original, que puede leer nuestra
-copia. Import acepta **tres formatos**: (A) copia de la app original `{tripTitle, state:{days
-label/fecha, places, transfers}}` — solo toca campos compartidos + espejo `origDays`, jamás el
-itinerario v2; (B) copias antiguas de esta app (estado plano con días v2); (C) formato actual
-envuelto. Siempre con elección **Fusionar** (añade lo que falte, no borra) / **Reemplazar**, y
-con guard: una copia con menos lugares que el plan actual exige una segunda confirmación
-explícita antes de reducir `state.places`.
+Export: envoltorio `{tripTitle, state}` (sin `transfers` desde la Fase 10b). Import acepta
+**tres formatos**: (A) copia de la app original `{tripTitle, state:{days label/fecha, places,
+transfers}}` — toca campos compartidos + archivo `origDays`, jamás pisa el itinerario v2 (sus
+transfers/días asignados solo se consolidarían si `migratedOrig` aún no estuviera puesta); (B)
+copias antiguas de esta app (estado plano con días v2, pids con clave curada se canonicalizan);
+(C) formato actual envuelto. Siempre con elección **Fusionar** (añade lo que falte, no borra) /
+**Reemplazar**, con guard: una copia con menos lugares que el plan actual exige una segunda
+confirmación explícita antes de reducir `state.places`. Al reemplazar places, `catalogVersion`
+viaja con el array y la fusión v10 se re-aplica si hace falta.
 
 ## 7. Historia de fases (cronológica, con commits)
 
@@ -131,7 +152,11 @@ explícita antes de reducir `state.places`.
 | 8b | `9015e27` | Paridad de plataforma | PWA (manifest dinámico de un archivo + metas Apple + theme-color), sesgo Japón en Nominatim (viewbox + reintento ", Japan"), inferencia de horas (funciones puras del original) en mover/insertar/añadir, vista "App original" solo lectura desde `origDays` |
 | 8c | `cc6af8a` | **Gate de paridad** (solo verificación) | Verificación EN VIVO contra producción; auditoría de política de escritura con `fb` inyectado; suite movida a `tests/`; `PARITY.md`. **PARIDAD FUNCIONAL DECLARADA** |
 | 9 | `1db5185` | **Rediseño visual premium** | Sistema washi/sumi/torii (ver §11 y DESIGN.md); cero cambios funcionales; `PRODUCT.md`+`DESIGN.md` |
-| Docs | (este commit) | Referencia canónica + corrección: tres amigos, no pareja | — |
+| Docs | `febdcca` | Referencia canónica + corrección: tres amigos, no pareja | — |
+| 10a | `7f63a63` | **Fusión real del catálogo** (D1) | Catálogo único en `state.places`; `foldCurated` + `LEGACY_PID_MAP`; protección campo a campo de ediciones de usuario; `CATALOG_ALIAS` y doble resolución eliminados; producción 220→312 lugares al primer sync |
+| 10b | `3f82943` | **Modelo único de itinerario/trayectos** (P2/D4) | `maybeMigrateOriginal`: transfers por par → hueco v2 con mismos extremos, asignaciones dayId → paradas; marca `migratedOrig` en state/v2, monótona; espejo local `state.transfers` retirado; `localNewer` re-sube ediciones offline |
+| 10c | `6b40e34` | **Service worker offline** (R4) | `sw.js` cache-first del shell + CDNs versionadas, refresco silencioso en segundo plano; sin toasts de actualización; APIs vivas nunca interceptadas |
+| Docs | (este commit) | Fase 10 cerrada: gate aprobado, app original retirada del flujo soportado | — |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -143,30 +168,38 @@ explícita antes de reducir `state.places`.
   asset local del repo.
 - **Emoji como iconografía**: decisión de marca deliberada (cuaderno de viaje personal), no
   descuido; documentada en PRODUCT/DESIGN.
+- **Aviso de "hay versión nueva" del service worker**: descartado a propósito (Fase 10c). El
+  refresco es silencioso en segundo plano; la siguiente apertura estrena. Nada de toasts de
+  actualización ni recargas a mitad de uso.
+- **Migrar pares de transfers sin hueco v2 equivalente**: descartado a propósito (Fase 10b).
+  Solo se consolidan los pares cuyos extremos coinciden con un hueco del plan v2; el resto
+  queda legible en el archivo de la nube y en las copias.
 
 ## 9. Deuda técnica restante y fases futuras
 
-**Deuda consciente**: dos catálogos (alias D1 la mitiga; fusión real pendiente) · dos modelos de
-trayectos (P2/D4) · `onclick` inline globales (D5) · helpers duplicados `haversine`/`haversineMeters`,
-`uid`/`placeUid`, `esc` (D3) · código muerto `TOKYO_SPECIAL_WARDS` (muerto también en la original)
-(D2) · em-dashes solo en comentarios de código (4) · sin service worker (R4).
+**Fase 10 — Consolidación: COMPLETADA** (gate aprobado el 2026-07-07: los tres viajeros usan
+solo esta app). D1 (fusión real del catálogo), P2/D4 (modelo único de itinerario/trayectos con
+migración única) y R4 (service worker offline) cerrados.
 
-**Fase 10 — Consolidación** (⚠️ gate: solo cuando LOS TRES viajeros usen esta app): un único
-modelo de itinerario/trayectos con migración única; fusión real de los dos catálogos; service
-worker offline cache-first. Riesgos documentados en PARITY.md §6.
-**Fase 11 — Calidad de código**: D2, D3, D5, nombres, docs, rendimiento; sin cambios
-visuales/funcionales. Resultado esperado: código de proyecto open-source profesional.
+**Deuda consciente restante (Fase 11 — Calidad de código)**: `onclick` inline globales (D5) ·
+helpers duplicados `haversine`/`haversineMeters`, `uid`/`placeUid`, `esc` (D3) · código muerto
+`TOKYO_SPECIAL_WARDS` (muerto también en la original) (D2) · em-dashes solo en comentarios de
+código · nombres heredados (`userPlaceView`/`userHotels` sirven hoy a todo el catálogo) ·
+`hotelArea` no se edita en el formulario (campo del esquema original que sí se muestra).
+Fase 11: D2, D3, D5, nombres, docs, rendimiento; sin cambios visuales/funcionales. Resultado
+esperado: código de proyecto open-source profesional.
 
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
 `node tests/run-all.js [volcado-firebase.json]` — extrae el JS de `index.html`, hace
 `node --check` y ejecuta las suites contra el **código real** con stubs de DOM/Leaflet:
-7a import (6 casos) · 7b Dani (11) · 7c listas/alias (25) · 8a mapa (23, incluye fugas de capas)
-· 8b plataforma (21) · 8c gate (15; necesita un volcado en vivo:
-`curl .../proyectos/viaje-japon.json > live.json`, nunca se versiona). Antes de cada commit:
-suite completa en verde + smoke HTTP con `.claude/serve.ps1` (index y PDF en 200). Cada fase
-termina en SU PROPIO commit (puntos de rollback). Si aparece deuda que bloquee la visión final:
-parar, proponer el refactor y esperar aprobación (regla vigente).
+7a import (6 casos) · 7b Dani (11) · 10a catálogo fusionado (37) · 10b consolidación (29) ·
+10c service worker (12) · 8a mapa (23, incluye fugas de capas) · 8b plataforma (21) · 8c gate
+(20; necesita un volcado en vivo: `curl .../proyectos/viaje-japon.json > live.json`, nunca se
+versiona). Antes de cada commit: suite completa en verde + smoke HTTP con `.claude/serve.ps1`
+(index, sw.js y PDF en 200). Cada fase termina en SU PROPIO commit (puntos de rollback). Si
+aparece deuda que bloquee la visión final: parar, proponer el refactor y esperar aprobación
+(regla vigente).
 
 ## 11. Filosofía de producto, diseño y las Skills usadas
 
@@ -196,9 +229,11 @@ pequeño en oscuro).
 
 ## 12. Convenciones e invariantes (ROMPER ESTO ROMPE EL PROYECTO)
 
-1. **Política Firebase v2-only** (§5): 3 `fb.set`, ni uno más; jamás `state/days`/`state/transfers`.
-2. **Ids compartidos inmutables**: `catalog_*`, `dani_*`, `airport_*` y el `CATALOG_VERSION`
-   están vivos en la base de producción de tres personas. No renombrar, no fusionar (hasta F10).
+1. **Política Firebase v2-only** (§5): 3 `fb.set`, ni uno más; jamás `state/days`/`state/transfers`
+   (archivo congelado de la app original: tampoco borrarlos sin decisión explícita del usuario).
+2. **Ids canónicos inmutables**: `catalog_*`, `dani_*`, `airport_*` y las claves curadas
+   (`nakamise`…) están vivos en la base de producción de tres personas. No renombrar.
+   `LEGACY_PID_MAP` es permanente (copias antiguas traen pids con clave curada).
 3. **Nombres de token CSS = API interna**: las plantillas JS los usan inline (`--muted` 62 usos…).
    No renombrar tokens; añadir es seguro.
 4. **Los tests dependen del contrato del DOM**: ids (`#dayPanel`, `#placesGrid`, `#mapCatChips`…),
@@ -215,13 +250,22 @@ pequeño en oscuro).
 9. **Un commit por fase**, mensaje descriptivo, suite verde antes de commitear.
 10. **Tres amigos**: cualquier copy, ejemplo o decisión de producto asume 3 viajeros
     (presupuestos "por persona", nunca "pareja"/"ambos").
+11. **`migratedOrig` es monótona**: nunca se borra ni se pisa con un remoto vacío; borrarla
+    re-ejecutaría la consolidación 10b (resucitaría paradas eliminadas).
+12. **`sw.js`**: el nombre de caché (`japon27-vN`) solo sube si cambia la lista `SHELL`; el
+    contenido se refresca solo. Nunca interceptar APIs vivas (teselas, Nominatim, OSRM,
+    Overpass, RTDB) ni cachear respuestas parciales (206).
 
 ## 13. Supuestos que el trabajo futuro no debe romper por accidente
 
-- La app original sigue desplegada y EN USO; puede escribir en Firebase en cualquier momento.
-  Todo cambio debe sobrevivir a un `onValue` con datos suyos (arrays podados incluidos).
+- La app original está RETIRADA del flujo soportado (decisión del usuario, Fase 10), pero sus
+  datos siguen llegando por otras vías: nodos de archivo en la nube (`state/days`,
+  `state/transfers`), copias de seguridad antiguas y localStorage viejo. Todo cambio debe
+  sobrevivir a un `onValue` o import con esos datos (arrays podados incluidos, pids con clave
+  curada, catálogos sin fusionar).
 - `applyCatalogUpdate` puede re-sembrar lugares borrados al subir `CATALOG_VERSION` (avisado en
-  el confirm de borrado). Subir la versión del catálogo afecta a las DOS apps.
+  el confirm de borrado). La fusión (`foldCurated`) debe seguir siendo determinista e
+  idempotente: los tres móviles convergen byte a byte al mismo array.
 - Los servicios externos (OSRM de FOSSGIS, Overpass, Nominatim) son públicos y con rate-limit:
   la cola de límites espera 1,15 s entre peticiones; OSRM en cola de 250 ms; cachés en
   localStorage. No paralelizar esas peticiones.
@@ -230,4 +274,7 @@ pequeño en oscuro).
 - El pre-pintado del tema vive en un `<script>` del `<head>` (evita flash); `setTheme` mantiene
   sincronizados `data-theme`, `<meta theme-color>` y las teselas de mapa/mini-mapa.
 - El manifest PWA se genera en runtime (blob) dentro del propio HTML: no hay manifest.json.
+- El service worker sirve el shell cache-first: tras desplegar un cambio, la PRIMERA apertura
+  con red aún muestra la versión anterior mientras se refresca en segundo plano; la segunda
+  apertura ya estrena. Es el comportamiento elegido (sin toasts ni recargas a mitad de uso).
 - Node ≥18 basta para la suite; no hay `package.json` ni dependencias: mantenerlo así.

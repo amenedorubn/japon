@@ -10,7 +10,7 @@ Tres amigos españoles planificando y viviendo juntos su viaje a Japón del 8 al
 
 ## Product Purpose
 
-Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Reemplaza y convive con la "app original" de los viajeros: misma base de datos, cero riesgo para sus datos. Éxito = los tres la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados, presupuesto automático por persona, y sincronización silenciosa entre los tres móviles.
+Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Desde la Fase 10 es LA app del viaje: reemplazó a la "app original" de los viajeros sobre su misma base de datos, con su catálogo fusionado y su itinerario consolidado (los nodos antiguos quedan como archivo de solo lectura, cero riesgo para sus datos). Éxito = los tres la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados con ficha rica, presupuesto automático por persona, sincronización silenciosa entre los tres móviles y funcionamiento completo sin conexión.
 
 ## Brand Personality
 

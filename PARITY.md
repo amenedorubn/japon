@@ -32,14 +32,14 @@ este documento cierra cada uno de sus ítems.
 | R1 Teselas del mapa según tema | ✅ Completado | 8a | `applyMapTheme` con el mecanismo original; claro=Voyager, oscuro=CARTO dark |
 | R2 Import/export compatible + fusionar | ✅ Completado | 7a | Los 3 formatos de copia; guard contra reducir `state.places` sin confirmación |
 | R3 Sesgo Japón en Nominatim | ✅ Completado | 8b | `viewbox` + reintento ", Japan"; mejoras actuales conservadas |
-| R4 Offline (librerías embebidas) | ⏳ Aplazado a Fase 10 | — | Un service worker cache-first supera al embebido; la app original tampoco tenía SW |
+| R4 Offline (librerías embebidas) | ✅ Completado | 10c | `sw.js` cache-first (shell + PDF + CDNs versionadas) con refresco en segundo plano; supera al embebido y la app original tampoco tenía SW |
 
 ### Parciales (P)
 
 | Ítem | Estado | Fase | Nota |
 |---|---|---|---|
 | P1 Itinerario original visible | ✅ Completado | 8b | Vista "App original" solo lectura desde `state.origDays`; su modelo no se toca |
-| P2 Transfers del modelo original editables | ⏳ Aplazado a Fase 10 | — | Consolidación de los dos modelos de itinerario (migración única) |
+| P2 Transfers del modelo original editables | ✅ Completado | 10b | Migración única al modelo v2 (`maybeMigrateOriginal`): las opciones del original viven ahora en los huecos v2, plenamente editables |
 | P3 Arrastrar parada a otro día | 🔶 Adaptación aceptada | — | Modal "Mover a otro día" (la vista es de un día); revisar UX en Fase 9 |
 | P4 Descubribilidad de "Pasar" | ✅ Completado | 7b/7c | Adopción desde vista Dani, listas y ficha |
 | P5 Editar/borrar lugares compartidos | ✅ Completado | 7b | Con aviso de re-siembra para ids de catálogo |
@@ -49,11 +49,11 @@ este documento cierra cada uno de sus ítems.
 
 | Ítem | Estado | Fase | Nota |
 |---|---|---|---|
-| D1 Dos catálogos solapados | ✅ Mitigado (alias) / ⏳ fusión real en Fase 10 | 7c | `CATALOG_ALIAS` (26 entradas) elimina listados duplicados; ids intactos por compatibilidad |
+| D1 Dos catálogos solapados | ✅ Completado (fusión real) | 7c/10a | Catálogo único en `state.places` (`foldCurated`); `CATALOG_ALIAS` eliminado; ediciones de usuario protegidas campo a campo |
 | D2 Código muerto | ⏳ Fase 11 | — | `TOKYO_SPECIAL_WARDS` (muerto también en la original); `DANI_ROUTE_GROUPS` y `origDays` ya están vivos |
 | D3 Helpers duplicados | ⏳ Fase 11 | — | haversine/haversineMeters, uid/placeUid, esc |
-| D4 Dos modelos de transfers | ⏳ Fase 10 | — | = P2 |
-| D5 onclick inline globales | ⏳ Fase 9 | — | Se reescriben con las plantillas del rediseño |
+| D4 Dos modelos de transfers | ✅ Completado | 10b | = P2; el espejo `state.transfers` ya no existe en el modelo vivo |
+| D5 onclick inline globales | ⏳ Fase 11 | — | Limpieza de plantillas pendiente |
 | D6 Restos en el repo | ✅ Completado | 7a | `index - pre.html` eliminado; `index-pre-source.html` se queda como referencia permanente |
 | D7 Categoría `excursion` sin mapear | ✅ Completado | 7c | Añadida a `CATS` |
 
@@ -96,23 +96,27 @@ Con un `fb` falso inyectado en la app real (suite `test-8c-gate.js`):
 Además: comprobación de sintaxis del script completo y smoke HTTP
 (index 200, PDF 200 `application/pdf`, manifest servido).
 
-## 5. Aplazado a Fase 9+ (plan aprobado)
+## 5. Fases posteriores (estado)
 
-- **Fase 9** — rediseño visual completo (Apple HIG + minimalismo japonés); absorbe P3 (UX de
-  arrastre entre días) y D5 (plantillas sin onclick inline).
-- **Fase 10** — consolidación: un único modelo de itinerario/transfers con migración (P2/D4),
-  fusión real de catálogos (D1), service worker offline (R4). Solo cuando los tres viajeros usen esta app.
-- **Fase 11** — calidad de código: D2, D3, nombres, docs, rendimiento; sin cambios visuales/funcionales.
+- **Fase 9** — rediseño visual completo (Apple HIG + minimalismo japonés): HECHA (`1db5185`).
+- **Fase 10** — consolidación (gate aprobado 2026-07-07, los tres viajeros usan solo esta app):
+  HECHA. 10a fusión real de catálogos (`7f63a63`), 10b modelo único de itinerario/transfers con
+  migración única (`3f82943`), 10c service worker offline (`6b40e34`).
+- **Fase 11** — calidad de código: D2, D3, D5, nombres, docs, rendimiento; sin cambios
+  visuales/funcionales. PENDIENTE.
 
-## 6. Riesgos conocidos
+## 6. Riesgos conocidos (revisados tras la Fase 10)
 
-1. La ficha curada y la entrada compartida con alias son objetos distintos: si la app original
-   edita un `catalog_*` con gemelo curado, ese cambio no se ve en las listas de esta app
-   (la versión curada manda). Se resuelve con la fusión de la Fase 10.
-2. Los duplicados de nombre bajo el filtro "Todos" (par curado↔Dani) son intencionales
-   hasta la Fase 10; pueden sorprender a un usuario nuevo.
-3. `state/places` es un nodo compartido de escritura total (política heredada de la Fase 3):
-   una restauración de copia antigua puede retroceder lugares de ambas apps — mitigado con
-   las confirmaciones y el guard de reducción del import.
-4. El espejo `origDays` depende de la nube: sin sincronizar nunca, la vista "App original"
+1. ~~Ediciones de la app original en un `catalog_*` con gemelo curado invisibles aquí~~ —
+   RESUELTO en 10a: catálogo único con protección campo a campo (la edición de usuario gana
+   sobre la semilla; lo verificó el caso real de Akihabara `zona→compras` en producción).
+2. ~~Duplicados de nombre curado↔catálogo bajo "Todos"~~ — RESUELTOS en 10a. Los pares
+   nuestros↔Dani siguen siendo entradas separadas A PROPÓSITO (fuentes paralelas con notas
+   propias); conviven bajo "Todos".
+3. `state/places` sigue siendo un nodo de escritura total: una restauración de copia antigua
+   puede retroceder lugares — mitigado con las confirmaciones, el guard de reducción del
+   import y la re-fusión automática del catálogo al adoptar.
+4. El archivo `origDays` depende de la nube: sin sincronizar nunca, la vista "App original"
    queda vacía (comportamiento documentado en la propia vista).
+5. Borrar `migratedOrig` a mano re-ejecutaría la consolidación 10b y podría resucitar paradas
+   eliminadas: la marca es monótona y no debe tocarse (PROJECT.md §12.11).
