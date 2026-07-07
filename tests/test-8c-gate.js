@@ -42,14 +42,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const localBefore = api.state.places.length;
   const res = api.adoptRemote(livePayload);
   check('live: adoptRemote consumes production payload without throwing', !!res);
-  check('live: remote places adopted (220 from prod)', api.state.places.length === 220 && res.changed === true);
+  // Fase 10a: adoptar un remoto sin fusionar (v9, 220 lugares) re-ejecuta la
+  // fusión en el acto: 220 + 92 curados = 312, listos para subir a la nube.
+  check('live: remote places adopted and re-fused (220 -> 312)', api.state.places.length === 312 && res.changed === true);
+  check('live: fused catalog keeps every remote id and adds curated ones',
+    (() => { const ids = new Set(api.state.places.map(p => p.id));
+      return ids.has('catalog_sensoji') && ids.has('dani_fushimi_inari') && ids.has('nakamise') && ids.has('kagetsudo'); })());
+  check('live: catalog version stamped current after re-fusion', api.state.catalogVersion === 'sitios-japon-2026-07-07-v10-fusion');
   check('live: original days mirrored to origDays (21)', api.state.origDays.length === 21 &&
     api.state.origDays.every(d => d.label && d.date));
   check('live: v2 detected (not missing)', res.v2Missing === false);
   check('live: v2 days restored with arrays repaired', Array.isArray(api.state.days) && api.state.days.length === 21 &&
     api.state.days.every(d => Array.isArray(d.stops) && Array.isArray(d.trans)));
   check('live: tripTitle adopted', api.state.tripTitle === livePayload.tripTitle);
-  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 190);
+  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 282);
 
   // ---- (2) push audit with injected fake fb ----
   const writes = [];
@@ -70,7 +76,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   writes.length = 0;
   api.pushPlaces(); await sleep(900); // debounced 800ms
   check('policy: pushPlaces targets state/places only', writes.length === 1 && writes[0].node === 'NODE:state/places');
-  check('policy: pushPlaces sends the places array as-is', Array.isArray(writes[0].payload) && writes[0].payload.length === 220);
+  check('policy: pushPlaces sends the places array as-is (fused, 312)', Array.isArray(writes[0].payload) && writes[0].payload.length === 312);
 
   writes.length = 0;
   api.state.tripTitle = 'Gate 8c';

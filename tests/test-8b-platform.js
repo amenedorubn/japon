@@ -88,7 +88,7 @@ const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); 
   documentStub.querySelector('#addToDay').value = '3';
   const d3 = api.state.days[3];
   const d3last = api.parseTimeToMinutes(d3.stops[d3.stops.length - 1].time);
-  api.addPlaceToDay('sensoji');
+  api.addPlaceToDay('catalog_sensoji');
   check('M11: add-to-day infers last+60', d3.stops[d3.stops.length - 1].time === api.formatMinutes(d3last + 60));
 
   // ---- P1: read-only original itinerary ----

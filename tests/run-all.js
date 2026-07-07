@@ -16,7 +16,7 @@ fs.writeFileSync(appJs, m[1]);
 execFileSync('node', ['--check', appJs], { stdio: 'inherit' });
 console.log('SYNTAX OK\n');
 
-const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-7c-lists.js', 'test-8a-map.js', 'test-8b-platform.js'];
+const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-10a-catalog.js', 'test-8a-map.js', 'test-8b-platform.js'];
 let failed = 0;
 for (const s of suites) {
   console.log('=== ' + s + ' ===');

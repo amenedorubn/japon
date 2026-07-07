@@ -82,8 +82,9 @@ const layersOfType = t => [...api.getMap()._layers].filter(l => l._type === t);
 const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type === t);
 
 (async () => {
-  // Boot sanity: app evaluated, seed state built (2 airports + 38 catalog + 150 dani = 190)
-  check('boot: seed state built (190 shared places)', api.state.places.length === 190);
+  // Boot sanity: app evaluated, merged seed built (2 airports + 38 catalog +
+  // 150 dani + 92 curated folded in = 282, Fase 10a)
+  check('boot: merged seed state built (282 places)', api.state.places.length === 282);
 
   // Open the map tab (initMapView is deferred by 60ms), then let the
   // day-mode OSRM queue drain fully (1 job / 250ms) before measuring.

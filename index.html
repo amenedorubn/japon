@@ -693,9 +693,11 @@ const MODES = {
 const modeOf = m => MODES[m] || MODES.walk;
 
 /* ================================================================
-   CATÁLOGO DE SITIOS
+   CATÁLOGO DE SITIOS (ficha curada, materia prima de la semilla)
    dur = tiempo de visita sugerido (min) · yen = entrada por persona
    web = página oficial · insta = reel guardado
+   Desde la Fase 10 esto NO se consulta en tiempo de ejecución: se
+   fusiona dentro de state.places (catálogo único) vía foldCurated.
 ================================================================ */
 function P(name, cat, region, lat, lng, dur, yen, price, hours, web, desc, tip, ...rest){
   const insta = rest.find(x => x && String(x).startsWith('http')) || '';
@@ -1177,11 +1179,11 @@ const PHRASES = [
    CATÁLOGO COMPARTIDO (portado literal de la app original,
    ver index-pre-source.html líneas 6495–7024)
    - Ids idénticos a los que existen en Firebase (catalog_*, dani_*,
-     airport_*): imprescindible para fusionar sin duplicar.
-   - DANI_PLACES_RAW: ruta "Dani" (151 sitios). Sin UI todavía
-     (fase 5); los datos viajan con el estado desde ya.
+     airport_*): son los ids CANÓNICOS del catálogo único (Fase 10).
+   - DANI_PLACES_RAW: ruta "Dani" (151 sitios).
    - applyCatalogUpdate(): versionado del catálogo; con la misma
-     CATALOG_VERSION que hay en la nube es un no-op.
+     CATALOG_VERSION ya aplicada es un no-op. La versión v10 ejecuta
+     la fusión real con la ficha curada (foldCurated).
 ================================================================ */
 /* Documento "JAPÓN DEFINITIVO" de Dani: asset local del propio repo
    (lo sirve GitHub Pages junto a index.html), sin depender de Drive.
@@ -1197,8 +1199,7 @@ const isoDate = d => {
   return `${y}-${m}-${day}`;
 };
 const addDays = (base,n) => { const d = new Date(base); d.setDate(d.getDate()+n); return d; };
-const CATALOG_VERSION = 'sitios-japon-2026-07-02-v9-dani-pdf';
-let catalogNeedsSave = false;
+const CATALOG_VERSION = 'sitios-japon-2026-07-07-v10-fusion';
 
 function softAreaPolygon(lat, lng, radiusLat, radiusLng, points){
   points = points || 36;
@@ -1525,7 +1526,10 @@ const DANI_ROUTE_GROUPS = [
 ];
 
 function buildSeedPlaces(){
-  return AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).concat(DANI_PLACES_RAW).map(p => Object.assign({}, p));
+  const byId = new Map(AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).concat(DANI_PLACES_RAW)
+    .map(p => [p.id, Object.assign({}, p)]));
+  foldCurated(byId); // Fase 10: el catálogo nace ya fusionado con la capa curada
+  return Array.from(byId.values());
 }
 
 function isAirportPlace(p){
@@ -1558,11 +1562,12 @@ function applyCatalogUpdate(){
   DANI_PLACES_RAW.forEach(dp => {
     byId.set(dp.id, mergeCatalogPlace(byId.get(dp.id), dp));
   });
+  foldCurated(byId); // Fase 10: fusión real del catálogo curado (D1 resuelto)
   state.places = Array.from(byId.values());
   const validIds = new Set(state.places.map(p=>p.id));
   state.transfers = (Array.isArray(state.transfers) ? state.transfers : []).filter(t => validIds.has(t.fromPlaceId) && validIds.has(t.toPlaceId));
+  canonicalizeDayPids(state.days); // los pids del itinerario v2 pasan a ids canónicos
   state.catalogVersion = CATALOG_VERSION;
-  catalogNeedsSave = true;
   return true;
 }
 
@@ -1570,29 +1575,81 @@ function applyCatalogUpdate(){
 
 
 /* ================================================================
-   D1 · CAPA DE ALIAS: catálogo compartido → catálogo curado
-   Un mismo sitio real existe con dos ids: catalog_* dentro de
-   state.places (esquema de la app original, viaja por Firebase) y su
-   clave curada en PLACES (ficha rica: precio, horario, web, consejo).
-   En las listas gana la versión curada; la entrada compartida NUNCA se
-   toca ni se renombra (fusionar ids rompería la app original — la
-   fusión real es Fase 10). Las entradas sin gemelo curado se listan
-   tal cual (Harajuku, Shinjuku, Namba, excursiones-concepto…).
+   FUSIÓN REAL DEL CATÁLOGO (Fase 10, cierra D1)
+   Antes convivían dos catálogos: state.places (esquema de la app
+   original, viaja por Firebase) y PLACES (ficha curada rica). Desde la
+   Fase 10 hay UNO: la ficha curada se fusiona dentro de state.places.
+   - Pares con gemelo (clave curada ↔ catalog_*): el id canónico es el
+     id compartido de producción; la ficha curada aporta los campos
+     ricos (dur/yen/price/hours/web/tip) y gana en los campos visibles
+     SOLO si el valor actual sigue siendo el de la semilla (una edición
+     de usuario nunca se pisa: cierre del riesgo 1 de PARITY.md).
+   - Claves curadas sin gemelo (nakamise, kagetsudo…): entran como
+     entradas propias del catálogo con su clave como id.
+   - LEGACY_PID_MAP es PERMANENTE: copias antiguas y v2 en la nube
+     pueden traer pids con clave curada; se canonicalizan al leer.
+     (Los dos airport_* no se fusionan con 'nrt': siguen siendo
+     marcadores propios del modelo original, ocultos en listas.)
 ================================================================ */
-const CATALOG_ALIAS = {
-  catalog_sensoji: 'sensoji', catalog_ueno: 'ueno_park', catalog_ginza: 'ginza',
-  catalog_odaiba: 'odaiba', catalog_meiji: 'meiji', catalog_takeshita: 'takeshita',
-  catalog_akihabara: 'akihabara', catalog_shibuya: 'shibuya',
-  catalog_tokyo_metropolitan: 'tocho', catalog_mori_tower: 'mori',
-  catalog_kinkakuji: 'kinkakuji', catalog_sannenzaka: 'sannenzaka',
-  catalog_yasaka: 'yasaka', catalog_gion: 'gion', catalog_pontocho: 'pontocho',
-  catalog_denden_town: 'denden', catalog_nijo_castle: 'nijo',
-  catalog_shijo_kawaramachi: 'teramachi', catalog_arashiyama: 'bamboo',
-  catalog_nara: 'nara_park', catalog_kanazawa: 'kanazawa',
-  catalog_uji_excursion: 'uji', catalog_hakone_fuji_excursion: 'hakone',
-  catalog_takayama_kamikochi_excursion: 'takayama',
-  airport_narita_llegada: 'nrt', airport_narita_salida: 'nrt'
+const LEGACY_PID_MAP = {
+  sensoji: 'catalog_sensoji', ueno_park: 'catalog_ueno', ginza: 'catalog_ginza',
+  odaiba: 'catalog_odaiba', meiji: 'catalog_meiji', takeshita: 'catalog_takeshita',
+  akihabara: 'catalog_akihabara', shibuya: 'catalog_shibuya',
+  tocho: 'catalog_tokyo_metropolitan', mori: 'catalog_mori_tower',
+  kinkakuji: 'catalog_kinkakuji', sannenzaka: 'catalog_sannenzaka',
+  yasaka: 'catalog_yasaka', gion: 'catalog_gion', pontocho: 'catalog_pontocho',
+  denden: 'catalog_denden_town', nijo: 'catalog_nijo_castle',
+  teramachi: 'catalog_shijo_kawaramachi', bamboo: 'catalog_arashiyama',
+  nara_park: 'catalog_nara', kanazawa: 'catalog_kanazawa',
+  uji: 'catalog_uji_excursion', hakone: 'catalog_hakone_fuji_excursion',
+  takayama: 'catalog_takayama_kamikochi_excursion'
 };
+const canonicalPid = pid => LEGACY_PID_MAP[pid] || pid;
+function canonicalizeDayPids(days){
+  let changed = false;
+  (days || []).forEach(d => {
+    ((d && d.stops) || []).forEach(s => {
+      if(s && LEGACY_PID_MAP[s.pid]){ s.pid = LEGACY_PID_MAP[s.pid]; changed = true; }
+    });
+  });
+  return changed;
+}
+/* Campos ricos que la ficha curada aporta al catálogo fusionado */
+function curatedFields(c){
+  return {dur: c.dur, yen: c.yen, price: c.price, hours: c.hours, web: c.web, tip: c.tip};
+}
+function curatedSharedEntry(key, c){
+  return Object.assign({id: key, name: c.name, category: c.cat, region: c.region,
+    lat: c.lat, lng: c.lng, notes: c.desc || '', video: c.insta || '',
+    dayId: null, time: '', catalog: true, catalogItem: true}, curatedFields(c));
+}
+/* Fusiona la capa curada dentro del mapa id→lugar. Determinista e
+   idempotente: todos los dispositivos convergen al mismo array. */
+function foldCurated(byId){
+  const rawById = new Map(CATALOG_PLACES_RAW.concat(AIRPORT_PLACES_RAW).map(r => [r.id, r]));
+  Object.keys(PLACES).forEach(key => {
+    const c = PLACES[key];
+    const sharedId = LEGACY_PID_MAP[key];
+    if(sharedId){
+      const p = byId.get(sharedId);
+      if(!p) return;
+      const raw = rawById.get(sharedId) || {};
+      // Campo visible: la ficha curada gana solo sobre el valor de semilla
+      const fold = (field, curVal, rawVal) => {
+        if(curVal && (p[field] == null || p[field] === '' || p[field] === rawVal)) p[field] = curVal;
+      };
+      fold('name', c.name, raw.name);
+      fold('notes', c.desc, raw.notes);
+      fold('region', c.region, raw.region);
+      fold('category', c.cat, raw.category);
+      if(!p.video && c.insta) p.video = c.insta;
+      Object.assign(p, curatedFields(c));
+    } else {
+      const existing = byId.get(key);
+      byId.set(key, existing ? mergeCatalogPlace(existing, curatedSharedEntry(key, c)) : curatedSharedEntry(key, c));
+    }
+  });
+}
 
 /* ================================================================
    ESTADO
@@ -1600,8 +1657,9 @@ const CATALOG_ALIAS = {
 const LS_KEY = 'japon27_app_v1';
 const CITY_COLORS = {Tokio:'#cf3f2a', Kioto:'#2b4a7a', Osaka:'#a97b12', Nara:'#3e7c59', Hiroshima:'#57534a', Kamakura:'#8a5a44', Nikko:'#5c7048', 'Monte Fuji':'#2b8ca3', Yokohama:'#4a7a9a', Miyajima:'#8a4a8a', Vuelo:'#889'};
 
-function gapWalkEstimate(day, i){
-  const a = placeById(day.stops[i] && day.stops[i].pid), b = placeById(day.stops[i+1] && day.stops[i+1].pid);
+function gapWalkEstimate(day, i, resolve){
+  resolve = resolve || placeById; // buildSeedState pasa su propio resolvedor (state aún no existe)
+  const a = resolve(day.stops[i] && day.stops[i].pid), b = resolve(day.stops[i+1] && day.stops[i+1].pid);
   if(!a || !b) return 10;
   return walkEstimate(haversine(a, b));
 }
@@ -1615,19 +1673,22 @@ function normTransfer(t, walkMin){
   return nt;
 }
 function buildSeedState(){
+  const places = buildSeedPlaces();
+  const placeMap = new Map(places.map(p => [p.id, p]));
+  const resolve = pid => placeMap.get(canonicalPid(pid)) || null;
   const days = SEED_DAYS.map(sd => {
     const day = {date: sd.date, title: sd.title, city: sd.city, icon: sd.icon, flight: sd.flight || null,
-      stops: sd.stops.map(s => ({id: uid(), pid: s.pid, time: s.time, dur: s.dur, note: s.note, done: false})),
+      stops: sd.stops.map(s => ({id: uid(), pid: canonicalPid(s.pid), time: s.time, dur: s.dur, note: s.note, done: false})),
       trans: [], pre: sd.pre ? normTransfer(sd.pre, null) : null, post: sd.post ? normTransfer(sd.post, null) : null};
     for(let i = 0; i < Math.max(0, day.stops.length - 1); i++){
-      day.trans.push(normTransfer(sd.trans && sd.trans[i], gapWalkEstimate(day, i)));
+      day.trans.push(normTransfer(sd.trans && sd.trans[i], gapWalkEstimate(day, i, resolve)));
     }
     return day;
   });
   // updatedAt: 0 = "nunca editado". Así cualquier v2 remoto real gana a un
   // seed recién generado en un dispositivo nuevo (commit() pone timestamps).
   return {v: SEED_VERSION, days, rate: 170, check: {}, updatedAt: 0,
-    places: buildSeedPlaces(), transfers: [], catalogVersion: CATALOG_VERSION,
+    places, transfers: [], catalogVersion: CATALOG_VERSION,
     tripTitle: "Japón '27", origDays: []};
 }
 /* Campos compartidos con la app original (places/transfers/catalogVersion/
@@ -1651,7 +1712,9 @@ if(!state || !Array.isArray(state.days)) state = buildSeedState();
 if(!state.check) state.check = {};
 if(!state.rate) state.rate = 170;
 ensureSharedShape(state);
-applyCatalogUpdate(); // no-op si catalogVersion ya es la actual
+// Migración de arranque (no-op si catalogVersion ya es la actual). La subida
+// del catálogo fusionado a state/places la hace adoptRemote al sincronizar.
+if(applyCatalogUpdate()) persistLocal();
 
 function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 let pushTimer = null;
@@ -1713,13 +1776,17 @@ function adoptRemote(payload){
     // jamás debe borrar los datos locales.
     if(places.length && JSON.stringify(places) !== JSON.stringify(state.places)){
       state.places = places;
+      // La versión del catálogo describe al array adoptado: viaja con él. Si
+      // el remoto aún no está fusionado, applyCatalogUpdate lo re-fusiona.
+      state.catalogVersion = rs.catalogVersion || null;
       res.changed = true;
     }
     state.transfers = normArr(rs.transfers);
     state.origDays = normArr(rs.days);
-    if(rs.catalogVersion) state.catalogVersion = rs.catalogVersion;
     if(payload.tripTitle) state.tripTitle = payload.tripTitle;
-    applyCatalogUpdate(); // no-op mientras la versión coincida
+    // No-op mientras la versión coincida; si fusionó, el resultado se
+    // comparte por state/places (con la nube apagada solo persiste).
+    if(applyCatalogUpdate()) pushPlaces();
     const v2 = rs.v2;
     if(v2 && typeof v2 === 'object'){
       res.v2Missing = false;
@@ -1731,6 +1798,7 @@ function adoptRemote(payload){
         d.trans = normArr(d.trans);
         d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
       });
+      canonicalizeDayPids(v2days); // un v2 antiguo puede traer pids con clave curada
       if(v2days.length && v2.updatedAt > (state.updatedAt || 0)){
         state.days = v2days;
         state.rate = v2.rate || state.rate;
@@ -1877,17 +1945,17 @@ $('#btnNotify').addEventListener('click', requestChangeNotifications);
    así aparecen también en ella vía Firebase sin conversión alguna.
 ================================================================ */
 const placeUid = () => 'id_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
-// Lugares del usuario (no catálogo, no Dani: esos llegan en fase 5)
-function userPlaces(){
-  return state.places.filter(p => p && p.source === 'user' && !p.catalogItem && p.lat != null);
-}
-/* Adaptador de esquema original → tarjeta de esta app.
-   Los campos de hotel (nombres de la app original) pasan tal cual. */
+/* Adaptador de esquema almacenado → tarjeta/ficha de esta app. Desde la
+   Fase 10 es EL adaptador del catálogo único: expone también los campos
+   ricos fusionados (dur/yen/price/hours/web/tip). Los campos de hotel
+   (nombres del esquema original) pasan tal cual. */
 function userPlaceView(p){
   const isUser = p.source === 'user' && !p.catalogItem;
   return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
-    lat: p.lat, lng: p.lng, dur: 60, yen: null, price: '', hours: '', web: '',
-    desc: p.notes || '', tip: '', insta: p.video || '', userPlace: isUser, id: p.id,
+    lat: p.lat, lng: p.lng,
+    dur: p.dur || 60, yen: p.yen == null ? null : p.yen, price: p.price || '',
+    hours: p.hours || '', web: p.web || '', tip: p.tip || '',
+    desc: p.notes || '', insta: p.video || '', userPlace: isUser, id: p.id,
     source: p.source || (p.catalogItem ? 'catalog' : 'user'), dani: !!p.dani,
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
@@ -1900,14 +1968,17 @@ function daysBetween(checkIn, checkOut){
   const n = Math.round((b - a) / 86400000);
   return n > 0 ? `${n} noche${n === 1 ? '' : 's'}` : '';
 }
-/* Hoteles reales (reservas del usuario, compartidas con la app original) */
-function userHotels(){
-  return state.places.filter(p => p && p.source === 'user' && !p.dani && p.category === 'alojamiento' && p.lat != null);
+/* Bases sugeridas del catálogo aún sin reservar (van en su propia lista) */
+function hotelPlaceholderBase(p){
+  return !!(p && p.catalog && p.category === 'alojamiento' && /por reservar/i.test(p.price || ''));
 }
-/* Resolución unificada: catálogo (PLACES) o cualquier lugar compartido
-   de state.places (propio, Dani, Insta o catálogo de la app original). */
+/* Hoteles reales: reservas propias + los reservados del catálogo (APA) */
+function userHotels(){
+  return state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null &&
+    !p.dani && sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p));
+}
+/* Resolución del catálogo ÚNICO (Fase 10): todo lugar vive en state.places. */
 function placeById(pid){
-  if(PLACES[pid]) return PLACES[pid];
   const p = state.places.find(x => x && x.id === pid);
   return p ? userPlaceView(p) : null;
 }
@@ -1926,13 +1997,12 @@ function sourceMatchesFilter(p, filter){
   if(filter === 'insta') return source === 'insta';
   return true;
 }
-/* Lugares compartidos que van a listas: fuera los que tienen gemelo curado
-   (CATALOG_ALIAS: ya los lista PLACES), las capas base de ciudad, los
-   aeropuertos y los hoteles (tienen su propia pestaña). */
-function sharedListables(){
+/* Lugares del catálogo único que van a la lista de Sitios: fuera capas base
+   de ciudad, aeropuertos, transporte y hoteles (tienen su propia pestaña). */
+function listablePlaces(){
   return state.places.filter(p => p && p.lat != null &&
-    !CATALOG_ALIAS[p.id] && !p.baseLayer && !p.cityBase && !p.airport &&
-    p.category !== 'alojamiento');
+    !p.baseLayer && !p.cityBase && !p.airport &&
+    p.category !== 'alojamiento' && p.category !== 'transporte');
 }
 const SRC_FILTER_OPTS = [['ours','Nuestros'],['dani','Dani'],['insta','Insta'],['all','Todos']];
 function srcChipsHTML(active){
@@ -2103,9 +2173,10 @@ function savePlaceForm(placeId){
   toast(placeId ? 'Sitio actualizado' : 'Sitio añadido ✓');
 }
 function deleteUserPlace(placeId){
-  // Los sitios del catálogo compartido o de Dani pueden reaparecer si sube
+  // Los sitios del catálogo (fusionado) o de Dani pueden reaparecer si sube
   // la versión del catálogo (applyCatalogUpdate los re-siembra): avisar.
-  const seeded = /^(catalog_|dani_|airport_)/.test(placeId);
+  const seededP = state.places.find(p => p && p.id === placeId);
+  const seeded = !!(seededP && (seededP.catalog || seededP.catalogItem)) || /^(catalog_|dani_|airport_)/.test(placeId);
   const warn = seeded
     ? '¿Eliminar este sitio del catálogo compartido? Ojo: una futura actualización del catálogo puede volver a añadirlo. También se quitará de los días del itinerario donde aparezca.'
     : '¿Eliminar este sitio? También se quitará de los días del itinerario donde aparezca.';
@@ -2131,9 +2202,8 @@ $('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
    las bases "por reservar" sugeridas del catálogo como referencia.
 ================================================================ */
 function hotelBasePlaceholders(){
-  return Object.keys(PLACES)
-    .filter(pid => PLACES[pid].cat === 'alojamiento' && /por reservar/i.test(PLACES[pid].price || ''))
-    .map(pid => ({pid, p: PLACES[pid]}));
+  return state.places.filter(hotelPlaceholderBase)
+    .map(p => ({pid: p.id, p: userPlaceView(p)}));
 }
 function hotelCardHTML(p){
   const nights = daysBetween(p.checkIn, p.checkOut);
@@ -2168,9 +2238,11 @@ let hotelSrc = 'ours';
 function renderHoteles(){
   $('#hotelSrcChips').innerHTML = srcChipsHTML(hotelSrc);
   $$('#hotelSrcChips .fchip').forEach(b => b.addEventListener('click', () => { hotelSrc = b.dataset.s; renderHoteles(); }));
-  // Con "Nuestros" son las reservas reales (userHotels); los demás filtros
-  // muestran también los alojamientos de la ruta Dani / Insta compartidos.
-  const hotels = state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null && sourceMatchesFilter(p, hotelSrc));
+  // Con "Nuestros" son las reservas reales; los demás filtros muestran
+  // también los alojamientos de la ruta Dani / Insta. Las bases del catálogo
+  // aún por reservar van en su propia lista de sugerencias, no aquí.
+  const hotels = state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null &&
+    !hotelPlaceholderBase(p) && sourceMatchesFilter(p, hotelSrc));
   const countLabel = {ours: n => n + ' reservado' + (n === 1 ? '' : 's'), dani: n => n + ' de Dani', insta: n => n + ' de Insta', all: n => n + ' en total'}[hotelSrc];
   $('#hotelCount').textContent = hotels.length ? countLabel(hotels.length) : '';
   const emptyMsg = hotelSrc === 'ours'
@@ -2795,9 +2867,13 @@ function addPlaceToDay(pid){
   toast('Añadido a ' + fmtDateShort(day.date));
 }
 function openAddStop(dayIdx){
-  const list = Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
-    .filter(x => x.p.region !== 'Ideas')
-    .concat(userPlaces().map(up => ({pid: up.id, p: userPlaceView(up)})));
+  // Añadibles: todo lo "nuestro" del catálogo único (los sitios de Dani o
+  // Insta se adoptan antes con ★ Pasar, como siempre). Fuera Ideas,
+  // aeropuertos del modelo original y capas base de ciudad.
+  const list = state.places
+    .filter(p => p && p.lat != null && p.region !== 'Ideas' &&
+      !p.airport && !p.baseLayer && !p.cityBase && sourceValueForPlace(p) === 'user')
+    .map(p => ({pid: p.id, p: userPlaceView(p)}));
   openModal(`
     <h3>＋ Añadir parada</h3>
     <input type="search" id="addSearch" placeholder="Buscar sitio…" style="width:100%;margin-top:8px">
@@ -3377,8 +3453,13 @@ async function renderMapDay(){
   // Capas por origen: N (catálogo + nuestros), D (ruta Dani), I (Instagram)
   const pois = [];
   if(srcState.n){
-    Object.keys(PLACES).forEach(pid => pois.push({pid, p: PLACES[pid], ring: '#fff', badge: ''}));
-    userPlaces().forEach(up => pois.push({pid: up.id, p: userPlaceView(up), ring: '#fff', badge: ' <span style="color:var(--indigo)">★</span>'}));
+    state.places.forEach(sp => {
+      if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
+      if(sourceValueForPlace(sp) !== 'user') return;
+      const v = userPlaceView(sp);
+      pois.push({pid: sp.id, p: v, ring: '#fff',
+        badge: v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''});
+    });
   }
   if(srcState.d){
     state.places.forEach(sp => { if(sp && sp.dani && sp.lat != null)
@@ -3488,16 +3569,10 @@ function renderSitios(){
   $('#srcChips').innerHTML = srcChipsHTML(placeSrc);
   $$('#srcChips .fchip').forEach(b => b.addEventListener('click', () => { placeSrc = b.dataset.s; renderSitios(); }));
 
-  // Unión sin duplicados: catálogo curado (cuenta como "Nuestros") + lugares
-  // compartidos listables (la capa de alias D1 excluye los gemelos curados).
-  const curated = (placeSrc === 'ours' || placeSrc === 'all')
-    ? Object.keys(PLACES).map(pid => ({pid, p: PLACES[pid]}))
-        .filter(x => x.p.cat !== 'transporte' && x.p.cat !== 'alojamiento')
-    : [];
-  const shared = sharedListables()
+  // Catálogo único (Fase 10): una sola fuente, sin capa de alias.
+  const all = listablePlaces()
     .filter(p => sourceMatchesFilter(p, placeSrc))
     .map(p => ({pid: p.id, p: userPlaceView(p)}));
-  const all = curated.concat(shared);
 
   const regions = [];
   all.forEach(x => { const r = x.p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
@@ -3595,11 +3670,14 @@ $('#importFile').addEventListener('change', async e => {
     if(!inDays.length && !inPlaces.length){ toast('Archivo con formato inesperado'); e.target.value = ''; return; }
     // Días v2 (con paradas/título) frente a días de la app original (label/fecha)
     const v2Days = inDays.length && inDays.some(d => d && (d.stops || d.trans || d.title)) ? inDays : null;
-    if(v2Days) v2Days.forEach(d => {
-      d.stops = normArr(d.stops);
-      d.trans = normArr(d.trans);
-      d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
-    });
+    if(v2Days){
+      v2Days.forEach(d => {
+        d.stops = normArr(d.stops);
+        d.trans = normArr(d.trans);
+        d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
+      });
+      canonicalizeDayPids(v2Days); // copias antiguas: pids con clave curada
+    }
     const merge = confirm('Aceptar = FUSIONAR la copia con el plan actual (añade los lugares que falten, no borra nada).\nCancelar = REEMPLAZAR el plan por la copia.');
     let placesChanged = false, daysChanged = false;
     if(merge){
@@ -3610,9 +3688,12 @@ $('#importFile').addEventListener('change', async e => {
          !confirm(`La copia tiene ${inPlaces.length} lugares y el plan actual ${state.places.length}. ¿Reemplazar igualmente? Se perderán los lugares que no estén en la copia.`)){
         e.target.value = ''; return;
       }
-      if(inPlaces.length){ state.places = inPlaces; placesChanged = true; }
+      if(inPlaces.length){
+        state.places = inPlaces;
+        state.catalogVersion = s.catalogVersion || null; // la versión viaja con el array
+        placesChanged = true;
+      }
       state.transfers = normArr(s.transfers);
-      if(s.catalogVersion) state.catalogVersion = s.catalogVersion;
       if(v2Days){
         state.days = v2Days;
         state.rate = s.rate || state.rate;
@@ -3625,7 +3706,8 @@ $('#importFile').addEventListener('change', async e => {
       if(title){ state.tripTitle = title; pushTitle(); }
     }
     ensureSharedShape(state);
-    applyCatalogUpdate(); // copias antiguas sin catálogo: se re-siembra
+    // Copias antiguas o de la app original: re-siembra y fusión del catálogo
+    if(applyCatalogUpdate()) placesChanged = true;
     applyTripTitle();
     if(daysChanged) commit(); else persistLocal();
     if(placesChanged) pushPlaces();
