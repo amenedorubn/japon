@@ -414,8 +414,10 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="fchip src-chip" id="srcNos" title="Sitios del catálogo y añadidos por vosotros"><b>N</b> Nosotros</button>
       <button class="fchip src-chip src-dani" id="srcDani" title="Sitios de la ruta Dani"><b>D</b> Dani</button>
       <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
+      <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
+    <div class="map-toggles" id="mapCatChips" aria-label="Filtrar el mapa por categoría"></div>
     <div id="map"></div>
     <div class="map-legend" id="mapLegend"></div>
     <div class="map-note">Las rutas siguen calles y carreteras reales (OSRM/OpenStreetMap). En tramos de metro y tren el trazado sobre el plano es orientativo: consulta la conexión exacta en la tarjeta del trayecto o con el botón de Google Maps.</div>
@@ -512,6 +514,14 @@ const FLIGHTS = [
   { id:3, from:'Tokio Narita (NRT)', to:'Helsinki (HEL)', date:'2027-04-27', flight:'AY0074', dep:'23:05', arr:'05:55', airline:'Finnair', terminal:'T2', note:'Último check-in 22:05 · llegada el 28' },
   { id:4, from:'Helsinki (HEL)', to:'Madrid (MAD)', date:'2027-04-28', flight:'AY1661', dep:'16:40', arr:'20:05', airline:'Finnair (opera Iberia)', terminal:'T4', note:'Último check-in 15:55' },
 ];
+/* Aeropuertos de los vuelos (datos portados de la tabla AIRPORTS de la app
+   original); airportOf los resuelve desde el código IATA "(MAD)" de FLIGHTS. */
+const AIRPORTS = {
+  MAD: {name: 'Madrid (MAD)',       lat: 40.4983, lng: -3.5676,  emoji: '🛫'},
+  HEL: {name: 'Helsinki (HEL)',     lat: 60.3172, lng: 24.9633,  emoji: '🔄'},
+  NRT: {name: 'Tokio Narita (NRT)', lat: 35.7720, lng: 140.3929, emoji: '🛬'},
+};
+const airportOf = s => AIRPORTS[(String(s).match(/\(([A-Z]{3})\)/) || [])[1]] || null;
 const COUNTDOWN_TARGET = new Date('2027-04-08T10:15:00+02:00');
 const TRIP_END = new Date('2027-04-28T20:05:00+02:00');
 
@@ -1650,6 +1660,9 @@ $('#btnSync').addEventListener('click', () => {
 function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   try{ localStorage.setItem('japon27_theme', theme); }catch(e){}
+  // Igual que la app original: el mapa y el mini-mapa cambian de teselas
+  if(map) applyMapTheme(map);
+  if(miniMap) applyMapTheme(miniMap);
 }
 $('#btnTheme').addEventListener('click', () => {
   setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
@@ -1879,7 +1892,7 @@ function openPlaceForm(placeId, presetCat){
   if(miniMap){ miniMap.remove(); miniMap = null; miniPin = null; }
   miniMap = L.map('fpMiniMap', {zoomControl: false, attributionControl: false})
     .setView(p ? [p.lat, p.lng] : [35.68, 139.76], p ? 14 : 5);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 19}).addTo(miniMap);
+  applyMapTheme(miniMap);
   miniMap.on('click', ev => setMiniPin(ev.latlng.lat, ev.latlng.lng, false));
   if(p) setMiniPin(p.lat, p.lng, false);
   setTimeout(() => miniMap && miniMap.invalidateSize(), 120);
@@ -2263,8 +2276,10 @@ function gmapsLink(a, b, mode){
   return 'https://www.google.com/maps/dir/?api=1&origin=' + a.lat + ',' + a.lng +
          '&destination=' + b.lat + ',' + b.lng + '&travelmode=' + mode;
 }
-function renderDayChips(elId, sel, onclick){
-  $(elId).innerHTML = state.days.map((d, i) => {
+function renderDayChips(elId, sel, onclick, withAll){
+  // withAll (solo mapa): chip "Todos" con índice -1 = todos los días
+  $(elId).innerHTML = (withAll ? `<button class="day-chip ${sel === -1 ? 'active' : ''}" data-i="-1">🗾 Todos</button>` : '') +
+  state.days.map((d, i) => {
     const dt = new Date(d.date + 'T12:00');
     return `<button class="day-chip ${i === sel ? 'active' : ''}" data-i="${i}">
       <span class="cdot" style="background:${CITY_COLORS[d.city] || '#888'}"></span>${d.icon} ${dt.getDate()} ${dt.toLocaleDateString('es-ES',{month:'short'}).replace('.','')}
@@ -2810,19 +2825,37 @@ function openTransferEdit(dayIdx, gap){
    MAPA
 ================================================================ */
 let map = null, mapLayers = [], mapDay = null;
+/* R1 · Teselas claro/oscuro sincronizadas con el tema, mismo mecanismo que
+   la app original (applyMapTheme intercambia la capa de teselas). El tema
+   claro conserva las teselas Voyager actuales; el oscuro usa CARTO dark. */
+const MAP_TILES = {
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+};
+let mapTileLayer = null, miniTileLayer = null;
+function currentThemeName(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+function applyMapTheme(targetMap){
+  if(!targetMap) return;
+  const layer = L.tileLayer(MAP_TILES[currentThemeName()], {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
+  });
+  if(targetMap === map && mapTileLayer) targetMap.removeLayer(mapTileLayer);
+  if(targetMap === miniMap && miniTileLayer) targetMap.removeLayer(miniTileLayer);
+  layer.addTo(targetMap);
+  if(targetMap === map) mapTileLayer = layer; else miniTileLayer = layer;
+}
 function initMapView(){
   if(mapDay == null) mapDay = curDay;
   if(!map){
     map = L.map('map', {zoomControl: true, attributionControl: true}).setView([35.68, 139.76], 11);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
-    }).addTo(map);
+    applyMapTheme(map);
     // Las zonas dependen del nivel de zoom: redibujar al hacer zoom
     let zoomT = null;
     map.on('zoomend', () => { clearTimeout(zoomT); zoomT = setTimeout(renderZones, 120); });
   }
-  renderDayChips('#mapDayChips', mapDay, i => { mapDay = i; renderMapDay(); });
+  renderMapCatChips();
+  syncFlightsChip();
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
 }
 /* --- Capas de origen: Nosotros / Dani / Insta (persistidas) --- */
@@ -2841,6 +2874,27 @@ function syncSrcChips(){
   });
 });
 syncSrcChips();
+
+/* --- M4 · Capa de vuelos (no persistida, como en la app original) --- */
+let flightsVisible = false;
+function syncFlightsChip(){ $('#flightsToggle').classList.toggle('active', flightsVisible); }
+$('#flightsToggle').addEventListener('click', () => {
+  flightsVisible = !flightsVisible;
+  syncFlightsChip(); renderMapDay();
+});
+
+/* --- M5 · Filtro del mapa por categoría (no persistido, como el original) --- */
+const activeMapCategories = new Set(Object.keys(CATS));
+function renderMapCatChips(){
+  $('#mapCatChips').innerHTML = Object.keys(CATS).map(c =>
+    `<button class="fchip ${activeMapCategories.has(c) ? 'active' : ''}" data-c="${c}" title="${esc(CATS[c].label)}">${CATS[c].emoji}</button>`).join('');
+  $$('#mapCatChips .fchip').forEach(b => b.addEventListener('click', () => {
+    const c = b.dataset.c;
+    if(activeMapCategories.has(c)) activeMapCategories.delete(c);
+    else activeMapCategories.add(c);
+    renderMapCatChips(); renderMapDay();
+  }));
+}
 
 /* --- Zonas y límites de barrios (portado de la app original) ---
    Polígonos fijos del catálogo + límites reales de Nominatim con caché
@@ -2953,6 +3007,19 @@ function zoneLatLngs(p){
   if(p.allowFallback !== false && Array.isArray(p.fallbackPolygon) && p.fallbackPolygon.length >= 3) return p.fallbackPolygon;
   return null;
 }
+/* M6 · Bajo el umbral de zoom, la zona se degrada a un pin con su emoji en
+   vez de desaparecer (portado de drawZonePin de la app original). El pin no
+   dispara peticiones de límites: eso sigue pasando solo al dibujar polígono. */
+function drawZonePin(p){
+  if(p.lat == null || p.lng == null) return;
+  const cat = catOfShared(p);
+  const pin = L.marker([p.lat, p.lng], {icon: L.divIcon({className: '', html:
+    `<div style="background:${cat.color};width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(34,32,28,.3)">${cat.emoji || '▦'}</div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11]})});
+  pin.bindTooltip(esc(p.name), {direction: 'top', offset: [0, -10]});
+  pin.on('click', () => openPlace(p.id));
+  pin.addTo(zonesLayer);
+}
 let zonesLayer = null;
 function renderZones(){
   if(!map) return;
@@ -2965,7 +3032,8 @@ function renderZones(){
     if(!isZone) return;
     const base = isBaseCityZone(p);
     if(!base && !srcState.n) return;                       // zonas de barrio: solo con "Nosotros"
-    if(!base && zoom < zonePolygonZoomThreshold(p)) return; // gating por zoom
+    if(!base && !activeMapCategories.has(CATS[p.category] ? p.category : 'otro')) return; // M5
+    if(!base && zoom < zonePolygonZoomThreshold(p)){ drawZonePin(p); return; } // M6: pin, no desaparecer
     if(!base && !p.fixedPolygon && !hasAllBoundaries(p)) requestBoundary(p);
     const cat = catOfShared(p);
     const geoms = [];
@@ -3006,16 +3074,75 @@ function drawDaniRoutes(){
     badge.addTo(map); mapLayers.push(badge);
   });
 }
+/* M4 · Vuelos sobre el mapa: arcos de círculo máximo entre aeropuertos,
+   avión clicable en el punto medio y marcador por aeropuerto.
+   greatCirclePoints está portado literal de la app original. */
+function greatCirclePoints(from, to, steps){
+  steps = steps || 96;
+  const toRad = deg => deg * Math.PI / 180;
+  const toDeg = rad => rad * 180 / Math.PI;
+  const lat1 = toRad(from.lat), lon1 = toRad(from.lng);
+  const lat2 = toRad(to.lat), lon2 = toRad(to.lng);
+  const d = 2 * Math.asin(Math.sqrt(
+    Math.sin((lat2-lat1)/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin((lon2-lon1)/2)**2
+  ));
+  if(!isFinite(d) || d === 0) return [[from.lat, from.lng], [to.lat, to.lng]];
+  const pts = [];
+  for(let i=0; i<=steps; i++){
+    const f = i / steps;
+    const A = Math.sin((1-f)*d) / Math.sin(d);
+    const B = Math.sin(f*d) / Math.sin(d);
+    const x = A*Math.cos(lat1)*Math.cos(lon1) + B*Math.cos(lat2)*Math.cos(lon2);
+    const y = A*Math.cos(lat1)*Math.sin(lon1) + B*Math.cos(lat2)*Math.sin(lon2);
+    const z = A*Math.sin(lat1) + B*Math.sin(lat2);
+    pts.push([toDeg(Math.atan2(z, Math.sqrt(x*x+y*y))), toDeg(Math.atan2(y, x))]);
+  }
+  return pts;
+}
+/* Dibuja los vuelos del día (o los cuatro si day es null = "Todos") y
+   devuelve las coordenadas de los aeropuertos usados para el encuadre. */
+function drawFlights(day){
+  const ids = day ? (day.flight || []) : FLIGHTS.map(f => f.id);
+  const legs = ids.map(id => FLIGHTS.find(f => f.id === id)).filter(Boolean);
+  const airportPts = [];
+  const used = new Set();
+  legs.forEach(f => {
+    const a = airportOf(f.from), b = airportOf(f.to);
+    if(!a || !b) return;
+    const gc = greatCirclePoints(a, b, 128);
+    const arc = L.polyline(gc, {color: '#a97b12', weight: 3, dashArray: '2 9', opacity: .9, lineCap: 'round'});
+    arc.addTo(map); mapLayers.push(arc);
+    const mid = gc[Math.floor(gc.length / 2)];
+    const plane = L.marker(mid, {icon: L.divIcon({className: '', html:
+      '<div style="font-size:18px;filter:drop-shadow(0 1px 2px rgba(34,32,28,.35))">✈️</div>', iconSize: [22, 22], iconAnchor: [11, 11]})});
+    plane.bindPopup(`✈️ <b>${f.flight}</b> · ${esc(f.airline)}<br>${esc(f.from)} → ${esc(f.to)}<br>🕐 Sale ${f.dep} · llega ${f.arr}<br>${esc(f.terminal)}${f.note ? '<br>⚠️ ' + esc(f.note) : ''}`);
+    plane.addTo(map); mapLayers.push(plane);
+    used.add(f.from); used.add(f.to);
+    airportPts.push([a.lat, a.lng], [b.lat, b.lng]);
+  });
+  used.forEach(s => {
+    const a = airportOf(s);
+    if(!a) return;
+    const m = L.marker([a.lat, a.lng], {icon: L.divIcon({className: '', html:
+      `<div style="background:#2b4a7a;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;box-shadow:0 3px 8px rgba(34,32,28,.35);border:2.5px solid #fff">${a.emoji}</div>`,
+      iconSize: [30, 30], iconAnchor: [15, 15]})});
+    m.bindTooltip(a.name, {direction: 'top', offset: [0, -16]});
+    m.addTo(map); mapLayers.push(m);
+  });
+  return airportPts;
+}
 let mapRenderToken = 0;
 async function renderMapDay(){
   if(!map) return;
   const token = ++mapRenderToken;
-  renderDayChips('#mapDayChips', mapDay, i => { mapDay = i; renderMapDay(); });
+  renderDayChips('#mapDayChips', mapDay, i => { mapDay = i; renderMapDay(); }, true);
   mapLayers.forEach(l => map.removeLayer(l));
   mapLayers = [];
-  const day = state.days[mapDay];
-  const stops = day.stops.map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat);
+  // P6 · mapDay -1 = "Todos": solo marcadores, sin rutas del día (ni OSRM)
+  const day = mapDay >= 0 ? state.days[mapDay] : null;
+  const stops = day ? day.stops.map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat) : [];
   const usedModes = new Set();
+  const poiPts = [];
 
   renderZones();
   // Capas por origen: N (catálogo + nuestros), D (ruta Dani), I (Instagram)
@@ -3034,7 +3161,9 @@ async function renderMapDay(){
   }
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
-    if(day.stops.some(s => s.pid === pid)) return;
+    if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
+    if(day && day.stops.some(s => s.pid === pid)) return;
+    poiPts.push([p.lat, p.lng]);
     const c = catOf(p);
     const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: ring,
       weight: ring === '#fff' ? 1.5 : 2, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
@@ -3051,8 +3180,12 @@ async function renderMapDay(){
     mk.bindPopup(`<b>${i + 1}. ${esc(x.p.name)}</b><br>${x.s.time ? '🕐 ' + x.s.time + ' · ' : ''}${fmtMin(x.s.dur)}<br><a href="javascript:openPlace('${x.s.pid}')">Ver ficha →</a>`);
     mk.addTo(map); mapLayers.push(mk);
   });
-  if(stops.length){
-    map.fitBounds(L.latLngBounds(stops.map(x => [x.p.lat, x.p.lng])).pad(0.18));
+  const flightPts = flightsVisible ? drawFlights(day) : [];
+  // Encuadre: día = sus paradas (+aeropuertos si hay vuelos);
+  // "Todos" = todos los marcadores dibujados (+vuelos si están activos)
+  const fitPts = stops.map(x => [x.p.lat, x.p.lng]).concat(flightPts).concat(day ? [] : poiPts);
+  if(fitPts.length){
+    map.fitBounds(L.latLngBounds(fitPts).pad(day ? 0.18 : 0.06));
   }
 
   const statusEl = $('#routeStatus');
