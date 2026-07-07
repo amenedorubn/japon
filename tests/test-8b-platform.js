@@ -53,7 +53,7 @@ const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); 
   // ---- M12: theme-color meta follows setTheme ----
   const meta = documentStub.querySelector('meta[name="theme-color"]');
   api.setTheme('dark');
-  check('M12: theme-color dark = #141319', meta._attrs.content === '#141319');
+  check('M12: theme-color dark = #131217 (fondo sumi, fase 9)', meta._attrs.content === '#131217');
   api.setTheme('light');
   check('M12: theme-color light = #f6f4ee', meta._attrs.content === '#f6f4ee');
 
