@@ -2462,6 +2462,7 @@ function provenanceOf(p){
   const id = String(p.id || '');
   if(/^dani_/.test(id) || p.dani || p.daniAdopted || p.source === 'dani') return 'dani';
   if(p.source === 'insta') return 'instagram';
+  if(p.source === 'maria' || p.maria || /^maria_/.test(id)) return 'maria';
   // Reserva confirmada (mismo predicado que bookedHotels) o lugar creado por
   // un viajero (id_*) → nuestro. El resto de la semilla (curado + catálogo +
   // placeholders "por reservar") → IA.
@@ -2475,8 +2476,8 @@ function ensureProvenance(places){
   if(!Array.isArray(places)) return false;
   let changed = false;
   places.forEach(p => {
-    if(p && p.provenance !== 'ours' && p.provenance !== 'dani' &&
-       p.provenance !== 'instagram' && p.provenance !== 'ai'){ p.provenance = provenanceOf(p); changed = true; }
+    if(p && p.provenance !== 'ours' && p.provenance !== 'dani' && p.provenance !== 'instagram' &&
+       p.provenance !== 'ai' && p.provenance !== 'maria'){ p.provenance = provenanceOf(p); changed = true; }
   });
   return changed;
 }
@@ -2484,12 +2485,12 @@ function ensureProvenance(places){
    susurro, nunca una insignia). UI: Nuestros/Dani/Instagram/IA. */
 function provenanceLabel(prov){
   return prov === 'ours' ? 'Nuestro' : prov === 'dani' ? 'De Dani'
-       : prov === 'instagram' ? 'De Instagram' : prov === 'ai' ? 'IA' : '';
+       : prov === 'instagram' ? 'De Instagram' : prov === 'maria' ? 'De María' : prov === 'ai' ? 'IA' : '';
 }
 /* Marca de procedencia unificada (glifo + etiqueta, tono muted): distingue con
    claridad Nuestro/Dani/Instagram/IA sin gritar (misma marca en Ideas e itinerario). */
 function provTag(prov){
-  const t = {ours: 'Nuestro', dani: 'Dani', instagram: 'Instagram', ai: 'IA'}[prov];
+  const t = {ours: 'Nuestro', dani: 'Dani', instagram: 'Instagram', maria: 'María', ai: 'IA'}[prov];
   return t ? `<span class="prov-tag prov-${prov}">${t}</span>` : '';
 }
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */

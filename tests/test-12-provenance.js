@@ -103,5 +103,13 @@ check('provTag: ai mark is labelled IA', api.provTag('ai').includes('IA') && api
 check('provTag: all four provenances are visually distinct', new Set(['ours', 'dani', 'instagram', 'ai'].map(p => api.provTag(p))).size === 4);
 check('provTag: unknown -> empty', api.provTag(undefined) === '');
 
+// ---- 10) maria: a new immutable exploration provenance ----
+check('provenanceOf: source maria -> maria', api.provenanceOf({ id: 'x', source: 'maria', category: 'otro' }) === 'maria');
+check('provenanceOf: maria_ id prefix -> maria', api.provenanceOf({ id: 'maria_abc', category: 'templo' }) === 'maria');
+check('ensureProvenance never overwrites an explicit maria', (() => { const p = { id: 'y', provenance: 'maria' }; api.ensureProvenance([p]); return p.provenance === 'maria'; })());
+check('provenanceLabel: maria -> De María', api.provenanceLabel('maria') === 'De María');
+check('provTag: maria labelled María with class', api.provTag('maria').includes('María') && api.provTag('maria').includes('prov-maria'));
+check('provTag: five provenances now distinct', new Set(['ours', 'dani', 'instagram', 'maria', 'ai'].map(p => api.provTag(p))).size === 5);
+
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
