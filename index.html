@@ -4308,7 +4308,6 @@ function renderSitios(){
         <div style="flex:1;min-width:0"><b>${esc(x.p.name)}</b>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">${esc(x.p.region)}</div>
         </div>
-        ${provTag(x.p.provenance)}
         ${inPlan ? '<span class="pill green" title="Ya está en el itinerario">✓ en plan</span>' : ''}
       </div>
       <div class="desc">${esc(x.p.desc)}</div>
@@ -4316,6 +4315,7 @@ function renderSitios(){
         ${x.p.yen ? `<span class="pill">💴 ${esc(x.p.price || fmtYen(x.p.yen))}</span>` : x.p.yen === 0 ? '<span class="pill green">Gratis</span>' : ''}
         ${x.p.insta ? '<span class="pill red">📸 reel</span>' : ''}
         ${x.p.web ? '<span class="pill blue">🌐 web</span>' : ''}
+        ${provTag(x.p.provenance)}
       </div>
     </div>`;
   }).join('') || '<p style="color:var(--muted)">Sin resultados.</p>';
