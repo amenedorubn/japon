@@ -598,6 +598,12 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Marca de procedencia (unificada, muted; el glifo+etiqueta distingue, no el color) */
 .prov-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;
   font-size:11px;font-weight:600;color:var(--muted);background:var(--card);border:.5px solid var(--hairline);white-space:nowrap;}
+/* Home como Confirmado (Fase 12): franja calmada en vez de fila de KPIs/precios */
+#statRow{display:block;}
+.conf-strip{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:14px 16px;
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);}
+.conf-strip .cs-title{font-weight:600;font-size:15px;color:var(--ink);}
+.conf-strip .cs-sub{font-size:12.5px;color:var(--muted);}
 /* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
    destino en tategaki (japonés vertical, nombra un lugar real). */
 #cd-d{font-family:var(--serif);}
@@ -2996,14 +3002,14 @@ function renderInicio(){
   ).join('<div style="align-self:center;color:var(--muted);font-weight:800">→</div>');
   $('#routeSummary').textContent = '+ excursiones a Nikkō, Kamakura, Fuji, Nara, Hiroshima y Miyajima';
 
-  let entr = 0, trans = 0, nStops = 0;
-  state.days.forEach(d => { const c = dayCosts(d); entr += c.entr; trans += c.trans; nStops += d.stops.length; });
-  const rate = state.rate || 170;
-  $('#statRow').innerHTML = `
-    <div class="card stat"><div class="v">21 días</div><div class="k">8 – 28 abril 2027</div></div>
-    <div class="card stat"><div class="v">${nStops}</div><div class="k">paradas en el plan</div></div>
-    <div class="card stat"><div class="v">${fmtYen(entr)} <small style="font-size:12px;color:var(--muted)">≈ ${(entr/rate).toFixed(0)} €</small></div><div class="k">entradas · por persona</div></div>
-    <div class="card stat"><div class="v">${fmtYen(trans)} <small style="font-size:12px;color:var(--muted)">≈ ${(trans/rate).toFixed(0)} €</small></div><div class="k">transporte en Japón · pp aprox.</div></div>`;
+  // Home = Confirmado (Wallet): sin fila de KPIs ni precios ambientales
+  // (DIRECTION §7 / §6.12). Lo confirmado son los vuelos y hoteles; el
+  // presupuesto por persona vive BAJO DEMANDA (BudgetPeek).
+  $('#statRow').innerHTML = `<button class="conf-strip" id="statBudget" aria-label="Ver presupuesto por persona">
+    <span class="cs-title">✈️ Vuelos y 🏨 hoteles reservados</span>
+    <span class="cs-sub">Lo confirmado del viaje · toca para ver el presupuesto</span>
+  </button>`;
+  onClick('#statBudget', () => openBudget('trip'));
 
   $('#flightCards').innerHTML = FLIGHTS.map(f => `
     <div class="m-foil is-flight flight">
