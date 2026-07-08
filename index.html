@@ -581,6 +581,10 @@ table.phr tr:last-child td{border-bottom:none;}
   background-color:var(--line);transition:background-color var(--dur-2) var(--ease),width var(--dur-2) var(--ease);}
 .axis-dots button.on{background-color:var(--accent);width:18px;}
 @media(min-width:900px){.axis-dots{display:none;}}
+/* Seasons (Fase 12 · Stage 7): Now-Line + Recap del día (durante/después) */
+.now-line{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:12.5px;font-weight:700;color:var(--accent);}
+.now-line .now-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;}
+.day-recap{margin:6px 0 10px;font-size:12.5px;color:var(--muted);font-weight:600;}
 </style>
 </head>
 <body>
@@ -2787,6 +2791,7 @@ if(document.addEventListener){
 ================================================================ */
 function tickCountdown(){
   const now = new Date();
+  if(document.documentElement && document.documentElement.setAttribute) document.documentElement.setAttribute('data-phase', tripPhase(now));
   const el = s => $(s);
   let target = COUNTDOWN_TARGET;
   if(now >= COUNTDOWN_TARGET && now <= TRIP_END){
@@ -2858,6 +2863,42 @@ function budgetPeekHTML(scope){
     </div>`;
 }
 function openBudget(scope){ openModal(budgetPeekHTML(scope || 'trip')); }
+/* ================================================================
+   SEASONS (Fase 12 · Stage 7) · el producto evoluciona con el viaje:
+   planning → countdown → threshold → during → after. Umbrales objetivos.
+   Añade la Now-Line y el Recap del día durante/después del viaje.
+================================================================ */
+function tripPhase(now){
+  now = now || new Date();
+  if(now >= TRIP_END) return 'after';
+  if(now >= COUNTDOWN_TARGET) return 'during';
+  const days = Math.ceil((COUNTDOWN_TARGET - now) / 86400000);
+  if(days <= 1) return 'threshold';
+  if(days <= 14) return 'countdown';
+  return 'planning';
+}
+function dayRecap(d){
+  const stops = d && d.stops ? d.stops.length : 0;
+  const done = d && d.stops ? d.stops.filter(s => s.done).length : 0;
+  const c = d ? dayCosts(d) : {entr: 0, trans: 0};
+  return {stops, done, entr: c.entr, trans: c.trans};
+}
+function seasonDayExtras(d){
+  const phase = tripPhase();
+  if(phase !== 'during' && phase !== 'after') return '';
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const today = !!(d && d.date === todayISO);
+  const past = !!(d && d.date < todayISO);
+  if(!today && !past) return '';
+  const r = dayRecap(d);
+  let html = '';
+  if(today){
+    const now = new Date();
+    html += `<div class="now-line"><span class="now-dot"></span>Ahora · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}</div>`;
+  }
+  if(r.stops) html += `<div class="day-recap u-tabular">${today ? 'Hoy' : 'Ese día'}: ${r.done}/${r.stops} lugares${r.entr ? ' · 🎫 ' + fmtYen(r.entr) : ''}${r.trans ? ' · 🚇 ' + fmtYen(r.trans) : ''}</div>`;
+  return html;
+}
 function renderInicio(){
   const legs = [
     {city: 'Tokio', from: '9 abr', to: '16 abr', n: 7},
@@ -3228,6 +3269,7 @@ function renderItinerary(){
     html += transferHTML(d.post, null, null, curDay, 'post', '🔙 Vuelta');
   }
   html += '</div>';
+  html += seasonDayExtras(d); // Fase 12 · Stage 7: Now-Line + Recap durante/después del viaje
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
   onClick('#dayPanel .add-stop', () => openAddStop(curDay));
