@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, provenanceOf, ensureProvenance, placeView };`);
+  ;return { state, provenanceOf, ensureProvenance, placeView, provenanceLabel };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -89,6 +89,13 @@ check('ensureProvenance is idempotent on the seed (no changes on 2nd run)',
 // ---- 7) placeView exposes provenance to the UI ----
 const pv = api.placeView(byId('dani_fushimi_inari'));
 check('placeView exposes provenance', pv && pv.provenance === 'dani');
+
+// ---- 8) provenance whisper labels (DIRECTION §6.11) ----
+check('provenanceLabel: ours -> Nuestro', api.provenanceLabel('ours') === 'Nuestro');
+check('provenanceLabel: dani -> De Dani', api.provenanceLabel('dani') === 'De Dani');
+check('provenanceLabel: instagram -> De Instagram', api.provenanceLabel('instagram') === 'De Instagram');
+check('provenanceLabel: ai -> IA', api.provenanceLabel('ai') === 'IA');
+check('provenanceLabel: unknown -> empty (no whisper)', api.provenanceLabel(undefined) === '');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

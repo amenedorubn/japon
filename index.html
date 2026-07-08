@@ -405,6 +405,8 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .place-card b{font-size:14.5px;font-weight:700;line-height:1.3;}
 .place-card .desc{font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .place-card .foot{display:flex;gap:5px;flex-wrap:wrap;margin-top:auto;}
+/* Susurro de procedencia (Fase 12): callado, muted, nunca compite con el estado */
+.prov-whisper{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px;letter-spacing:.02em;}
 
 /* ---------- Guía ---------- */
 .check-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);
@@ -2282,6 +2284,12 @@ function ensureProvenance(places){
   });
   return changed;
 }
+/* Etiqueta-susurro de procedencia (DIRECTION §6.11: la procedencia es un
+   susurro, nunca una insignia). UI: Nuestros/Dani/Instagram/IA. */
+function provenanceLabel(prov){
+  return prov === 'ours' ? 'Nuestro' : prov === 'dani' ? 'De Dani'
+       : prov === 'instagram' ? 'De Instagram' : prov === 'ai' ? 'IA' : '';
+}
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
 function sourceMatchesFilter(p, filter){
   const source = sourceValueForPlace(p);
@@ -3130,6 +3138,7 @@ function openPlace(pid){
       <div><h3 style="margin:0">${esc(p.name)}</h3>
       <div style="display:flex;gap:5px;margin-top:3px"><span class="pill">${esc(p.region)}</span><span class="pill" style="color:${c.color}">${esc(c.label)}</span></div></div>
     </div>
+    ${provenanceLabel(p.provenance) ? `<div class="prov-whisper">${provenanceLabel(p.provenance)}</div>` : ''}
     ${p.desc ? `<p style="font-size:14px;margin-top:10px">${esc(p.desc)}</p>` : ''}
     ${p.tip ? `<p style="font-size:13px;margin-top:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px">💡 <b>Consejo:</b> ${esc(p.tip)}</p>` : ''}
     <div class="info-rows">
