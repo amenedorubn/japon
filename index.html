@@ -574,6 +574,13 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Plant (Fase 12 · 12.10): la parada recién plantada florece al entrar */
 @keyframes plant-in{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
 .stop.just-planted{animation:plant-in var(--dur-bloom) var(--ease);}
+/* Axis (Fase 12 · Stage 6): indicador de posición en el eje de certeza */
+.axis-dots{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));
+  display:flex;justify-content:center;gap:7px;z-index:var(--z-bar);}
+.axis-dots button{width:7px;height:7px;padding:9px;background-clip:content-box;border-radius:999px;
+  background-color:var(--line);transition:background-color var(--dur-2) var(--ease),width var(--dur-2) var(--ease);}
+.axis-dots button.on{background-color:var(--accent);width:18px;}
+@media(min-width:900px){.axis-dots{display:none;}}
 </style>
 </head>
 <body>
@@ -718,6 +725,7 @@ table.phr tr:last-child td{border-bottom:none;}
   </section>
 </main>
 
+<div class="axis-dots" id="axisDots"></div>
 <nav class="tabbar" id="tabbar"></nav>
 
 <!-- Modals -->
@@ -2717,18 +2725,61 @@ function cachedRoute(a, b, profile){
 ================================================================ */
 const TABS = [['inicio','🏠','Inicio'],['itinerario','📅','Itinerario'],['mapa','🗺️','Mapa'],['sitios','📍','Sitios'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
 let curTab = 'inicio';
+/* ================================================================
+   AXIS (Fase 12 · Stage 6) · navegación por CERTEZA: Ideas ← Plan →
+   Confirmado. Rightward = más real. Se superpone a las pestañas (el
+   indicador de 3 puntos y el deslizamiento horizontal); Mapa/Guía/
+   Hoteles siguen siendo lentes/utilidades, fuera del eje.
+================================================================ */
+const AXIS_REGIONS = ['sitios', 'itinerario', 'inicio']; // Ideas · Plan · Confirmado(Wallet)
+const AXIS_LABELS = ['Ideas', 'Plan', 'Confirmado'];
+function axisIndexOf(tab){ return AXIS_REGIONS.indexOf(tab); }
+function axisGo(delta){
+  const cur = axisIndexOf(curTab); if(cur < 0) return;
+  const next = Math.max(0, Math.min(AXIS_REGIONS.length - 1, cur + delta));
+  if(next !== cur) showTab(AXIS_REGIONS[next]);
+}
 function buildNav(){
   $('#topnav').innerHTML = TABS.map(t => `<button data-tab="${t[0]}">${t[2]}</button>`).join('');
   $('#tabbar').innerHTML = TABS.map(t => `<button data-tab="${t[0]}"><span class="ti">${t[1]}</span>${t[2]}</button>`).join('');
   $$('#topnav button, #tabbar button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  const dots = $('#axisDots');
+  if(dots){
+    dots.innerHTML = AXIS_REGIONS.map((r, k) => `<button data-region="${r}" aria-label="${AXIS_LABELS[k]}"></button>`).join('');
+    $$('#axisDots button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.region)));
+  }
 }
 function showTab(id){
   curTab = id;
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
   $$('#topnav button, #tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  const ai = axisIndexOf(id);
+  const dots = $('#axisDots');
+  if(dots){
+    $$('#axisDots button').forEach((b, k) => b.classList.toggle('on', k === ai));
+    dots.style.display = ai >= 0 ? '' : 'none';
+  }
   history.replaceState(null, '', '#/' + id);
   window.scrollTo({top: 0});
   if(id === 'mapa') initMapView();
+}
+/* Deslizamiento horizontal = eje de certeza (izq→der = más real). Cede el
+   paso a contenedores con scroll horizontal y controles. */
+let axStartX = 0, axStartY = 0, axTracking = false;
+function axisTouchStart(e){
+  const t = e.touches ? e.touches[0] : e; if(!t) return;
+  if(e.target && e.target.closest && e.target.closest('.day-chips,.filter-bar,#cord,.places-grid,.grid2,.map-toggles,input,select,textarea,.leaflet-container,.modal-bg')){ axTracking = false; return; }
+  axStartX = t.clientX; axStartY = t.clientY; axTracking = true;
+}
+function axisTouchEnd(e){
+  if(!axTracking) return; axTracking = false;
+  const t = e.changedTouches ? e.changedTouches[0] : e; if(!t) return;
+  const dx = t.clientX - axStartX, dy = t.clientY - axStartY;
+  if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) axisGo(dx < 0 ? 1 : -1);
+}
+if(document.addEventListener){
+  document.addEventListener('touchstart', axisTouchStart, {passive: true});
+  document.addEventListener('touchend', axisTouchEnd, {passive: true});
 }
 
 /* ================================================================
