@@ -1653,7 +1653,9 @@ function buildSeedPlaces(){
   const byId = new Map(AIRPORT_PLACES_RAW.concat(CATALOG_PLACES_RAW).concat(DANI_PLACES_RAW)
     .map(p => [p.id, Object.assign({}, p)]));
   foldCurated(byId); // Fase 10: el catálogo nace ya fusionado con la capa curada
-  return Array.from(byId.values());
+  const arr = Array.from(byId.values());
+  ensureProvenance(arr); // Fase 12: procedencia estable (backfill único en la semilla)
+  return arr;
 }
 
 function mergeCatalogPlace(existing, catalog){
@@ -1687,6 +1689,7 @@ function applyCatalogUpdate(){
   state.places = Array.from(byId.values());
   canonicalizeDayPids(state.days); // los pids del itinerario v2 pasan a ids canónicos
   state.catalogVersion = CATALOG_VERSION;
+  ensureProvenance(state.places); // Fase 12: procedencia a lo re-sembrado/adoptado
   return true;
 }
 
@@ -1961,6 +1964,7 @@ ensureSharedShape(state);
 // La subida del catálogo fusionado la hace adoptRemote al sincronizar.
 // La consolidación 10b del modelo original corre en INIT (final del script).
 if(applyCatalogUpdate()) persistLocal();
+if(ensureProvenance(state.places)) persistLocal(); // Fase 12: fija procedencia (una vez) y persiste
 
 function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 let pushTimer = null;
@@ -2023,6 +2027,7 @@ function adoptRemote(payload){
     // jamás debe borrar los datos locales.
     if(places.length && JSON.stringify(places) !== JSON.stringify(state.places)){
       state.places = places;
+      ensureProvenance(state.places); // Fase 12: procedencia a lugares remotos/antiguos sin ella
       // La versión del catálogo describe al array adoptado: viaja con él. Si
       // el remoto aún no está fusionado, applyCatalogUpdate lo re-fusiona.
       state.catalogVersion = rs.catalogVersion || null;
@@ -2215,7 +2220,7 @@ function placeView(p){
     source: p.source || (p.catalogItem ? 'catalog' : 'user'), dani: !!p.dani,
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
-    hotelWebsite: p.hotelWebsite || ''};
+    hotelWebsite: p.hotelWebsite || '', provenance: p.provenance || provenanceOf(p)};
 }
 /* Noches entre dos fechas ISO (portado de la app original) */
 function daysBetween(checkIn, checkOut){
@@ -2244,6 +2249,38 @@ function sourceValueForPlace(p){
   if(p.source === 'dani' || p.dani) return 'dani';
   if(p.source === 'insta') return 'insta';
   return 'user';
+}
+/* ================================================================
+   PROCEDENCIA (Fase 12) · de dónde salió un lugar: ours | dani |
+   instagram | ai. Estable e histórica: se fija al entrar y NO cambia
+   nunca (§12.13). Campo ADITIVO: la app original lo ignora; el `source`
+   heredado no se toca. El id canónico (dani_*, catalog_*, airport_*,
+   id_*) es la señal más fiable porque es INMUTABLE aunque el lugar se
+   adopte: un lugar de Dani sigue siendo Dani tras adoptarlo. */
+function provenanceOf(p){
+  if(!p) return 'ai';
+  const id = String(p.id || '');
+  if(/^dani_/.test(id) || p.dani || p.daniAdopted || p.source === 'dani') return 'dani';
+  if(p.source === 'insta') return 'instagram';
+  // Reserva confirmada (mismo predicado que bookedHotels) o lugar creado por
+  // un viajero (id_*) → nuestro. El resto de la semilla (curado + catálogo +
+  // placeholders "por reservar") → IA.
+  const bookedHotel = p.category === 'alojamiento' && p.lat != null && !p.dani &&
+    sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p);
+  if(/^id_/.test(id) || bookedHotel) return 'ours';
+  return 'ai';
+}
+/* Backfill único e idempotente: sólo rellena la procedencia que falta,
+   nunca pisa una ya asignada (la procedencia es historia). Devuelve true
+   si asignó alguna, para persistir una sola vez. */
+function ensureProvenance(places){
+  if(!Array.isArray(places)) return false;
+  let changed = false;
+  places.forEach(p => {
+    if(p && p.provenance !== 'ours' && p.provenance !== 'dani' &&
+       p.provenance !== 'instagram' && p.provenance !== 'ai'){ p.provenance = provenanceOf(p); changed = true; }
+  });
+  return changed;
 }
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
 function sourceMatchesFilter(p, filter){
@@ -3980,6 +4017,7 @@ $('#importFile').addEventListener('change', async e => {
     ensureSharedShape(state);
     // Copias antiguas o de la app original: re-siembra y fusión del catálogo
     if(applyCatalogUpdate()) placesChanged = true;
+    if(ensureProvenance(state.places)) placesChanged = true; // Fase 12: procedencia a copias sin ella
     // Consolidación 10b: si la copia trae el modelo original sin migrar,
     // sus transfers y días asignados se incorporan al plan v2 (una vez).
     maybeMigrateOriginal(s.transfers);
