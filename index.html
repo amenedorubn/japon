@@ -574,6 +574,9 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Plant (Fase 12 · 12.10): la parada recién plantada florece al entrar */
 @keyframes plant-in{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
 .stop.just-planted{animation:plant-in var(--dur-bloom) var(--ease);}
+/* Reservado ≠ planificado: una parada confirmada se siente Foil (permanente),
+   frente a la tinta de una parada planificada */
+.stop.is-confirmed .stop-card{box-shadow:var(--shadow-lg),inset 0 0 0 1px var(--foil-edge-red);}
 /* Axis (Fase 12 · Stage 6): indicador de posición en el eje de certeza */
 .axis-dots{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));
   display:flex;justify-content:center;gap:7px;z-index:var(--z-bar);}
@@ -596,8 +599,9 @@ table.phr tr:last-child td{border-bottom:none;}
   background-image:radial-gradient(var(--ink) .5px,transparent .5px);background-size:3px 3px;}
 @media(hover:hover){.card.place-card:hover{box-shadow:0 2px 10px rgba(38,34,26,.05);}}
 /* Marca de procedencia (unificada, muted; el glifo+etiqueta distingue, no el color) */
-.prov-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;
-  font-size:11px;font-weight:600;color:var(--muted);background:var(--card);border:.5px solid var(--hairline);white-space:nowrap;}
+/* Procedencia = metadato histórico secundario: un susurro que NUNCA compite con
+   la certeza. Tan sutil que quitarlo apenas cambia el layout (sin pastilla). */
+.prov-tag{font-size:10.5px;font-weight:500;color:var(--muted);opacity:.7;white-space:nowrap;letter-spacing:.02em;}
 /* Home como Confirmado (Fase 12): franja calmada en vez de fila de KPIs/precios */
 #statRow{display:block;}
 .conf-strip{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:14px 16px;
@@ -2439,8 +2443,8 @@ function provenanceLabel(prov){
 /* Marca de procedencia unificada (glifo + etiqueta, tono muted): distingue con
    claridad Nuestro/Dani/Instagram/IA sin gritar (misma marca en Ideas e itinerario). */
 function provTag(prov){
-  const t = {ours: ['✍️', 'Nuestro'], dani: ['🧭', 'Dani'], instagram: ['📸', 'Instagram'], ai: ['✨', 'IA']}[prov];
-  return t ? `<span class="prov-tag prov-${prov}">${t[0]} ${t[1]}</span>` : '';
+  const t = {ours: 'Nuestro', dani: 'Dani', instagram: 'Instagram', ai: 'IA'}[prov];
+  return t ? `<span class="prov-tag prov-${prov}">${t}</span>` : '';
 }
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
 function sourceMatchesFilter(p, filter){
@@ -3125,7 +3129,7 @@ function transferHTML(t, a, b, dayIdx, gapIdx, label){
 function stopHTML(s, idx, dayIdx){
   const p = placeById(s.pid) || {name: '(sitio eliminado)', cat: 'otro'};
   const c = catOf(p);
-  return `<div class="stop ${s.done ? 'done' : ''}" data-day="${dayIdx}" data-stop="${idx}">
+  return `<div class="stop ${s.done ? 'done' : ''}${p.confirmed ? ' is-confirmed' : ''}" data-day="${dayIdx}" data-stop="${idx}">
     <div class="dotn">${idx + 1}</div>
     <div class="card stop-card">
       <div class="top">
@@ -3134,8 +3138,7 @@ function stopHTML(s, idx, dayIdx){
           <b class="pname">${esc(p.name)} <span style="font-weight:400">${p.web || p.insta ? '🔗' : ''}</span></b>
           <div class="chips">
             <span class="pill" style="color:${c.color}">${c.emoji} ${esc(c.label)}</span>
-            ${provTag(p.provenance)}
-            ${p.confirmed ? '<span class="pill green" title="Confirmado">✓ sellado</span>' : ''}
+            ${p.confirmed ? '<span class="pill green" title="Reserva confirmada">✓ sellado</span>' : ''}
             <span class="dur-wrap">🕐 <input type="number" class="dur" min="5" step="5" value="${s.dur}"> min</span>
             ${p.yen ? `<span class="pill">💴 ${esc(p.price || fmtYen(p.yen))}</span>` : p.yen === 0 ? '<span class="pill green">Gratis</span>' : ''}
           </div>
