@@ -2256,7 +2256,8 @@ function placeView(p){
     source: p.source || (p.catalogItem ? 'catalog' : 'user'), dani: !!p.dani,
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
-    hotelWebsite: p.hotelWebsite || '', provenance: p.provenance || provenanceOf(p)};
+    hotelWebsite: p.hotelWebsite || '', provenance: p.provenance || provenanceOf(p),
+    confirmed: isConfirmed(p)};
 }
 /* Noches entre dos fechas ISO (portado de la app original) */
 function daysBetween(checkIn, checkOut){
@@ -2270,9 +2271,31 @@ function hotelPlaceholderBase(p){
   return !!(p && p.catalog && p.category === 'alojamiento' && /por reservar/i.test(p.price || ''));
 }
 /* Hoteles reales: reservas propias + los reservados del catálogo (APA) */
+/* ¿Es una reserva de hotel real? Predicado histórico único, compartido por
+   bookedHotels, la procedencia y el estado Confirmado. */
+function isBookedHotel(p){
+  return !!(p && p.category === 'alojamiento' && p.lat != null && !p.dani &&
+    sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p));
+}
 function bookedHotels(){
-  return state.places.filter(p => p && p.category === 'alojamiento' && p.lat != null &&
-    !p.dani && sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p));
+  return state.places.filter(isBookedHotel);
+}
+/* ================================================================
+   ESTADO / CAPA (Fase 12 · Foil Press) · CONFIRMADO es un eje aparte de
+   la procedencia (§4). Se gana con una ACCIÓN DELIBERADA (sellar). Vuelos
+   y los dos hoteles reservados son Confirmado por naturaleza. `confirmed`
+   es un flag ADITIVO: la app original lo ignora y viaja en state.places
+   (export/import/Firebase). Sellar/des-sellar NO toca la procedencia. */
+function isConfirmed(p){ return !!(p && (p.confirmed === true || isBookedHotel(p))); }
+function sealPlace(pid){
+  const p = state.places.find(x => x && x.id === pid);
+  if(!p || isConfirmed(p)) return false;
+  p.confirmed = true; commit(); pushPlaces(); return true;
+}
+function unsealPlace(pid){
+  const p = state.places.find(x => x && x.id === pid);
+  if(!p || p.confirmed !== true) return false; // los confirmados por naturaleza no se des-sellan
+  p.confirmed = false; commit(); pushPlaces(); return true;
 }
 /* Resolución del catálogo ÚNICO (Fase 10): todo lugar vive en state.places. */
 function placeById(pid){
@@ -2301,9 +2324,7 @@ function provenanceOf(p){
   // Reserva confirmada (mismo predicado que bookedHotels) o lugar creado por
   // un viajero (id_*) → nuestro. El resto de la semilla (curado + catálogo +
   // placeholders "por reservar") → IA.
-  const bookedHotel = p.category === 'alojamiento' && p.lat != null && !p.dani &&
-    sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p);
-  if(/^id_/.test(id) || bookedHotel) return 'ours';
+  if(/^id_/.test(id) || isBookedHotel(p)) return 'ours';
   return 'ai';
 }
 /* Backfill único e idempotente: sólo rellena la procedencia que falta,
