@@ -84,7 +84,8 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
 (async () => {
   // Boot sanity: app evaluated, merged seed built (2 airports + 38 catalog +
   // 150 dani + 92 curated folded in = 282, Fase 10a; +1 Louis House (Fase 12 §9.4) = 283)
-  check('boot: merged seed state built (283 places)', api.state.places.length === 283);
+  // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
+  check('boot: merged seed state built (283 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 283);
 
   // Open the map tab (initMapView is deferred by 60ms), then let the
   // day-mode OSRM queue drain fully (1 job / 250ms) before measuring.

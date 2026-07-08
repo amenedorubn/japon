@@ -44,6 +44,20 @@ function readMariaMaps() {
   return urls;
 }
 
+// Normaliza el título de la lista de María al vocabulario de regiones de la app
+// (Tokio/Kioto/Osaka…). No inventa: sólo alinea mayúsculas/idioma con la app.
+function normalizeCity(raw) {
+  const s = (raw || '').trim();
+  const u = s.toUpperCase();
+  if (/^TOKYO|TOKIO/.test(u)) return 'Tokio';
+  if (/^OSAKA/.test(u)) return 'Osaka';
+  if (/^NAGOYA/.test(u)) return 'Nagoya';
+  if (/KIOTO|KYOTO/.test(u)) return /NARA/.test(u) ? 'Kioto y Nara' : 'Kioto';
+  if (/NARA/.test(u)) return 'Nara';
+  if (/(JIGOKUDANI|野猿|MONKEY|MONO)/.test(u)) return 'Nagano';
+  return s || 'Ideas';
+}
+
 // Categoría heurística por palabras clave del nombre (mapea a CATS de la app).
 function guessCategory(name) {
   const s = (name || '').toLowerCase();
@@ -115,6 +129,18 @@ async function extractList(page, url) {
     });
   }, ITEM_SEL);
 
+  // Caso especial: un enlace que NO es una lista sino un ÚNICO sitio (p. ej. el
+  // parque de los monos). No hay botones de lista; se captura el sitio directo.
+  if (!meta.length) {
+    const u = page.url();
+    const m = u.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || u.match(/\/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    let name = '';
+    try { name = await page.locator('h1').first().textContent({ timeout: 4000 }); } catch (e) {}
+    name = (name || city || '').trim();
+    if (name && m) return { city: city || name, url, items: [{ name, gcat: '', lat: parseFloat(m[1]), lng: parseFloat(m[2]) }] };
+    return { city, url, items: [] };
+  }
+
   // Coordenadas reales: clic en cada sitio -> parse de la URL -> volver atrás.
   const items = [];
   for (let i = 0; i < meta.length; i++) {
@@ -173,7 +199,7 @@ async function main() {
       const kept = items.filter((it) => !isNoise(it.name));
       kept.forEach((it) => places.push({
         name: it.name,
-        city: city || 'Ideas',
+        city: normalizeCity(city),
         lat: it.lat, lng: it.lng,
         cat: guessCategory(it.name),
       }));
@@ -186,13 +212,19 @@ async function main() {
   }
   await browser.close();
 
+  // Con --list=N, fusiona en el JSON existente (no lo pisa) para poder añadir
+  // una lista suelta sin re-escanear las demás.
+  let base = [];
+  if (onlyArg && fs.existsSync(OUT)) {
+    try { base = JSON.parse(fs.readFileSync(OUT, 'utf8')); } catch (e) {}
+  }
   // Dedup global por nombre+ciudad (una lista puede repetir sitios de otra).
   const byKey = new Map();
-  for (const p of places) {
+  for (const p of base.concat(places)) {
     const k = (p.name + '|' + p.city).toLowerCase();
     if (!byKey.has(k)) byKey.set(k, p);
   }
-  const deduped = Array.from(byKey.values());
+  const deduped = Array.from(byKey.values()).map((p) => ({ ...p, city: normalizeCity(p.city) }));
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(deduped, null, 2) + '\n');
@@ -207,4 +239,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error('FATAL', e); process.exit(1); });
-module.exports = { readMariaMaps, guessCategory, isNoise };
+module.exports = { readMariaMaps, guessCategory, isNoise, normalizeCity };
