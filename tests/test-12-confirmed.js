@@ -43,7 +43,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, isBookedHotel, isConfirmed, sealPlace, unsealPlace, placeView, provenanceOf };`);
+  ;return { state, isBookedHotel, isConfirmed, sealPlace, unsealPlace, placeView, provenanceOf, openPlace };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -73,6 +73,15 @@ check('unseal: a by-nature confirmed hotel cannot be unsealed here', api.unsealP
 // ---- 5) placeView exposes confirmed ----
 check('placeView exposes confirmed', api.placeView(byId('apa_asakusabashi')).confirmed === true);
 check('placeView: unconfirmed place reads confirmed=false', api.placeView(byId('catalog_ueno') || byId('catalog_sensoji')).confirmed === false);
+
+// ---- 6) Foil Press UI in the place detail (openPlace) ----
+api.openPlace('apa_asakusabashi'); // confirmed by nature
+const m1 = els['#modalBox'].innerHTML;
+check('detail: confirmed place shows "✓ Confirmado"', m1.includes('Confirmado'));
+check('detail: by-nature confirmed offers no seal button and no unseal', !m1.includes('id="pfSeal"') && !m1.includes('id="pfUnseal"'));
+api.openPlace('catalog_sensoji'); // unconfirmed (sealed then unsealed above)
+const m2 = els['#modalBox'].innerHTML;
+check('detail: unconfirmed place offers hold-to-seal', m2.includes('id="pfSeal"') && m2.toLowerCase().includes('sellar'));
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

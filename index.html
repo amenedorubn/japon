@@ -2257,7 +2257,7 @@ function placeView(p){
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
     hotelWebsite: p.hotelWebsite || '', provenance: p.provenance || provenanceOf(p),
-    confirmed: isConfirmed(p)};
+    confirmed: isConfirmed(p), sealed: p.confirmed === true};
 }
 /* Noches entre dos fechas ISO (portado de la app original) */
 function daysBetween(checkIn, checkOut){
@@ -3317,6 +3317,9 @@ function openPlace(pid){
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Google Maps</a>
       ${p.id ? `<button class="btn ghost small" id="pfEdit">✏️ Editar</button>` : ''}
       ${(p.dani || p.source === 'insta') ? `<button class="btn small" id="pfAdopt">★ Adoptar a nuestros sitios</button>` : ''}
+      ${p.confirmed
+        ? `<span class="pill green">✓ Confirmado</span>${p.sealed ? '<button class="btn ghost small" id="pfUnseal">Anular sello</button>' : ''}`
+        : `<button class="btn small" id="pfSeal" style="position:relative;overflow:hidden">🔒 Mantén para sellar</button>`}
     </div>
     <div class="form-row" style="margin-top:18px"><label>Añadir al itinerario</label>
       <div style="display:flex;gap:8px">
@@ -3327,6 +3330,10 @@ function openPlace(pid){
   onClick('#pfEdit', () => openPlaceForm(p.id));
   onClick('#pfAdopt', () => adoptPlace(p.id));
   onClick('#pfAddDay', () => addPlaceToDay(pid));
+  onClick('#pfUnseal', () => { unsealPlace(p.id); openPlace(pid); });
+  // Foil Press: mantener para sellar (ceremonia deliberada, 1.2s lineal)
+  const sealBtn = $('#pfSeal');
+  if(sealBtn) Motion.holdToConfirm(sealBtn, {duration: 1200, onComplete: () => { if(sealPlace(p.id)){ toast('Sellado ✓'); openPlace(pid); } }});
 }
 function addPlaceToDay(pid){
   const i = +$('#addToDay').value;
