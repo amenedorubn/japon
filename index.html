@@ -604,6 +604,12 @@ table.phr tr:last-child td{border-bottom:none;}
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);}
 .conf-strip .cs-title{font-weight:600;font-size:15px;color:var(--ink);}
 .conf-strip .cs-sub{font-size:12.5px;color:var(--muted);}
+/* Command Dot (Fase 12): única acción persistente, contextual, en la zona del pulgar */
+.command-dot{position:fixed;right:16px;bottom:calc(64px + env(safe-area-inset-bottom));
+  width:52px;height:52px;border-radius:999px;background:var(--accent);color:#fff;
+  font-size:26px;line-height:1;display:none;align-items:center;justify-content:center;
+  z-index:var(--z-bar);box-shadow:var(--shadow-lg);}
+@media(min-width:900px){.command-dot{bottom:24px;}}
 /* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
    destino en tategaki (japonés vertical, nombra un lugar real). */
 #cd-d{font-family:var(--serif);}
@@ -755,6 +761,7 @@ table.phr tr:last-child td{border-bottom:none;}
   </section>
 </main>
 
+<button class="command-dot" id="commandDot" aria-label="Acción"></button>
 <div class="axis-dots" id="axisDots"></div>
 <nav class="tabbar" id="tabbar"></nav>
 
@@ -2827,6 +2834,20 @@ function buildNav(){
     dots.innerHTML = AXIS_REGIONS.map((r, k) => `<button data-region="${r}" aria-label="${AXIS_LABELS[k]}"></button>`).join('');
     $$('#axisDots button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.region)));
   }
+  const cd = $('#commandDot');
+  if(cd) cd.addEventListener('click', () => { const a = $('#commandDot')._action; if(a) a(); });
+}
+/* Command Dot · una sola acción, cuyo significado depende del contexto:
+   Ideas → añadir sitio; Plan (altitud de Día) → añadir parada; en otro sitio,
+   ausente (no atenuada). */
+function updateCommandDot(){
+  const dot = $('#commandDot'); if(!dot) return;
+  let icon = '', action = null;
+  if(curTab === 'sitios'){ icon = '＋'; action = () => openPlaceForm(null); }
+  else if(curTab === 'itinerario' && itinAlt === 'day'){ icon = '＋'; action = () => openAddStop(curDay); }
+  dot.textContent = icon;
+  dot._action = action;
+  dot.style.display = action ? 'flex' : 'none';
 }
 function showTab(id){
   curTab = id;
@@ -2838,6 +2859,7 @@ function showTab(id){
     $$('#axisDots button').forEach((b, k) => b.classList.toggle('on', k === ai));
     dots.style.display = ai >= 0 ? '' : 'none';
   }
+  updateCommandDot();
   history.replaceState(null, '', '#/' + id);
   window.scrollTo({top: 0});
   if(id === 'mapa') initMapView();
@@ -3135,6 +3157,7 @@ let itinAlt = 'trip';  // Fase 12: altitud del Plan · 'trip' (Cord) | 'day' | '
 function setItinAlt(alt){
   itinAlt = alt;
   const v = $('#view-itinerario'); if(v && v.setAttribute) v.setAttribute('data-alt', alt);
+  updateCommandDot();
 }
 function setItinMode(mode){
   itinMode = mode;

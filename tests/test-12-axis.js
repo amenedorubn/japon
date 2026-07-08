@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { showTab, axisGo, axisIndexOf, getCurTab: () => curTab, AXIS_REGIONS };`);
+  ;return { showTab, axisGo, axisIndexOf, getCurTab: () => curTab, AXIS_REGIONS, setItinAlt };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -71,6 +71,16 @@ check('axis: cannot go past the loose end (clamped)', api.getCurTab() === 'sitio
 api.showTab('mapa');
 api.axisGo(1);
 check('axis: axisGo is a no-op from an off-axis tab (Mapa)', api.getCurTab() === 'mapa');
+
+// ---- 4) Command Dot: single contextual action ----
+api.showTab('sitios');
+check('command dot: shown with an action on Ideas', els['#commandDot'].style.display === 'flex' && !!els['#commandDot']._action);
+api.showTab('itinerario'); api.setItinAlt('trip');
+check('command dot: hidden at Plan/Trip altitude', els['#commandDot'].style.display === 'none');
+api.setItinAlt('day');
+check('command dot: shown at Plan/Day altitude (+ parada)', els['#commandDot'].style.display === 'flex');
+api.showTab('mapa');
+check('command dot: absent on off-axis tabs', els['#commandDot'].style.display === 'none');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
