@@ -585,6 +585,12 @@ table.phr tr:last-child td{border-bottom:none;}
 .now-line{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:12.5px;font-weight:700;color:var(--accent);}
 .now-line .now-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;}
 .day-recap{margin:6px 0 10px;font-size:12.5px;color:var(--muted);font-weight:600;}
+/* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
+   destino en tategaki (japonés vertical, nombra un lugar real). */
+#cd-d{font-family:var(--serif);}
+.hero .rail{position:absolute;top:14px;right:16px;writing-mode:vertical-rl;text-orientation:upright;
+  font-family:var(--serif);font-size:26px;line-height:1;letter-spacing:.06em;
+  color:rgba(255,255,255,.5);pointer-events:none;}
 </style>
 </head>
 <body>
@@ -621,6 +627,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="hero">
       <div class="kanji">日本</div>
       <div class="torii">⛩️</div>
+      <div class="rail" id="tripRail" aria-hidden="true">東京</div>
       <h2 id="heroTitle">Nos vamos a Japón</h2>
       <div class="dates">Madrid → Tokio · 8 al 28 de abril de 2027 · Finnair</div>
       <div class="count" id="countdown">
