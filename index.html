@@ -2365,7 +2365,9 @@ function adoptRemote(payload){
     // jamás debe borrar los datos locales.
     if(places.length && JSON.stringify(places) !== JSON.stringify(state.places)){
       state.places = places;
-      ensureProvenance(state.places); // Fase 12: procedencia a lugares remotos/antiguos sin ella
+      // Procedencia a lugares remotos/antiguos sin ella + reparación de María
+      // corrupta ('ai'→'maria'); si repara algo, se re-sube para sanar la nube.
+      if(ensureProvenance(state.places)){ res.changed = true; pushPlaces(); }
       // La versión del catálogo describe al array adoptado: viaja con él. Si
       // el remoto aún no está fusionado, applyCatalogUpdate lo re-fusiona.
       state.catalogVersion = rs.catalogVersion || null;
@@ -2685,10 +2687,18 @@ function provenanceOf(p){
    si asignó alguna, para persistir una sola vez. */
 function ensureProvenance(places){
   if(!Array.isArray(places)) return false;
+  const VALID = ['ours', 'dani', 'instagram', 'ai', 'maria'];
   let changed = false;
   places.forEach(p => {
-    if(p && p.provenance !== 'ours' && p.provenance !== 'dani' && p.provenance !== 'instagram' &&
-       p.provenance !== 'ai' && p.provenance !== 'maria'){ p.provenance = provenanceOf(p); changed = true; }
+    if(!p) return;
+    // Reparación: un id maria_* (o source 'maria') es SIEMPRE procedencia
+    // 'maria'. Una versión anterior llegó a guardarlos como 'ai' (catalogItem),
+    // dejándolos invisibles en el filtro/capa de María. Corregir esa corrupción
+    // no cambia la historia: la restaura (la procedencia sigue siendo inmutable).
+    if((/^maria_/.test(String(p.id || '')) || p.source === 'maria') && p.provenance !== 'maria'){
+      p.provenance = 'maria'; changed = true; return;
+    }
+    if(VALID.indexOf(p.provenance) < 0){ p.provenance = provenanceOf(p); changed = true; }
   });
   return changed;
 }

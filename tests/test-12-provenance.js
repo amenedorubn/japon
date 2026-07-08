@@ -55,6 +55,15 @@ check('seed: every place has a provenance in {ours,dani,instagram,ai,maria}',
   api.state.places.length > 0 && api.state.places.every(p => VALID.indexOf(p.provenance) >= 0));
 check('maria_* place → maria (Exploración curator, immutable)',
   api.state.places.some(p => /^maria_/.test(p.id) && p.provenance === 'maria'));
+// Repair: a maria_* place persisted with a stale 'ai' provenance (a past bug
+// left them invisible to the María filter/layer) is corrected back to 'maria'.
+(function(){
+  const corrupt = { id: 'maria_test_repair', source: 'user', provenance: 'ai', category: 'otro' };
+  api.state.places.push(corrupt);
+  const did = api.ensureProvenance(api.state.places);
+  check('repair: maria_* stored as ai is restored to maria', did && corrupt.provenance === 'maria');
+  api.state.places.splice(api.state.places.indexOf(corrupt), 1);
+})();
 
 // ---- 2) id prefix is the historical signal ----
 check('dani_* place → dani', byId('dani_fushimi_inari') && byId('dani_fushimi_inari').provenance === 'dani');
