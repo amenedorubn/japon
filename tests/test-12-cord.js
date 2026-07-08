@@ -43,7 +43,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, renderCord, cordStays, cordFill, zoomToDay, zoomOut, setItinAlt };`);
+  ;return { state, renderCord, cordStays, cordFill, zoomToDay, zoomOut, setItinAlt, addPlaceToDay };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -94,6 +94,13 @@ api.zoomToDay(3);
 check('zoom in: tapping a day switches to Day altitude', view() === 'day');
 api.zoomOut();
 check('zoom out: returns to Trip altitude', view() === 'trip');
+
+// ---- 9) Plant: adding a place lands on the day at Day altitude ----
+els['#addToDay'] = mkEl(); els['#addToDay'].value = '1';
+const beforeN = api.state.days[1].stops.length;
+api.addPlaceToDay('catalog_sensoji');
+check('plant: place added to the chosen day', api.state.days[1].stops.length === beforeN + 1 && api.state.days[1].stops.some(s => s.pid === 'catalog_sensoji'));
+check('plant: lands at Day altitude (zoomed in)', view() === 'day');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

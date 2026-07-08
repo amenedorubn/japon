@@ -571,6 +571,9 @@ table.phr tr:last-child td{border-bottom:none;}
 #view-itinerario[data-alt="trip"] #dayPanel{display:none;}
 #view-itinerario[data-alt="day"] #cordBack{display:inline-flex;}
 #view-itinerario[data-alt="plain"] #dayChips{display:none;}
+/* Plant (Fase 12 · 12.10): la parada recién plantada florece al entrar */
+@keyframes plant-in{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+.stop.just-planted{animation:plant-in var(--dur-bloom) var(--ease);}
 </style>
 </head>
 <body>
@@ -3343,8 +3346,12 @@ function addPlaceToDay(pid){
     dur: (p && p.dur) || 60, note: '', done: false});
   fixTransfers(day);
   commit(); closeModal();
-  curDay = i; showTab('itinerario');
-  setItinMode('ours'); // salir de la vista Dani/original para ver el día editado
+  showTab('itinerario');
+  setItinMode('ours');   // vista Nuestro plan
+  zoomToDay(i);          // The Zoom → altitud de Día, con la parada ya plantada
+  // Plant: la nueva parada entra con un pequeño florecer (Ink Bloom en el plan)
+  const newStop = $('#dayPanel .stop[data-stop="' + (day.stops.length - 1) + '"]');
+  if(newStop && newStop.classList) newStop.classList.add('just-planted');
   toast('Añadido a ' + fmtDateShort(day.date));
 }
 function openAddStop(dayIdx){
