@@ -102,5 +102,10 @@ api.addPlaceToDay('catalog_sensoji');
 check('plant: place added to the chosen day', api.state.days[1].stops.length === beforeN + 1 && api.state.days[1].stops.some(s => s.pid === 'catalog_sensoji'));
 check('plant: lands at Day altitude (zoomed in)', view() === 'day');
 
+// ---- 10) EmptyState: an empty day is an invitation, not blank ----
+api.state.days[5].stops = [];
+api.zoomToDay(5);
+check('empty day: shows a "Día libre" invitation (not blank)', els['#dayPanel'].innerHTML.includes('Día libre'));
+
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

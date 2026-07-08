@@ -585,6 +585,11 @@ table.phr tr:last-child td{border-bottom:none;}
 .now-line{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:12.5px;font-weight:700;color:var(--accent);}
 .now-line .now-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;}
 .day-recap{margin:6px 0 10px;font-size:12.5px;color:var(--muted);font-weight:600;}
+/* EmptyState (Fase 12): día libre como invitación (respira, sin color de error) */
+.empty-day{text-align:center;padding:26px 16px;}
+.empty-day .ed-title{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.empty-day .ed-sub{font-size:12.5px;color:var(--muted);margin-bottom:8px;}
+.empty-day .ed-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
 /* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
    destino en tategaki (japonés vertical, nombra un lugar real). */
 #cd-d{font-family:var(--serif);}
@@ -2875,6 +2880,22 @@ function openBudget(scope){ openModal(budgetPeekHTML(scope || 'trip')); }
    planning → countdown → threshold → during → after. Umbrales objetivos.
    Añade la Now-Line y el Recap del día durante/después del viaje.
 ================================================================ */
+/* EmptyState (Fase 12): un día libre es una INVITACIÓN, no un error. Ofrece
+   un par de ideas cercanas sin planificar para plantar de un toque. */
+function emptyDayHTML(d){
+  const city = d.city || '';
+  const planned = new Set();
+  state.days.forEach(dd => (dd.stops || []).forEach(s => planned.add(s.pid)));
+  const near = state.places.filter(p => p && p.lat != null && !p.airport && !p.baseLayer && !p.cityBase &&
+    p.category !== 'alojamiento' && p.category !== 'transporte' && !planned.has(p.id) &&
+    ((p.region || '') === city || (city && (p.region || '').indexOf(city) >= 0))).slice(0, 2);
+  const di = state.days.indexOf(d);
+  const chips = near.map(p => `<button class="btn ghost small e-plant" data-pid="${p.id}" data-day="${di}">＋ ${esc(p.name)}</button>`).join('');
+  return `<div class="empty-day u-float">
+    <div class="ed-title">Día libre${city ? ' en ' + esc(city) : ''}</div>
+    ${chips ? `<div class="ed-sub">Cerca, sin planificar:</div><div class="ed-chips">${chips}</div>` : '<div class="ed-sub">Añade una parada o déjalo libre.</div>'}
+  </div>`;
+}
 function tripPhase(now){
   now = now || new Date();
   if(now >= TRIP_END) return 'after';
@@ -3276,10 +3297,16 @@ function renderItinerary(){
     html += transferHTML(d.post, null, null, curDay, 'post', '🔙 Vuelta');
   }
   html += '</div>';
+  if(!d.stops.length) html += emptyDayHTML(d); // Fase 12: EmptyState · invitación de día libre
   html += seasonDayExtras(d); // Fase 12 · Stage 7: Now-Line + Recap durante/después del viaje
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
   onClick('#dayPanel .add-stop', () => openAddStop(curDay));
+  $$('#dayPanel .e-plant').forEach(b => b.addEventListener('click', () => {
+    const di = +b.dataset.day, day = state.days[di], p = placeById(b.dataset.pid);
+    day.stops.push({id: uid(), pid: b.dataset.pid, time: inferTimeForInsert(day.stops, day.stops.length, null), dur: (p && p.dur) || 60, note: '', done: false});
+    fixTransfers(day); commit(); zoomToDay(di);
+  }));
   bindDayPanel();
   refreshWalkEstimates(d);
 }
