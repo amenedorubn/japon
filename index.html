@@ -2515,7 +2515,9 @@ function hotelCardHTML(p){
   const srcPill = src === 'dani' ? '<span class="pill" style="color:#223A5E">D Dani</span>'
     : src === 'insta' ? '<span class="pill" style="color:#C13584">I Insta</span>'
     : '<span class="pill green">✓ Reservado</span>';
-  return `<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+  // Certeza = material: reserva confirmada → Foil; alojamiento de Dani/Insta (exploración) → Washi
+  const material = (src === 'dani' || src === 'insta') ? 'm-washi' : 'm-foil';
+  return `<div class="${material}" style="padding:16px;display:flex;flex-direction:column;gap:8px">
     <div style="display:flex;gap:10px;align-items:flex-start">
       <div style="font-size:24px">🏨</div>
       <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(p.name)}</b>
