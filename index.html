@@ -196,9 +196,18 @@ a.icon-btn{text-decoration:none;color:inherit;}
 .logo h1[contenteditable]:focus{background:var(--card2);box-shadow:0 0 0 2px var(--accent-soft);}
 /* En pantallas estrechas: exportar/importar siguen disponibles en Guía */
 @media(max-width:560px){
-  #btnExport,#btnImport{display:none;}
   .icon-btn{width:34px;height:34px;}
   .top-actions{gap:4px;}
+}
+/* Topbar como objeto de viaje, no panel de control: en móvil solo el tema y "•••";
+   Drive/Spotify/campana/nube/exportar/importar se revelan al pulsar "•••". */
+#btnMoreActions{display:none;}
+@media(max-width:899px){
+  #topActions #btnDrive,#topActions #btnSpotify,#topActions #btnNotify,
+  #topActions #btnSync,#topActions #btnExport,#topActions #btnImport{display:none;}
+  #topActions.open #btnDrive,#topActions.open #btnSpotify,#topActions.open #btnNotify,
+  #topActions.open #btnSync,#topActions.open #btnExport,#topActions.open #btnImport{display:flex;}
+  #btnMoreActions{display:flex;}
 }
 
 /* ---------- Bottom tab bar (mobile) ----------
@@ -660,7 +669,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <div><h1 id="tripTitle" contenteditable="true" spellcheck="false">Japón 2027</h1><small>8 – 28 de abril · 21 días</small></div>
     </div>
     <nav class="topnav" id="topnav"></nav>
-    <div class="top-actions">
+    <div class="top-actions" id="topActions">
       <a class="icon-btn" id="btnDrive" title="Drive del viaje" aria-label="Abrir Drive del viaje" href="https://drive.google.com/drive/folders/14-sXN4Kt_lESHyxo7kiXAfC4J-xHnCxB" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3.5h6.8L22 15.2l-3.4 5.8-3.3-5.6L8.6 3.5Z" fill="#FFCF63"/><path d="M8.6 3.5 2 15.2l3.4 5.8 6.6-11.3-3.4-6.2Z" fill="#11A861"/><path d="M5.4 21h13.2l3.4-5.8H8.8L5.4 21Z" fill="#4688F4" opacity=".92"/></svg>
       </a>
@@ -675,6 +684,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="icon-btn" id="btnSync" title="Sincronización en la nube">☁️</button>
       <button class="icon-btn" id="btnExport" title="Exportar copia de seguridad">⬇️</button>
       <button class="icon-btn" id="btnImport" title="Importar copia">⬆️</button>
+      <button class="icon-btn" id="btnMoreActions" title="Más acciones" aria-label="Más acciones">•••</button>
     </div>
   </div>
 </header>
@@ -4485,6 +4495,7 @@ $('#btnExport').addEventListener('click', doExport);
 $('#btnExport2').addEventListener('click', doExport);
 $('#btnImport').addEventListener('click', doImport);
 $('#btnImport2').addEventListener('click', doImport);
+onClick('#btnMoreActions', () => { const ta = $('#topActions'); if(ta) ta.classList.toggle('open'); });
 $('#btnReset').addEventListener('click', () => {
   if(!confirm('Esto sustituye tu plan actual por el itinerario sugerido original. ¿Seguro?')) return;
   // Restablecer solo resetea NUESTRO itinerario (v2); el catálogo, el título,
