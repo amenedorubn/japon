@@ -638,7 +638,10 @@ table.phr tr:last-child td{border-bottom:none;}
         <button class="fchip" id="itinModeDani">Ruta Dani</button>
         <button class="fchip" id="itinModeOrig" title="Itinerario de la app original, solo lectura">App original</button>
       </div>
-      <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
+      <div style="display:flex;gap:6px">
+        <button class="btn small ghost" id="btnBudget">💴 Presupuesto</button>
+        <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
+      </div>
     </div>
     <div id="cord"></div>
     <button class="btn ghost small" id="cordBack">← Viaje</button>
@@ -2753,6 +2756,33 @@ function dayCosts(day){
   day.trans.forEach(addT); addT(day.pre); addT(day.post);
   return {entr, trans};
 }
+/* ================================================================
+   BUDGET PEEK (Fase 12 · Stage 4) · el presupuesto vive BAJO DEMANDA
+   (DIRECTION §6.12: los precios no se muestran de forma constante).
+   Suma entradas + transporte por persona (lo que dayCosts conoce en ¥);
+   alojamiento y vuelos van aparte. scope: 'trip' | índice de día.
+================================================================ */
+function budgetSummary(scope){
+  const rate = state.rate || 170;
+  const days = scope === 'trip' ? state.days : [state.days[scope]].filter(Boolean);
+  let entr = 0, trans = 0;
+  days.forEach(d => { if(d){ const c = dayCosts(d); entr += c.entr; trans += c.trans; } });
+  const total = entr + trans;
+  return {entr, trans, total, rate, eur: Math.round(total / rate)};
+}
+function budgetPeekHTML(scope){
+  const b = budgetSummary(scope);
+  const eur = n => Math.round(n / b.rate);
+  const row = (k, v) => `<div class="info-row"><span class="k">${k}</span><span class="v u-tabular">${fmtYen(v)} · ${eur(v)} €</span></div>`;
+  return `<h3 style="margin:0 0 4px">💴 Presupuesto por persona</h3>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${scope === 'trip' ? 'Todo el viaje' : 'Este día'} · estimación en Japón (entradas y transporte). Alojamiento y vuelos aparte.</div>
+    <div class="info-rows">
+      ${row('🎫 Entradas', b.entr)}
+      ${row('🚇 Transporte', b.trans)}
+      <div class="info-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k"><b>Total</b></span><span class="v u-tabular"><b>${fmtYen(b.total)} · ${b.eur} €</b></span></div>
+    </div>`;
+}
+function openBudget(scope){ openModal(budgetPeekHTML(scope || 'trip')); }
 function renderInicio(){
   const legs = [
     {city: 'Tokio', from: '9 abr', to: '16 abr', n: 7},
@@ -4181,6 +4211,7 @@ $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 $('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
 onClick('#cordBack', () => zoomOut());
+onClick('#btnBudget', () => openBudget('trip'));
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
 applyTripTitle();
