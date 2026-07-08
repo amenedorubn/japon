@@ -1,0 +1,27 @@
+{
+  "name": "japan",
+  "version": "1.0.0",
+  "description": "Web/app de planificación del viaje a Japón (8–28 de abril de 2027). Todo en un único `index.html`, sin dependencias que instalar: lista para GitHub Pages.",
+  "main": "sw.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amenedorubn/japon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/amenedorubn/japon/issues"
+  },
+  "homepage": "https://github.com/amenedorubn/japon#readme",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}

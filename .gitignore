@@ -1,0 +1,8 @@
+# Dependencias del importador de María (dev-time; se instalan con `npm i`).
+# La APP en sí es single-file y sin dependencias de runtime; Playwright solo
+# lo usa tools/maria-import.js para extraer las listas de Google Maps.
+node_modules/
+
+# Volcados en vivo de Firebase para el gate (nunca se versionan, PROJECT.md §10).
+live.json
+*-live.json
