@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, ensureHotelFixes, isBookedHotel, isConfirmed, provenanceOf };`);
+  ;return { state, ensureHotelFixes, isBookedHotel, isConfirmed, provenanceOf, hotelForNight };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -78,6 +78,11 @@ check('merge: itinerary stop re-pointed to canonical id (no dangling pid)',
   api.state.days[1].stops.some(s => s.id === 'st_twin' && s.pid === 'apa_asakusabashi') &&
   !api.state.days[1].stops.some(s => s.pid === 'id_test_twin'));
 check('merge: canonical apa is still a confirmed booked hotel', api.isBookedHotel(byId('apa_asakusabashi')) && api.isConfirmed(byId('apa_asakusabashi')));
+
+// ---- 4) hotelForNight: reservations connect to the real trip nights ----
+check('night: a covered night maps to Louis House', api.hotelForNight('2027-04-10') && api.hotelForNight('2027-04-10').id === 'id_louis_otsuka_nishi');
+check('night: the checkout night is not covered', !api.hotelForNight('2027-04-12'));
+check('night: an unbooked night returns null', api.hotelForNight('2027-04-18') === null);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

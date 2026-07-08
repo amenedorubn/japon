@@ -577,6 +577,9 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Reservado ≠ planificado: una parada confirmada se siente Foil (permanente),
    frente a la tinta de una parada planificada */
 .stop.is-confirmed .stop-card{box-shadow:var(--shadow-lg),inset 0 0 0 1px var(--foil-edge-red);}
+/* Pase de noche (Fase 12): el hotel reservado que cubre esta noche, en Foil */
+.night-pass{position:relative;padding:12px 14px;margin:12px 0;border-radius:var(--radius);font-size:14px;}
+.night-pass .np-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px;}
 /* Axis (Fase 12 · Stage 6): indicador de posición en el eje de certeza */
 .axis-dots{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));
   display:flex;justify-content:center;gap:7px;z-index:var(--z-bar);}
@@ -2335,6 +2338,13 @@ function isBookedHotel(p){
 function bookedHotels(){
   return state.places.filter(isBookedHotel);
 }
+/* El hotel reservado que cubre la noche de un día (checkIn ≤ fecha < checkOut).
+   Conecta las reservas con los días reales: dónde dormimos esa noche. */
+function hotelForNight(dayDate){
+  if(!dayDate) return null;
+  return state.places.find(p => isBookedHotel(p) && p.checkIn && p.checkOut &&
+    dayDate >= p.checkIn && dayDate < p.checkOut) || null;
+}
 /* ================================================================
    ESTADO / CAPA (Fase 12 · Foil Press) · CONFIRMADO es un eje aparte de
    la procedencia (§4). Se gana con una ACCIÓN DELIBERADA (sellar). Vuelos
@@ -3390,6 +3400,8 @@ function renderItinerary(){
   html += '</div>';
   if(!d.stops.length) html += emptyDayHTML(d); // Fase 12: EmptyState · invitación de día libre
   html += seasonDayExtras(d); // Fase 12 · Stage 7: Now-Line + Recap durante/después del viaje
+  const nightHotel = hotelForNight(d.date); // dónde dormís esta noche (reserva confirmada → Foil)
+  if(nightHotel) html += `<div class="night-pass m-foil">🛏 <b>${esc(nightHotel.name)}</b><div class="np-sub">Dónde dormís esta noche · reserva confirmada</div></div>`;
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
   onClick('#dayPanel .add-stop', () => openAddStop(curDay));
