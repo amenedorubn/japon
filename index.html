@@ -407,6 +407,14 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
   border:1px solid var(--line);color:var(--muted);}
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
 .fchip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+/* Modos del itinerario: "Nuestro plan" es EL plan (primario); Dani y Original
+   son referencias/archivo, demotadas tras un rótulo (no itinerarios peer). */
+.itin-mode-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.itin-ref-sep{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;
+  color:var(--muted);opacity:.7;margin-left:6px;}
+.fchip.ref{font-size:12px;padding:5px 10px;}
+.fchip.ref:not(.active){background:transparent;border-color:transparent;}
+@media(hover:hover){.fchip.ref:not(.active):hover{background:var(--card);border-color:var(--line);}}
 .places-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
 .places-grid.grouped{display:block;}
 .ideas-group{margin-bottom:26px;}
@@ -736,10 +744,11 @@ table.phr tr:last-child td{border-bottom:none;}
   <!-- ============ ITINERARIO ============ -->
   <section class="view" id="view-itinerario" data-alt="trip">
     <div class="filter-bar" style="justify-content:space-between">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="fchip active" id="itinModeOurs">Nuestro plan</button>
-        <button class="fchip" id="itinModeDani">Ruta Dani</button>
-        <button class="fchip" id="itinModeOrig" title="Itinerario de la app original, solo lectura">App original</button>
+      <div class="itin-mode-group">
+        <button class="fchip active" id="itinModeOurs">🗓️ Nuestro plan</button>
+        <span class="itin-ref-sep">referencias</span>
+        <button class="fchip ref" id="itinModeDani" title="Ruta que sugirió Dani · exploración, no es el plan">🧭 Dani</button>
+        <button class="fchip ref" id="itinModeOrig" title="Itinerario de la app original · archivo de solo lectura">📄 Original</button>
       </div>
       <div style="display:flex;gap:6px">
         <button class="btn small ghost" id="btnBudget">💴 Presupuesto</button>
