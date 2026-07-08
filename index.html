@@ -408,6 +408,12 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
 .fchip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 .places-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+.places-grid.grouped{display:block;}
+.ideas-group{margin-bottom:26px;}
+.ideas-region{display:flex;align-items:baseline;gap:8px;margin:0 0 12px;
+  font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--ink);}
+.ideas-region small{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;}
+.ideas-more{margin-top:12px;}
 .place-card{padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;
   transition:transform var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);}
 @media(hover:hover){.place-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);
@@ -4574,7 +4580,7 @@ function renderSitios(){
     .filter(x => !placeRegion || x.p.region === placeRegion)
     .filter(x => !placeCat || x.p.cat === placeCat)
     .filter(x => !placeQ || (x.p.name + ' ' + x.p.desc + ' ' + x.p.region).toLowerCase().includes(placeQ));
-  $('#placesGrid').innerHTML = items.map(x => {
+  const cardHTML = x => {
     const c = catOf(x.p);
     const inPlan = state.days.some(d => d.stops.some(s => s.pid === x.pid));
     return `<div class="card place-card" data-pid="${x.pid}">
@@ -4593,7 +4599,42 @@ function renderSitios(){
         ${provTag(x.p.provenance)}
       </div>
     </div>`;
-  }).join('') || '<p style="color:var(--muted)">Sin resultados.</p>';
+  };
+  const grid = $('#placesGrid');
+  if(!items.length){
+    grid.classList.remove('grouped');
+    grid.innerHTML = '<p style="color:var(--muted)">Sin resultados.</p>';
+    return;
+  }
+  // Exploración editorial, sin muro (DIRECTION §7): con búsqueda o región elegida,
+  // lista plana; en la vista general, se AGRUPA por región y cada grupo muestra un
+  // avance (divulgación progresiva) con "ver todos" que entra en esa región.
+  const flat = !!placeRegion || !!placeQ;
+  if(flat){
+    grid.classList.remove('grouped');
+    grid.innerHTML = items.map(cardHTML).join('');
+  } else {
+    grid.classList.add('grouped');
+    const byRegion = new Map();
+    items.forEach(x => { const r = x.p.region || 'Otros'; if(!byRegion.has(r)) byRegion.set(r, []); byRegion.get(r).push(x); });
+    const ORDER = ['Tokio', 'Nikko', 'Kamakura', 'Monte Fuji', 'Kioto', 'Kioto y Nara', 'Nara', 'Osaka', 'Hiroshima', 'Nagoya', 'Nagano'];
+    const rank = r => { const i = ORDER.indexOf(r); return i < 0 ? 90 : i; };
+    const regionsSorted = Array.from(byRegion.keys()).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+    const CAP = 6;
+    grid.innerHTML = regionsSorted.map(r => {
+      const list = byRegion.get(r);
+      const shown = list.slice(0, CAP).map(cardHTML).join('');
+      const more = list.length - Math.min(list.length, CAP);
+      return `<section class="ideas-group">
+        <h3 class="ideas-region">${esc(r)}<small>${list.length}</small></h3>
+        <div class="places-grid">${shown}</div>
+        ${more > 0 ? `<button class="btn ghost small ideas-more" data-region="${esc(r)}">Ver los ${list.length} de ${esc(r)} →</button>` : ''}
+      </section>`;
+    }).join('');
+    $$('#placesGrid .ideas-more').forEach(b => b.addEventListener('click', () => {
+      placeRegion = b.dataset.region; renderSitios(); window.scrollTo({top: 0});
+    }));
+  }
   bindPlaceOpen('#placesGrid .place-card');
 }
 $('#placeSearch').addEventListener('input', e => { placeQ = e.target.value.toLowerCase(); renderSitios(); });

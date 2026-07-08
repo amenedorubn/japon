@@ -45,7 +45,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   ;return { state, PLACES, LEGACY_PID_MAP, CATALOG_VERSION,
     placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
     renderSitios, renderHoteles, dayCosts, openAddStop, hotelBasePlaceholders,
-    setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; } };`);
+    setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; },
+    setRegion: v => { placeRegion = v; } };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -127,33 +128,36 @@ const gridIds = () => {
   let m; while ((m = re.exec(els['#placesGrid'].innerHTML))) out.push(m[1]);
   return out;
 };
+// La vista Ideas agrupa por región y limita cada grupo (divulgación progresiva);
+// para comprobar la presencia de un lugar concreto se fuerza el modo plano
+// fijando su región (con región elegida se listan todos los de esa región).
+const idsFor = (src, region) => { api.setSrc(src); api.setRegion(region || ''); api.renderSitios(); return gridIds(); };
 for (const f of ['ours', 'dani', 'insta', 'all']) {
   api.setSrc(f); api.renderSitios();
   const g = gridIds();
   const dups = g.filter((x, i) => g.indexOf(x) !== i);
   check(`sitios[${f}]: ${g.length} items, no dup ids`, (g.length > 0) === (f !== 'insta') && dups.length === 0);
 }
-api.setSrc('ours'); api.renderSitios();
-let g = gridIds();
+let g = idsFor('ours', byId('catalog_sensoji').region);
 check('sitios[ours]: merged twin listed once (catalog_sensoji), legacy slug gone',
   g.includes('catalog_sensoji') && !g.includes('sensoji'));
-check('sitios[ours]: unaliased catalog zone listed (catalog_harajuku)', g.includes('catalog_harajuku'));
-check('sitios[ours]: curated-only entry listed (nakamise)', g.includes('nakamise'));
+check('sitios[ours]: unaliased catalog zone listed (catalog_harajuku)',
+  idsFor('ours', byId('catalog_harajuku').region).includes('catalog_harajuku'));
+check('sitios[ours]: curated-only entry listed (nakamise)',
+  idsFor('ours', byId('nakamise').region).includes('nakamise'));
 check('sitios[ours]: no dani, no city bases, no airports, no hotels, no transporte',
   !g.some(i => i.startsWith('dani_')) && !g.includes('catalog_tokio') &&
   !g.includes('airport_narita_llegada') && !g.includes('nrt') && !g.includes('hotel_tokyo'));
-api.setSrc('dani'); api.renderSitios();
-g = gridIds();
+g = idsFor('dani', byId('dani_fushimi_inari').region);
 check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_fushimi_inari') && !g.includes('dani_rise_osaka'));
 
 // ---- 8) adoption flow unchanged ----
 (function(){
   const dp = byId('dani_kagetsudo');
+  const rgn = dp.region;
   dp.source = 'user'; dp.dani = false; dp.daniAdopted = true; dp.catalogItem = false;
-  api.setSrc('dani'); api.renderSitios();
-  check('adopt: gone from dani filter', !gridIds().includes('dani_kagetsudo'));
-  api.setSrc('ours'); api.renderSitios();
-  check('adopt: appears under ours', gridIds().includes('dani_kagetsudo'));
+  check('adopt: gone from dani filter', !idsFor('dani', rgn).includes('dani_kagetsudo'));
+  check('adopt: appears under ours', idsFor('ours', rgn).includes('dani_kagetsudo'));
 })();
 
 // ---- 9) Hoteles: APA now a real booked card; bases stay placeholders ----
