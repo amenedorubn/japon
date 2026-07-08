@@ -43,7 +43,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, renderCord, cordStays, cordFill };`);
+  ;return { state, renderCord, cordStays, cordFill, zoomToDay, zoomOut, setItinAlt };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -85,6 +85,15 @@ check('cordStays: returning to a city after a break is a new stay (new tone)', t
 check('cordFill: 0 stops -> no filled dots', api.cordFill(0) === '<i class=""></i><i class=""></i><i class=""></i>');
 check('cordFill: 2 stops -> 2 filled dots', count(api.cordFill(2), 'class="on"') === 2);
 check('cordFill: 5 stops -> capped at 3 filled dots', count(api.cordFill(5), 'class="on"') === 3);
+
+// ---- 8) The Zoom: altitude switching (Trip <-> Day) ----
+const view = () => els['#view-itinerario']._attrs['data-alt'];
+api.setItinAlt('trip');
+check('zoom: starts at Trip altitude', view() === 'trip');
+api.zoomToDay(3);
+check('zoom in: tapping a day switches to Day altitude', view() === 'day');
+api.zoomOut();
+check('zoom out: returns to Trip altitude', view() === 'trip');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

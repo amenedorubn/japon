@@ -562,6 +562,15 @@ table.phr tr:last-child td{border-bottom:none;}
 .cord-fill{display:flex;gap:3px;flex:none;}
 .cord-fill i{width:5px;height:5px;border-radius:50%;background:var(--line);}
 .cord-fill i.on{background:var(--ink);}
+/* The Zoom (Fase 12 · 12.6): altitudes del Plan · Trip (Cord) ⇄ Day ⇄ plain */
+#cordBack{margin:0 0 10px;}
+#view-itinerario #cord{display:none;}
+#view-itinerario #cordBack{display:none;}
+#view-itinerario[data-alt="trip"] #cord{display:flex;}
+#view-itinerario[data-alt="trip"] #dayChips,
+#view-itinerario[data-alt="trip"] #dayPanel{display:none;}
+#view-itinerario[data-alt="day"] #cordBack{display:inline-flex;}
+#view-itinerario[data-alt="plain"] #dayChips{display:none;}
 </style>
 </head>
 <body>
@@ -622,7 +631,7 @@ table.phr tr:last-child td{border-bottom:none;}
   </section>
 
   <!-- ============ ITINERARIO ============ -->
-  <section class="view" id="view-itinerario">
+  <section class="view" id="view-itinerario" data-alt="trip">
     <div class="filter-bar" style="justify-content:space-between">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="fchip active" id="itinModeOurs">Nuestro plan</button>
@@ -632,6 +641,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
     </div>
     <div id="cord"></div>
+    <button class="btn ghost small" id="cordBack">← Viaje</button>
     <div class="day-chips" id="dayChips"></div>
     <div id="dayPanel"></div>
   </section>
@@ -2882,13 +2892,18 @@ function stopHTML(s, idx, dayIdx){
    Muestra los 14 días de DANI_ROUTE_GROUPS en modo solo lectura, con el
    botón ★ Pasar (adoptPlace) y el documento original (DANI_PDF_URL). */
 let itinMode = 'ours'; // 'ours' | 'dani' | 'orig' (P1: app original, solo lectura)
+let itinAlt = 'trip';  // Fase 12: altitud del Plan · 'trip' (Cord) | 'day' | 'plain' (dani/orig)
+function setItinAlt(alt){
+  itinAlt = alt;
+  const v = $('#view-itinerario'); if(v && v.setAttribute) v.setAttribute('data-alt', alt);
+}
 function setItinMode(mode){
   itinMode = mode;
   $('#itinModeOurs').classList.toggle('active', mode === 'ours');
   $('#itinModeDani').classList.toggle('active', mode === 'dani');
   $('#itinModeOrig').classList.toggle('active', mode === 'orig');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
-  $('#dayChips').style.display = mode === 'ours' ? '' : 'none';
+  setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
   renderItinerary();
 }
 /* P1 · Itinerario de la app original, SOLO LECTURA: espejo de state.origDays
@@ -3034,17 +3049,26 @@ function renderCord(){
       <span class="cord-fill" aria-hidden="true">${cordFill(nStops)}</span>
     </button>`;
   }).join('');
-  $$('#cord .cord-day').forEach(b => b.addEventListener('click', () => zoomToDay(parseInt(b.dataset.day, 10))));
+  $$('#cord .cord-day').forEach(b => b.addEventListener('click', () => zoomToDay(parseInt(b.dataset.day, 10), b)));
 }
-function zoomToDay(i){
+/* The Zoom · entrar en un día crece desde el DayNode tocado (FLIP, origen
+   consciente) hacia la altitud de Día; salir vuelve al Cord. */
+function zoomToDay(i, fromEl){
   if(i == null || isNaN(i)) return;
-  curDay = i; renderItinerary();
-  const p = $('#dayPanel'); if(p && p.scrollIntoView) p.scrollIntoView({behavior: 'smooth', block: 'start'});
+  curDay = i; setItinAlt('day'); renderItinerary();
+  const panel = $('#dayPanel');
+  const from = fromEl && fromEl.getBoundingClientRect ? fromEl.getBoundingClientRect() : null;
+  if(from && panel) Motion.flip(panel, from, {duration: 260, fade: true});
+  if(panel && panel.scrollIntoView) panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function zoomOut(){
+  setItinAlt('trip'); renderCord();
+  const c = $('#cord'); if(c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderItinerary(){
   const cord = $('#cord');
-  if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; renderDaniItinerary(); return; }
-  if(itinMode === 'orig'){ if(cord) cord.innerHTML = ''; renderOrigItinerary(); return; }
+  if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderDaniItinerary(); return; }
+  if(itinMode === 'orig'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderOrigItinerary(); return; }
   renderCord();
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
@@ -4156,6 +4180,7 @@ buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 $('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
+onClick('#cordBack', () => zoomOut());
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
 applyTripTitle();
