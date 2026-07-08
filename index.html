@@ -623,6 +623,9 @@ table.phr tr:last-child td{border-bottom:none;}
 @keyframes slide-in-left{from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:none;}}
 .view.slide-right{animation:slide-in-right var(--dur-fast) var(--ease);}
 .view.slide-left{animation:slide-in-left var(--dur-fast) var(--ease);}
+/* Confirmado como cartera de pases (Fase 12): pases Foil a lo ancho, en pila
+   vertical, no una rejilla de datos. Se sienten como billetes y llaves. */
+#flightCards, #hotelCards{display:flex;flex-direction:column;gap:10px;}
 /* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
    destino en tategaki (japonés vertical, nombra un lugar real). */
 #cd-d{font-family:var(--serif);}
