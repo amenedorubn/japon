@@ -391,6 +391,7 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .src-chip b{font-weight:800;margin-right:2px;}
 .src-chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 .src-chip.src-dani.active{background:#223A5E;border-color:#223A5E;color:#fff;}
+.src-chip.src-maria.active{background:#7a4fa3;border-color:#7a4fa3;color:#fff;}
 .src-chip.src-insta.active{background:#C13584;border-color:#C13584;color:#fff;}
 .zone-tooltip{background:transparent;border:none;box-shadow:none;color:var(--ink);
   font-weight:700;font-size:11.5px;text-shadow:0 1px 2px var(--bg);}
@@ -744,6 +745,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="map-toggles">
       <button class="fchip src-chip" id="srcNos" title="Sitios del catálogo y añadidos por vosotros"><b>N</b> Nosotros</button>
       <button class="fchip src-chip src-dani" id="srcDani" title="Sitios de la ruta Dani"><b>D</b> Dani</button>
+      <button class="fchip src-chip src-maria" id="srcMaria" title="Listas de Google Maps que curó María"><b>M</b> María</button>
       <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
@@ -2681,7 +2683,12 @@ function provTag(prov){
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
 function sourceMatchesFilter(p, filter){
   const source = sourceValueForPlace(p);
-  if(filter === 'ours') return source === 'user';
+  const prov = p.provenance || provenanceOf(p);
+  // María es una CURADORA de Exploración de primera clase (eje de procedencia,
+  // no de source): se filtra por provenance y se excluye del cubo "Nuestros"
+  // para no mezclarla con lo verdaderamente nuestro.
+  if(filter === 'maria') return prov === 'maria';
+  if(filter === 'ours') return source === 'user' && prov !== 'maria';
   if(filter === 'dani') return source === 'dani';
   if(filter === 'insta') return source === 'insta';
   return true;
@@ -2693,7 +2700,7 @@ function listablePlaces(){
     !p.baseLayer && !p.cityBase && !p.airport &&
     p.category !== 'alojamiento' && p.category !== 'transporte');
 }
-const SRC_FILTER_OPTS = [['ours','Nuestros'],['dani','Dani'],['insta','Insta'],['all','Todos']];
+const SRC_FILTER_OPTS = [['all','Todos'],['ours','Nuestros'],['dani','Dani'],['maria','María'],['insta','Insta']];
 function srcChipsHTML(active){
   return SRC_FILTER_OPTS.map(([v, l]) =>
     `<button class="fchip ${active === v ? 'active' : ''}" data-s="${v}">${l}</button>`).join('');
@@ -4121,16 +4128,18 @@ function initMapView(){
   syncFlightsChip();
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
 }
-/* --- Capas de origen: Nosotros / Dani / Insta (persistidas) --- */
-let srcState = {n: true, d: false, i: false}; // como la app original: "Nosotros" activo
+/* --- Capas de origen: Nosotros / Dani / María / Insta (persistidas) --- */
+let srcState = {n: true, d: false, i: false, m: false}; // "Nosotros" activo por defecto
 try{ srcState = Object.assign(srcState, JSON.parse(localStorage.getItem('jp27_map_sources') || '{}')); }catch(e){}
 function syncSrcChips(){
   $('#srcNos').classList.toggle('active', srcState.n);
   $('#srcDani').classList.toggle('active', srcState.d);
   $('#srcInsta').classList.toggle('active', srcState.i);
+  const sm = $('#srcMaria'); if(sm) sm.classList.toggle('active', srcState.m);
 }
-[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i']].forEach(([sel, key]) => {
-  $(sel).addEventListener('click', () => {
+[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i'], ['#srcMaria','m']].forEach(([sel, key]) => {
+  const el = $(sel); if(!el) return;
+  el.addEventListener('click', () => {
     srcState[key] = !srcState[key];
     try{ localStorage.setItem('jp27_map_sources', JSON.stringify(srcState)); }catch(e){}
     syncSrcChips(); renderMapDay();
@@ -4414,6 +4423,7 @@ async function renderMapDay(){
     state.places.forEach(sp => {
       if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
       if(sourceValueForPlace(sp) !== 'user') return;
+      if((sp.provenance || provenanceOf(sp)) === 'maria') return; // María tiene su propia capa
       const v = placeView(sp);
       pois.push({pid: sp.id, p: v, ring: '#fff',
         badge: v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''});
@@ -4422,6 +4432,10 @@ async function renderMapDay(){
   if(srcState.d){
     state.places.forEach(sp => { if(sp && sp.dani && sp.lat != null)
       pois.push({pid: sp.id, p: placeView(sp), ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'}); });
+  }
+  if(srcState.m){
+    state.places.forEach(sp => { if(sp && (sp.provenance || provenanceOf(sp)) === 'maria' && sp.lat != null)
+      pois.push({pid: sp.id, p: placeView(sp), ring: '#7a4fa3', badge: ' <span style="color:#7a4fa3;font-weight:800">M</span>'}); });
   }
   if(srcState.i){
     state.places.forEach(sp => { if(sp && sp.source === 'insta' && sp.lat != null)
