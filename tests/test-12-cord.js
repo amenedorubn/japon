@@ -107,5 +107,9 @@ api.state.days[5].stops = [];
 api.zoomToDay(5);
 check('empty day: shows a "Día libre" invitation (not blank)', els['#dayPanel'].innerHTML.includes('Día libre'));
 
+// ---- 11) provenance is visible in the itinerary flow ----
+api.zoomToDay(1); // day 1 holds the planted stop (catalog_sensoji)
+check('itinerary: stops carry a provenance mark (prov-tag)', els['#dayPanel'].innerHTML.includes('prov-tag'));
+
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

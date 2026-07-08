@@ -3063,6 +3063,8 @@ function stopHTML(s, idx, dayIdx){
           <b class="pname">${esc(p.name)} <span style="font-weight:400">${p.web || p.insta ? '🔗' : ''}</span></b>
           <div class="chips">
             <span class="pill" style="color:${c.color}">${c.emoji} ${esc(c.label)}</span>
+            ${provTag(p.provenance)}
+            ${p.confirmed ? '<span class="pill green" title="Confirmado">✓ sellado</span>' : ''}
             <span class="dur-wrap">🕐 <input type="number" class="dur" min="5" step="5" value="${s.dur}"> min</span>
             ${p.yen ? `<span class="pill">💴 ${esc(p.price || fmtYen(p.yen))}</span>` : p.yen === 0 ? '<span class="pill green">Gratis</span>' : ''}
           </div>
