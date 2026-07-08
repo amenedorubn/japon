@@ -2111,8 +2111,10 @@ function ensureSharedShape(s){
    sus sitios NUNCA entran solos en Nuestro Viaje ni en Confirmado; viven
    en Exploración con provenance 'maria'. Declarado ANTES del arranque
    (boot) porque ensureMariaPlaces se invoca ahí: mover MARIA_PLACES abajo
-   provocaba un ReferenceError por zona muerta temporal (TDZ). Ver el
-   comentario del pipeline en generateMariaImporter()/MARIA_MAPS. */
+   provocaba un ReferenceError por zona muerta temporal (TDZ). El extractor
+   automático vive en tools/maria-import.js (Playwright, dev-time) y hornea los
+   datos en MARIA_PLACES vía tools/maria-bake.js; import/maria-places.json es la
+   fuente. La app en runtime NO usa Playwright ni red (single-file, offline). */
 const MARIA_MAPS = [
   {url: 'https://maps.app.goo.gl/3kJQast3HFWRjzB78', listId: 'gmTab8I4Q-OusWMU_6XHeQ'},
   {url: 'https://maps.app.goo.gl/rLjD7Kwpp72TvgDQ8', listId: null},

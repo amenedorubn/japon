@@ -27,8 +27,11 @@ modelo v2 y sus nodos en la nube quedaron como archivo de solo lectura.
 
 | Fichero | Papel |
 |---|---|
-| `index.html` | LA app entera (~3.8k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
+| `index.html` | LA app entera (~4.7k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
 | `sw.js` | Service worker offline (Fase 10c): cache-first del shell + CDNs versionadas, refresco en segundo plano. Subir junto a index.html a GitHub Pages |
+| `tools/maria-import.js` `tools/maria-bake.js` | Importador de María (Fase 12.33+): extrae con Playwright las listas de Google Maps que compartió y hornea el resultado en `MARIA_PLACES`. **Dev-time**: la app en runtime no usa Playwright ni red |
+| `import/maria-places.json` | Datos extraídos de las listas de María (139 sitios). Fuente que se hornea en `index.html`; re-generable con el importador |
+| `package.json` / `package-lock.json` | Declaran la ÚNICA dependencia (Playwright), sólo para el importador dev-time. `node_modules/` está en `.gitignore` |
 | `index-pre-source.html` | App original descomprimida. **Referencia permanente, no borrar**: contiene además el único embed del PDF de Dani |
 | `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
 | `PROJECT.md` `PRODUCT.md` `DESIGN.md` `PARITY.md` | Documentación (este orden: continuidad → estrategia → visual → paridad) |
@@ -176,6 +179,14 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 10c | `6b40e34` | **Service worker offline** (R4) | `sw.js` cache-first del shell + CDNs versionadas, refresco silencioso en segundo plano; sin toasts de actualización; APIs vivas nunca interceptadas |
 | Docs | `71396f7` | Fase 10 cerrada: gate aprobado, app original retirada del flujo soportado | — |
 | 11 | (este commit) | **Calidad de código** (D2/D3/D5, nombres, comentarios) | Cero handlers `onclick` inline (`data-pid`/ids + `addEventListener`); helpers deduplicados (`haversineMeters`/`placeUid` sobre `haversine`/`uid`); código muerto borrado (`TOKYO_SPECIAL_WARDS`, `isAirportPlace`); `userPlaceView`→`placeView`, `userHotels`→`bookedHotels`; em-dashes fuera de comentarios; sin cambios visuales/funcionales (suite verde byte a byte) |
+| 12.1–12.31 | varios | **Modelo de producto + primeras materializaciones** | Procedencia (`ours`/`dani`/`instagram`/`ai`/`maria`), Confirmado/Foil Press (sellar), Cord + Zoom, BudgetPeek, Seasons (`tripPhase`), Countdown Face + Rail, EmptyState, eje Ideas←Plan→Confirmado, higiene de hoteles |
+| 12.32 | `5df3ff0` | **Fix crash TDZ de María** | El boot llamaba `ensureMariaPlaces()` ~340 líneas antes de `const MARIA_PLACES`: zona muerta temporal → ReferenceError que dejaba la app en blanco y rojas todas las suites. Bloque María reubicado antes del boot |
+| 12.33 | `0fbd788` | **Importador de María** | Re-evaluada la extracción (antes "imposible"): AHORA es posible. Con navegadores Playwright + cookie `SOCS` de consentimiento, los enlaces `maps.app.goo.gl` resuelven la lista; nombres en `.fontHeadlineSmall`, coordenadas al hacer clic. `tools/maria-import.js` + `tools/maria-bake.js`; Playwright dev-only |
+| 12.34 | `2ed4398` | **Datos reales de María (139 sitios)** | Extraídas las 5 listas (Tokio 55 · Kioto y Nara 46 · Osaka 19 · Nagoya 18 · Nagano 1). Horneados en `MARIA_PLACES` como Exploración, provenance `maria`, nunca auto-planificados ni confirmados. Tests de recuento excluyen `maria` (aditiva) |
+| 12.35 | `008dfd2` | **María curadora de primera clase** | Chip 'María' en Ideas (por procedencia, fuera de 'Nuestros'); capa 'M María' en el mapa (morada), fuera de la capa 'Nosotros' |
+| 12.36 | `ea5f670` | **Hero = Countdown Face (Foil)** | Retirado el cartel de gradiente rojo; hero como material Foil (papel + borde de lámina + destello), días en serif como único acento rojo; en Home sólo reservas confirmadas (Foil), bases "por reservar" demotadas a Washi |
+| 12.37 | `a240574` | **Ideas editorial, sin muro** | Vista general agrupada por región (cabeceras + contador), avance de 6 por grupo con "ver todos" (divulgación progresiva); región elegida o búsqueda → lista plana. 41.544px → ~9.900px |
+| 12.38 | `fac61c9` | **Plan lidera con nuestro viaje** | Switcher: "Nuestro plan" primario; "Dani" y "Original" demotados como referencias tras un rótulo (no itinerarios peer) |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -391,4 +402,8 @@ pequeño en oscuro).
 - El service worker sirve el shell cache-first: tras desplegar un cambio, la PRIMERA apertura
   con red aún muestra la versión anterior mientras se refresca en segundo plano; la segunda
   apertura ya estrena. Es el comportamiento elegido (sin toasts ni recargas a mitad de uso).
-- Node ≥18 basta para la suite; no hay `package.json` ni dependencias: mantenerlo así.
+- Node ≥18 basta para la suite. La APP en runtime sigue sin dependencias ni build
+  (single-file + `sw.js`). Excepción dev-time: `package.json` declara Playwright
+  SÓLO para el importador de María (`tools/maria-import.js`); `node_modules/` está
+  en `.gitignore` y no se sube. Ejecutar el importador requiere `npm i` +
+  `npx playwright install chromium`. No introducir dependencias de runtime.
