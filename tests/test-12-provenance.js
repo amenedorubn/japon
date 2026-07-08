@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, provenanceOf, ensureProvenance, placeView, provenanceLabel };`);
+  ;return { state, provenanceOf, ensureProvenance, placeView, provenanceLabel, provTag };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -96,6 +96,12 @@ check('provenanceLabel: dani -> De Dani', api.provenanceLabel('dani') === 'De Da
 check('provenanceLabel: instagram -> De Instagram', api.provenanceLabel('instagram') === 'De Instagram');
 check('provenanceLabel: ai -> IA', api.provenanceLabel('ai') === 'IA');
 check('provenanceLabel: unknown -> empty (no whisper)', api.provenanceLabel(undefined) === '');
+
+// ---- 9) provTag: unified, clearly-distinct provenance mark ----
+check('provTag: dani mark carries label + class', api.provTag('dani').includes('Dani') && api.provTag('dani').includes('prov-dani'));
+check('provTag: ai mark is labelled IA', api.provTag('ai').includes('IA') && api.provTag('ai').includes('prov-ai'));
+check('provTag: all four provenances are visually distinct', new Set(['ours', 'dani', 'instagram', 'ai'].map(p => api.provTag(p))).size === 4);
+check('provTag: unknown -> empty', api.provTag(undefined) === '');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
