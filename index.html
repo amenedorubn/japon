@@ -581,8 +581,10 @@ table.phr tr:last-child td{border-bottom:none;}
 .night-pass{position:relative;padding:12px 14px;margin:12px 0;border-radius:var(--radius);font-size:14px;}
 .night-pass .np-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px;}
 /* Axis (Fase 12 · Stage 6): indicador de posición en el eje de certeza */
-.axis-dots{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));
-  display:flex;justify-content:center;gap:7px;z-index:var(--z-bar);}
+/* Los puntos del eje se retiran: la propia barra inferior ES ahora el eje. */
+.axis-dots{display:none;}
+.axis-dots.legacy{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));
+  justify-content:center;gap:7px;z-index:var(--z-bar);}
 .axis-dots button{width:7px;height:7px;padding:9px;background-clip:content-box;border-radius:999px;
   background-color:var(--line);transition:background-color var(--dur-2) var(--ease),width var(--dur-2) var(--ease);}
 .axis-dots button.on{background-color:var(--accent);width:18px;}
@@ -617,6 +619,12 @@ table.phr tr:last-child td{border-bottom:none;}
   font-size:26px;line-height:1;display:none;align-items:center;justify-content:center;
   z-index:var(--z-bar);box-shadow:var(--shadow-lg);}
 @media(min-width:900px){.command-dot{bottom:24px;}}
+/* Menú "Más" (lentes/utilidades fuera del eje) */
+.more-menu{display:flex;flex-direction:column;gap:8px;}
+.more-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;
+  border-radius:var(--radius-s);background:var(--card2);font-size:15px;font-weight:600;color:var(--ink);}
+.more-item .mi-ic{font-size:20px;line-height:1;}
+@media(hover:hover){.more-item:hover{background:color-mix(in srgb,var(--card2) 82%,var(--ink));}}
 /* Transición direccional del eje (Fase 12): la región entra desde el lado hacia
    el que te mueves (izq→der = hacia la certeza). Lo frecuente apenas se anima. */
 @keyframes slide-in-right{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:none;}}
@@ -2841,7 +2849,8 @@ function cachedRoute(a, b, profile){
 /* ================================================================
    NAVEGACIÓN
 ================================================================ */
-const TABS = [['inicio','🏠','Inicio'],['itinerario','📅','Plan'],['mapa','🗺️','Mapa'],['sitios','📍','Ideas'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
+// Orden = eje de certeza (Ideas ← Plan → Confirmado); Mapa/Hoteles/Guía tras "Más".
+const TABS = [['sitios','🧭','Ideas'],['itinerario','🗓️','Plan'],['inicio','✈️','Confirmado'],['mapa','🗺️','Mapa'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
 let curTab = 'inicio';
 /* ================================================================
    AXIS (Fase 12 · Stage 6) · navegación por CERTEZA: Ideas ← Plan →
@@ -2859,15 +2868,22 @@ function axisGo(delta){
 }
 function buildNav(){
   $('#topnav').innerHTML = TABS.map(t => `<button data-tab="${t[0]}">${t[2]}</button>`).join('');
-  $('#tabbar').innerHTML = TABS.map(t => `<button data-tab="${t[0]}"><span class="ti">${t[1]}</span>${t[2]}</button>`).join('');
-  $$('#topnav button, #tabbar button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  const dots = $('#axisDots');
-  if(dots){
-    dots.innerHTML = AXIS_REGIONS.map((r, k) => `<button data-region="${r}" aria-label="${AXIS_LABELS[k]}"></button>`).join('');
-    $$('#axisDots button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.region)));
-  }
+  // Barra inferior = el EJE DE CERTEZA (Ideas · Plan · Confirmado); las lentes
+  // (Mapa/Hoteles/Guía) viven tras "Más". Ya no seis pestañas de app de listas.
+  const primary = TABS.slice(0, 3);
+  $('#tabbar').innerHTML = primary.map(t => `<button data-tab="${t[0]}"><span class="ti">${t[1]}</span>${t[2]}</button>`).join('')
+    + `<button id="tabMore"><span class="ti">•••</span>Más</button>`;
+  $$('#topnav button, #tabbar button[data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  const more = $('#tabMore'); if(more) more.addEventListener('click', openMoreMenu);
   const cd = $('#commandDot');
   if(cd) cd.addEventListener('click', () => { const a = $('#commandDot')._action; if(a) a(); });
+}
+/* "Más": las lentes/utilidades fuera del eje (Mapa, Hoteles, Guía). */
+function openMoreMenu(){
+  openModal(`<h3 style="margin:0 0 12px">Más</h3><div class="more-menu">${
+    TABS.slice(3).map(t => `<button class="more-item" data-tab="${t[0]}"><span class="mi-ic">${t[1]}</span>${t[2]}</button>`).join('')
+  }</div>`);
+  $$('#modalBox .more-item').forEach(b => b.addEventListener('click', () => { closeModal(); showTab(b.dataset.tab); }));
 }
 /* Command Dot · una sola acción, cuyo significado depende del contexto:
    Ideas → añadir sitio; Plan (altitud de Día) → añadir parada; en otro sitio,
@@ -2893,13 +2909,9 @@ function showTab(id){
     v.classList.remove('slide-left', 'slide-right');
     if(on && dir) v.classList.add('slide-' + dir);
   });
-  $$('#topnav button, #tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
-  const ai = axisIndexOf(id);
-  const dots = $('#axisDots');
-  if(dots){
-    $$('#axisDots button').forEach((b, k) => b.classList.toggle('on', k === ai));
-    dots.style.display = ai >= 0 ? '' : 'none';
-  }
+  $$('#topnav button, #tabbar button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  const moreBtn = $('#tabMore');
+  if(moreBtn) moreBtn.classList.toggle('active', TABS.slice(3).some(t => t[0] === id));
   updateCommandDot();
   history.replaceState(null, '', '#/' + id);
   window.scrollTo({top: 0});
