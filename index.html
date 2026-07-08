@@ -617,6 +617,12 @@ table.phr tr:last-child td{border-bottom:none;}
   font-size:26px;line-height:1;display:none;align-items:center;justify-content:center;
   z-index:var(--z-bar);box-shadow:var(--shadow-lg);}
 @media(min-width:900px){.command-dot{bottom:24px;}}
+/* Transición direccional del eje (Fase 12): la región entra desde el lado hacia
+   el que te mueves (izq→der = hacia la certeza). Lo frecuente apenas se anima. */
+@keyframes slide-in-right{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:none;}}
+@keyframes slide-in-left{from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:none;}}
+.view.slide-right{animation:slide-in-right var(--dur-fast) var(--ease);}
+.view.slide-left{animation:slide-in-left var(--dur-fast) var(--ease);}
 /* Countdown Face + Rail (Fase 12 · Stage 7): número de días en serif y el
    destino en tategaki (japonés vertical, nombra un lugar real). */
 #cd-d{font-family:var(--serif);}
@@ -2864,8 +2870,17 @@ function updateCommandDot(){
   dot.style.display = action ? 'flex' : 'none';
 }
 function showTab(id){
+  const prevAi = axisIndexOf(curTab);
   curTab = id;
-  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
+  const newAi = axisIndexOf(id);
+  // Dirección en el eje de certeza: entrar desde el lado hacia el que te mueves
+  const dir = (prevAi >= 0 && newAi >= 0 && newAi !== prevAi) ? (newAi > prevAi ? 'right' : 'left') : '';
+  $$('.view').forEach(v => {
+    const on = v.id === 'view-' + id;
+    v.classList.toggle('active', on);
+    v.classList.remove('slide-left', 'slide-right');
+    if(on && dir) v.classList.add('slide-' + dir);
+  });
   $$('#topnav button, #tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   const ai = axisIndexOf(id);
   const dots = $('#axisDots');
