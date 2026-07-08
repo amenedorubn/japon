@@ -2036,6 +2036,7 @@ ensureSharedShape(state);
 // La consolidación 10b del modelo original corre en INIT (final del script).
 if(applyCatalogUpdate()) persistLocal();
 if(ensureProvenance(state.places)) persistLocal(); // Fase 12: fija procedencia (una vez) y persiste
+if(ensureHotelFixes()) persistLocal(); // Fase 12 §9.4: fusión APA + alta Louis House (idempotente)
 
 function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 let pushTimer = null;
@@ -2139,6 +2140,8 @@ function adoptRemote(payload){
     // incorporarlo al plan v2 (una sola vez; el archivo remoto no se toca).
     if(maybeMigrateOriginal(rs.transfers)) res.changed = true;
   }
+  // Higiene de hoteles sobre los datos adoptados (repunta paradas + propaga)
+  if(ensureHotelFixes()){ res.changed = true; pushPlaces(); }
   persistLocal();
   return res;
 }
@@ -2331,6 +2334,46 @@ function unsealPlace(pid){
   const p = state.places.find(x => x && x.id === pid);
   if(!p || p.confirmed !== true) return false; // los confirmados por naturaleza no se des-sellan
   p.confirmed = false; commit(); pushPlaces(); return true;
+}
+/* ================================================================
+   HIGIENE DE HOTELES (Fase 12 · §9.4) · idempotente y SIN pérdida:
+   1) fusiona el gemelo id_* del APA Asakusabashi en el id canónico
+      apa_asakusabashi (pliega los campos de reserva sin pisar, re-apunta
+      las paradas del itinerario, elimina el gemelo);
+   2) da de alta Louis House Otsuka Nishi (9–12 abr, 267,52 €) como
+      reserva confirmada (provenance ours). Determinista: converge en los
+      tres móviles. Devuelve true si cambió algo (para persistir/propagar). */
+function ensureHotelFixes(){
+  if(!state || !Array.isArray(state.places)) return false;
+  let changed = false;
+  const apa = state.places.find(p => p && p.id === 'apa_asakusabashi');
+  if(apa){
+    const twin = state.places.find(p => p && p.id !== 'apa_asakusabashi' && /^id_/.test(String(p.id || '')) &&
+      p.category === 'alojamiento' && /apa/i.test(p.name || '') &&
+      /asakusabashi/i.test((p.name || '') + ' ' + (p.address || '') + ' ' + (p.hotelArea || '')));
+    if(twin){
+      ['checkIn', 'checkOut', 'address', 'hotelPhone', 'hotelWebsite', 'bookingRef', 'hotelArea'].forEach(f => {
+        if((apa[f] == null || apa[f] === '') && twin[f]) apa[f] = twin[f];
+      });
+      if(apa.lat == null && twin.lat != null){ apa.lat = twin.lat; apa.lng = twin.lng; }
+      (state.days || []).forEach(d => (d.stops || []).forEach(s => { if(s && s.pid === twin.id) s.pid = 'apa_asakusabashi'; }));
+      state.places = state.places.filter(p => p !== twin);
+      changed = true;
+    }
+  }
+  const hasLouis = state.places.some(p => p && /louis house/i.test(p.name || '') &&
+    /otsuka|ōtsuka|ohtsuka/i.test((p.name || '') + ' ' + (p.hotelArea || '') + ' ' + (p.address || '')));
+  if(!hasLouis){
+    state.places.push({
+      id: 'id_louis_otsuka_nishi', name: 'Louis House Otsuka Nishi', category: 'alojamiento',
+      source: 'user', region: 'Tokio', hotelArea: 'Ōtsuka-Nishi (Toshima-ku)',
+      lat: 35.7318, lng: 139.7270, dur: 45,
+      checkIn: '2027-04-09', checkOut: '2027-04-12', price: '267,52 € · 3 noches',
+      notes: 'Primeras noches en Tokio (9–12 abr).', provenance: 'ours', confirmed: true, dayId: null, time: ''
+    });
+    changed = true;
+  }
+  return changed;
 }
 /* Resolución del catálogo ÚNICO (Fase 10): todo lugar vive en state.places. */
 function placeById(pid){
@@ -4343,6 +4386,7 @@ $('#importFile').addEventListener('change', async e => {
     // Copias antiguas o de la app original: re-siembra y fusión del catálogo
     if(applyCatalogUpdate()) placesChanged = true;
     if(ensureProvenance(state.places)) placesChanged = true; // Fase 12: procedencia a copias sin ella
+    if(ensureHotelFixes()) placesChanged = true; // Fase 12 §9.4: fusión APA + alta Louis House
     // Consolidación 10b: si la copia trae el modelo original sin migrar,
     // sus transfers y días asignados se incorporan al plan v2 (una vez).
     maybeMigrateOriginal(s.transfers);

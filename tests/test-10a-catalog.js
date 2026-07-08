@@ -55,7 +55,7 @@ const byId = id => api.state.places.find(p => p && p.id === id);
 // ---- 1) merged seed: single catalog, no dups, no alias ids ----
 const ids = api.state.places.map(p => p.id);
 const dupIds = ids.filter((x, i) => ids.indexOf(x) !== i);
-check('seed: 282 merged places (190 shared + 92 curated)', ids.length === 282);
+check('seed: 283 merged places (190 shared + 92 curated + Louis House booking)', ids.length === 283);
 check('seed: no duplicate ids', dupIds.length === 0);
 const aliasKeys = Object.keys(api.LEGACY_PID_MAP);
 check('seed: no curated alias key survives as id (24 folded)',
