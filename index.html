@@ -403,6 +403,12 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 /* ---------- Sitios ---------- */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .filter-bar input[type=search]{flex:1;min-width:180px;}
+/* Filas de filtros (curador/región/categoría): una sola fila con scroll
+   horizontal en vez de envolver a 4 líneas — menos ruido, más calma. */
+#srcChips, #regionChips, #catChips{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+#srcChips::-webkit-scrollbar, #regionChips::-webkit-scrollbar, #catChips::-webkit-scrollbar{display:none;}
+#srcChips .fchip, #regionChips .fchip, #catChips .fchip{flex:0 0 auto;}
 .fchip{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--card);
   border:1px solid var(--line);color:var(--muted);}
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
