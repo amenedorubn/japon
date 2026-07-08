@@ -965,7 +965,7 @@ function P(name, cat, region, lat, lng, dur, yen, price, hours, web, desc, tip, 
 const PLACES = {
 /* ---- Transporte / alojamiento ---- */
 nrt:            P('Aeropuerto de Narita (NRT)','transporte','Tokio',35.7720,140.3929,90,null,'','','https://www.narita-airport.jp/es/','Aeropuerto de llegada y salida. Terminal 2 para Finnair.','Al llegar: sacar Welcome Suica (o Suica en el móvil), efectivo del 7-Eleven ATM y activar la eSIM.'),
-hotel_tokyo:    P('Alojamiento en Tokio (zona Asakusa)','alojamiento','Tokio',35.7106,139.7930,45,null,'por reservar','','','Base en Tokio del 9 al 16 y del 22 al 25 de abril. Zona recomendada: Asakusa / Ueno / Asakusabashi, bien conectada con Narita y con la línea Ginza.','Reservar con cancelación gratuita cuanto antes: abril es temporada altísima.'),
+hotel_tokyo:    P('Alojamiento en Tokio (zona Asakusa)','alojamiento','Tokio',35.7106,139.7930,45,null,'por reservar','','','Base en Tokio del 12 al 16 y del 22 al 25 de abril (las noches 9–12 las cubre Louis House Otsuka Nishi). Zona recomendada: Asakusa / Ueno / Asakusabashi, bien conectada con Narita y con la línea Ginza.','Reservar con cancelación gratuita cuanto antes: abril es temporada altísima.'),
 apa_asakusabashi:P('APA Hotel Asakusabashi Ekimae','alojamiento','Tokio',35.69802,139.78507,45,null,'reservado · 25→27 abr','','https://www.apahotel.com/en-us/hotel/shutoken/asakusabashi-ekimae/','Hotel reservado para las 2 últimas noches (25 al 27 de abril). Junto a la estación JR Asakusabashi (línea Sobu), a 1 parada de Akihabara.','Guarda la confirmación de la reserva en el móvil.'),
 hotel_kyoto:    P('Alojamiento en Kioto (zona Shijō)','alojamiento','Kioto',35.0031,135.7602,45,null,'por reservar','','','Base en Kioto del 16 al 19 de abril. Zona recomendada: Shijō–Kawaramachi o cerca de la estación de Kioto.','En Kioto los buses se llenan: alojarse cerca de metro/Keihan ahorra tiempo.'),
 hotel_osaka:    P('Alojamiento en Osaka (zona Namba)','alojamiento','Osaka',34.6663,135.5004,45,null,'por reservar','','','Base en Osaka del 19 al 22 de abril. Namba/Shinsaibashi: todo a mano y Kintetsu/Midōsuji al lado.',''),
@@ -1392,7 +1392,7 @@ post:T(O('shinkansen','Shinkansen de vuelta',85,10620,'Hiroshima ~19:30 → Shin
 const CHECKLIST = [
   ['Pasaportes en regla','Caducidad posterior a octubre 2027. Los españoles no necesitan visado (90 días).'],
   ['Visit Japan Web','Rellenar inmigración y aduanas online 2 semanas antes: ahorra colas al aterrizar. services.digital.go.jp'],
-  ['Reservar alojamientos pendientes','Tokio (9–16 y 22–25 abr), Kioto (16–19) y Osaka (19–22). El APA del 25–27 ya está. Abril = temporada alta.'],
+  ['Reservar alojamientos pendientes','Tokio (12–16 y 22–25 abr), Kioto (16–19) y Osaka (19–22). Louis House (9–12) y APA (25–27) ya están. Abril = temporada alta.'],
   ['eSIM de datos','Ubigi, Airalo o Holafly. 10 GB ≈ 15 €. Instalarla antes de salir y activarla al aterrizar.'],
   ['Suica en el móvil','En iPhone/Android se crea en Wallet y se recarga con tarjeta. Si no, Welcome Suica física en Narita.'],
   ['Decidir JR Pass 7 días','~¥50.000. Del 16 al 22 (Kioto+Hiroshima+vuelta) gastaríais ~¥51.000 en JR: prácticamente empate. Solo compensa por flexibilidad.'],
@@ -3113,7 +3113,7 @@ function renderInicio(){
     </div>`).join('');
 
   // Reservas reales (state.places, sincronizadas) + bases sugeridas del catálogo.
-  const BASE_DATES = {hotel_tokyo: '9–16 y 22–25 abril (12 noches)', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
+  const BASE_DATES = {hotel_tokyo: '12–16 y 22–25 abril', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
   const bookedCards = bookedHotels().map(p => {
     const nights = daysBetween(p.checkIn, p.checkOut);
     return `<div class="m-foil" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${p.id}">
