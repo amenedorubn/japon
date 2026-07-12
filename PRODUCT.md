@@ -10,7 +10,7 @@ Tres amigos españoles planificando y viviendo juntos su viaje a Japón del 8 al
 
 ## Product Purpose
 
-Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Desde la Fase 10 es LA app del viaje: reemplazó a la "app original" de los viajeros sobre su misma base de datos, con su catálogo fusionado y su itinerario consolidado (los nodos antiguos quedan como archivo de solo lectura, cero riesgo para sus datos). Éxito = los tres la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados con ficha rica, presupuesto automático por persona, sincronización silenciosa entre los tres móviles y funcionamiento completo sin conexión.
+Planificador de viaje todo-en-uno de un solo archivo (GitHub Pages + Firebase RTDB compartido). Desde la Fase 10 es LA app del viaje: reemplazó a la "app original" de los viajeros sobre su misma base de datos, con su catálogo fusionado y su itinerario consolidado (los nodos antiguos quedan como archivo de solo lectura, cero riesgo para sus datos). Éxito = los tres la usan de verdad durante el viaje: itinerario editable con horas coherentes, mapa con rutas reales, catálogo de +100 sitios curados con ficha rica, sincronización silenciosa entre los tres móviles y funcionamiento completo sin conexión. (El presupuesto se ELIMINÓ del producto en 12.47; los precios de la ficha de un sitio son datos informativos del catálogo.)
 
 La **fuente de verdad de la planificación** son los documentos compartidos de Google Drive de los tres viajeros. La app va por detrás y se pone al día a mano, sin importador: su trabajo es hacer esa entrada agradable. El itinerario que vino sembrado durante el desarrollo NO es el viaje real: es una propuesta de exploración que se muestra hasta que el plan real la reemplaza día a día, y nunca se presenta como definitiva.
 
@@ -32,11 +32,12 @@ El rediseño visual de la Fase 9 se considera **demasiado conservador**: la app 
 
 Dos ejes independientes gobiernan cada lugar del viaje.
 
-**Procedencia (estable, histórica).** De dónde salió un lugar. Cuatro valores fijos que NO cambian nunca:
-- **Nuestros** (`ours`): de nuestros documentos de planificación o añadidos por nosotros.
+**Procedencia (estable, histórica).** De dónde salió un lugar. Cinco valores fijos que NO cambian nunca:
+- **Nuestros** (`ours`): **los lugares de Itinerario.docx, nuestro documento curado** (corrección 12.48; NO se define por "añadido a mano"). Un hotel con reserva confirmada también es nuestro.
 - **Dani** (`dani`): recomendaciones de Dani.
+- **María** (`maria`): las listas de Google Maps que curó María.
 - **Instagram** (`instagram`): inspiración guardada.
-- **IA** (`ai`): ideas generadas durante el desarrollo de la app. No son recomendaciones ni forman parte del viaje real hasta que decidimos incluirlas. (Ojo: **Exploración** es el nombre de una CAPA, no la etiqueta de esta procedencia.)
+- **IA** (`ai`): todo lo demás — ideas generadas durante el desarrollo de la app y añadidos sin otra procedencia. No son recomendaciones ni forman parte del viaje real hasta que decidimos incluirlas. (Ojo: **Exploración** es el nombre de una CAPA, no la etiqueta de esta procedencia.)
 
 La procedencia es historia: adoptar o planificar un lugar no la cambia. Un lugar de Dani sigue siendo de Dani; uno de IA sigue siendo de IA. Lo que cambia es si decidimos incluirlo en el viaje, no de dónde vino.
 
@@ -47,7 +48,7 @@ La procedencia es historia: adoptar o planificar un lugar no la cambia. Un lugar
 - **Planificación**: el itinerario que decidimos los tres, procedente de nuestros documentos de Google Drive. La app se pone al día a mano. Nada aquí está necesariamente confirmado.
 - **Exploración**: lo de IA (`ai`), Dani e Instagram, mientras no lo programemos a propósito.
 
-El itinerario sembrado en desarrollo pertenece a Exploración: se mantiene visible (la app nunca queda vacía) y desaparece día a día según entra nuestro plan real. Nunca es una capa permanente ni se presenta como el viaje.
+El itinerario sembrado en desarrollo YA NO vive dentro del plan (corrección 12.49): se retiró de una vez y existe solo como la referencia **"Propuesta"** (solo lectura), desde la que cada parada se puede plantar a propósito en nuestro viaje con ＋. Toda parada del plan es una decisión; los días sin decidir son invitaciones (Washi), nunca propuesta disfrazada de plan.
 
 ## Brand Personality
 
@@ -68,7 +69,7 @@ Sereno, artesanal, fiable. Sensación de app de pago premium: Apple HIG encontr�
 4. **Un acento, con intención.** El rojo torii marca acción primaria, selección y "hoy"; todo lo demás es papel y tinta.
 5. **Los datos de los viajeros son sagrados.** Nada visual puede costar funcionalidad verificada: paridad (PARITY.md) y política de escritura v2 son invariantes.
 6. **Confirmado, planificación y exploración no se mezclan.** Cada cosa se muestra en su registro: lo confirmado (vuelos, hoteles reservados) transmite certeza; la planificación es editable y nuestra; la exploración recede (sin acento, claramente "todavía no es el viaje"). La procedencia de un lugar es historia estable y se distingue de si lo hemos incluido en el plan.
-7. **Los precios no dominan.** Costes de transporte y entradas no se muestran de forma constante; el presupuesto vive bajo demanda (divulgación progresiva), no en cada pantalla.
+7. **Los precios no dominan.** El presupuesto salió del producto (12.47). Los únicos precios visibles son datos informativos de la ficha de un sitio o de una opción de transporte, nunca sumatorios ni costes ambientales.
 
 ## Accessibility & Inclusion
 

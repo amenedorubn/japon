@@ -96,9 +96,12 @@ state = {
   campo ADITIVO: la app original lo ignora; el `source` heredado (`user`/`dani`/`insta`) se
   mantiene tal cual para el esquema compartido. `foldCurated` preserva `provenance` al re-sembrar,
   y viaja en export/import.
-  - Backfill único desde flags estables: `source:'dani'`→`dani`; `source:'insta'`→`instagram`;
-    reservas confirmadas y lugares creados por un viajero (`id_*`)→`ours`; el resto de la semilla
-    (curado + catálogo, placeholders "por reservar")→`ai`.
+  - **Fuente de verdad de `ours` (corrección 12.48): Itinerario.docx.** `DOCX_OURS` (35 ids
+    canónicos derivados 1:1 del documento) → `ours`; un hotel con reserva confirmada → `ours`
+    (regla §9.4); `source:'dani'`/`dani_*`→`dani`; `source:'insta'`→`instagram`; `maria_*`→`maria`;
+    TODO lo demás (semilla, curado no-docx, añadidos a mano sin otra procedencia) → `ai`.
+    `ensureProvenance` además REPARA datos persistidos con la definición antigua (docx `ai`→`ours`,
+    manual `ours`→recalculado, maria `ai`→`maria`): reparar restaura la historia, no la reescribe.
 - **Estado / capa** (eje distinto de la procedencia): PLANIFICADO se deriva de si el lugar está en
   el itinerario; CONFIRMADO es un flag EXPLÍCITO que se pone con una acción deliberada (marcar como
   confirmado al editar). Vuelos y los DOS hoteles reservados son Confirmado por naturaleza; hoy nada
@@ -124,7 +127,8 @@ proyectos/viaje-japon = {
 
 **Política v2-only (no negociable, intacta tras la Fase 10): exactamente 3 call-sites de
 `fb.set` y ningún otro.** `pushRemote → state/v2` (payload exacto
-`{v,days,rate,check,migratedOrig,updatedAt}`, debounce 1.2 s) · `pushPlaces → state/places`
+`{v,days,rate,check,migratedOrig,seedRetired,updatedAt}` — `seedRetired` es la marca de
+retirada de la propuesta, 12.49, aditiva y ligada al LINAJE de los días —, debounce 1.2 s) · `pushPlaces → state/places`
 (array completo, debounce 800 ms) · `pushTitle → tripTitle` (debounce 600 ms). **Nada escribe
 jamás `state/days` ni `state/transfers`**: aunque la app original está retirada, sus nodos
 quedan como archivo (alimentan la vista "App original" vía `origDays` y fueron la fuente de la
@@ -187,6 +191,12 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.36 | `ea5f670` | **Hero = Countdown Face (Foil)** | Retirado el cartel de gradiente rojo; hero como material Foil (papel + borde de lámina + destello), días en serif como único acento rojo; en Home sólo reservas confirmadas (Foil), bases "por reservar" demotadas a Washi |
 | 12.37 | `a240574` | **Ideas editorial, sin muro** | Vista general agrupada por región (cabeceras + contador), avance de 6 por grupo con "ver todos" (divulgación progresiva); región elegida o búsqueda → lista plana. 41.544px → ~9.900px |
 | 12.38 | `fac61c9` | **Plan lidera con nuestro viaje** | Switcher: "Nuestro plan" primario; "Dani" y "Original" demotados como referencias tras un rótulo (no itinerarios peer) |
+| 12.40 | `51cce42` | **Reparación de procedencia María en producción** | La nube guardaba los 139 maria_* como `ai` (invisibles); `ensureProvenance` repara maria_*→maria y re-sube. Verificado sanado en producción |
+| 12.41–12.46 | varios | **Pulido de producto** | Filtros de Ideas en filas de scroll; elegido-vs-propuesta por material (luego obsoleto en 12.49); filtros por procedencia; nav de escritorio = eje de certeza; tira de ruta calmada |
+| 12.47 | `5985069` | **PRESUPUESTO ELIMINADO (corrección de producto)** | Fuera BudgetPeek, dayCosts, botones/chips/franja de presupuesto y el input de cambio. `state.rate` PERMANECE en el payload v2 (esquema, §5); los precios informativos de sitios/transportes permanecen (datos, no presupuesto) |
+| 12.48 | `95fb36a` | **NUESTROS = Itinerario.docx (corrección)** | `DOCX_OURS` (35 ids canónicos 1:1 del documento) define `ours`; hotel con reserva sigue `ours` (§9.4); TODO lo demás no-Dani/María/Instagram → `ai` (incluidos añadidos a mano). Reparación bidireccional en `ensureProvenance`; producción sanada (ours 3→37). Capas del mapa por procedencia (N=docx, +capa IA) |
+| 12.49 | `44b5e9d` | **El viaje canónico es lo DECIDIDO (corrección)** | La propuesta sembrada se RETIRA del plan editable (marca monótona `seedRetired` en el payload v2, ligada al linaje de días); queda como referencia "Propuesta" (solo lectura, plantable con ＋). El plan real: vuelos + hoteles + lo plantado (verificado en producción: 1 parada real, APA 25-abr). "Vaciar el plan" sustituye a "Restablecer plan sugerido". SUPERSEDE el mecanismo §12.14 de "retirada día a día" |
+| 12.50 | `4279edf` | **Prioridad de clic del mapa (corrección UX)** | Pane propio 'zones' (z 350) bajo el overlayPane: un sitio siempre gana el clic al polígono de zona; el área se inspecciona tocando mapa vacío. Verificado en navegador real |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -209,6 +219,13 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
   (derivado del itinerario). Ampliable más adelante sin rehacer el modelo.
 - **Importador de Google Drive**: descartado a propósito (Fase 12). Drive es la fuente de verdad,
   pero el plan real se entra a mano dentro de la app; el producto solo hace esa entrada agradable.
+- **Presupuesto**: ELIMINADO del producto (corrección 12.47, decisión del usuario). No
+  re-implementar BudgetPeek ni costes ambientales. `state.rate` permanece en el modelo/payload
+  (esquema compartido); los precios informativos de la ficha de un sitio y de las opciones de
+  transporte son DATOS del catálogo y sí permanecen.
+- **"Restablecer plan sugerido"**: retirado en 12.49. La propuesta ya no entra en el plan; el
+  botón es ahora "Vaciar el plan" (deja los 21 días sin paradas, conservando vuelos/hoteles/
+  catálogo y la referencia Propuesta).
 
 ## 9. Deuda técnica restante y fases futuras
 
@@ -376,10 +393,11 @@ pequeño en oscuro).
     cambia es si se incluye en el viaje (estado), no de dónde vino. Es un eje distinto del estado.
 14. **Separación confirmado / planificación / exploración**: mantener los tres modelos mentales
     visualmente distintos en todo el producto. Confirmado = vuelos + hoteles reservados;
-    planificación = itinerario decidido (desde Drive); exploración = `ai`/Dani/Instagram sin
-    programar. El itinerario semilla (`ai`) nunca se presenta como plan real ni se convierte en
-    capa permanente: se retira día a día según entra el plan real, nunca de golpe y nunca dejando
-    la app vacía.
+    planificación = itinerario decidido; exploración = `ai`/Dani/María/Instagram sin
+    programar. **Actualizado en 12.49:** la propuesta sembrada YA NO vive dentro del plan:
+    se retiró de una vez (marca `seedRetired`, ligada al linaje de días) y existe solo como
+    la referencia "Propuesta" (solo lectura, cada parada plantable a propósito con ＋). Toda
+    parada del plan es una decisión. La propuesta nunca vuelve a entrar en el plan por sí sola.
 
 ## 13. Supuestos que el trabajo futuro no debe romper por accidente
 
