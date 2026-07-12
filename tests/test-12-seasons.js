@@ -62,7 +62,7 @@ check('phase: after TRIP_END is after (memory)', api.tripPhase(at('2027-05-01T00
 const d = api.state.days.find(x => x.stops && x.stops.length) || api.state.days[2];
 const r = api.dayRecap(d);
 check('dayRecap: stops matches the day', r.stops === (d.stops ? d.stops.length : 0));
-check('dayRecap: done <= stops, numeric costs', r.done <= r.stops && typeof r.entr === 'number' && typeof r.trans === 'number');
+check('dayRecap: done <= stops (no cost fields: budget removed)', r.done <= r.stops && r.entr === undefined && r.trans === undefined);
 check('dayRecap: null-safe', (() => { const z = api.dayRecap(null); return z.stops === 0 && z.done === 0; })());
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');

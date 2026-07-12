@@ -276,8 +276,6 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .flight .times small{display:block;color:var(--muted);font-size:11.5px;font-weight:600;}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;
   border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
-.pill-btn{cursor:pointer;}
-@media(hover:hover){.pill-btn:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
 .pill.red{background:var(--accent-soft);color:var(--accent);border-color:transparent;}
 .pill.blue{background:var(--indigo-soft);color:var(--indigo);border-color:transparent;}
 .pill.green{background:var(--green-soft);color:var(--green);border-color:transparent;}
@@ -293,10 +291,6 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .city-block .nts{position:absolute;top:8px;right:10px;font-size:10px;color:var(--muted);font-weight:700;
   background:var(--card2);border:1px solid var(--line);padding:2px 7px;border-radius:99px;}
 
-.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;}
-.stat{padding:14px 16px;}
-.stat .v{font-size:20px;font-weight:800;letter-spacing:-.3px;}
-.stat .k{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
 
 /* ---------- Day chips ----------
    Riel horizontal con scroll-snap: cada chip encaja al deslizar con el pulgar. */
@@ -661,12 +655,6 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Procedencia = metadato histórico secundario: un susurro que NUNCA compite con
    la certeza. Tan sutil que quitarlo apenas cambia el layout (sin pastilla). */
 .prov-tag{font-size:10.5px;font-weight:500;color:var(--muted);opacity:.7;white-space:nowrap;letter-spacing:.02em;}
-/* Home como Confirmado (Fase 12): franja calmada en vez de fila de KPIs/precios */
-#statRow{display:block;}
-.conf-strip{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:14px 16px;
-  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);}
-.conf-strip .cs-title{font-weight:600;font-size:15px;color:var(--ink);}
-.conf-strip .cs-sub{font-size:12.5px;color:var(--muted);}
 /* Command Dot (Fase 12): única acción persistente, contextual, en la zona del pulgar */
 .command-dot{position:fixed;right:16px;bottom:calc(64px + env(safe-area-inset-bottom));
   width:52px;height:52px;border-radius:999px;background:var(--accent);color:#fff;
@@ -754,8 +742,6 @@ table.phr tr:last-child td{border-bottom:none;}
       <div class="status" id="heroStatus">…</div>
     </div>
 
-    <div class="stat-row" id="statRow"></div>
-
     <h2 class="section">✈️ Vuelos <small>Finnair · reservados</small></h2>
     <div class="grid2" id="flightCards"></div>
 
@@ -777,7 +763,6 @@ table.phr tr:last-child td{border-bottom:none;}
         <button class="fchip ref" id="itinModeOrig" title="Itinerario de la app original · archivo de solo lectura">📄 Original</button>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn small ghost" id="btnBudget">💴 Presupuesto</button>
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
       </div>
     </div>
@@ -841,9 +826,6 @@ table.phr tr:last-child td{border-bottom:none;}
 
     <h2 class="section">⚙️ Datos y ajustes</h2>
     <div class="card" style="padding:16px">
-      <div class="form-row"><label>Cambio aproximado (¥ por 1 €)</label>
-        <input type="number" id="rateInput" min="100" max="250" step="1" style="max-width:140px">
-      </div>
       <div class="btn-row">
         <button class="btn ghost" id="btnExport2">⬇️ Exportar plan (JSON)</button>
         <button class="btn ghost" id="btnImport2">⬆️ Importar plan</button>
@@ -3246,40 +3228,6 @@ function tickCountdown(){
 const fmtDateLong = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
 const fmtDateShort = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric'});
 
-function dayCosts(day){
-  let entr = 0, trans = 0;
-  day.stops.forEach(s => { const p = placeById(s.pid); if(p && p.yen) entr += p.yen; });
-  const addT = t => { if(t && t.opts[t.sel] && t.opts[t.sel].y) trans += t.opts[t.sel].y; };
-  day.trans.forEach(addT); addT(day.pre); addT(day.post);
-  return {entr, trans};
-}
-/* ================================================================
-   BUDGET PEEK (Fase 12 · Stage 4) · el presupuesto vive BAJO DEMANDA
-   (DIRECTION §6.12: los precios no se muestran de forma constante).
-   Suma entradas + transporte por persona (lo que dayCosts conoce en ¥);
-   alojamiento y vuelos van aparte. scope: 'trip' | índice de día.
-================================================================ */
-function budgetSummary(scope){
-  const rate = state.rate || 170;
-  const days = scope === 'trip' ? state.days : [state.days[scope]].filter(Boolean);
-  let entr = 0, trans = 0;
-  days.forEach(d => { if(d){ const c = dayCosts(d); entr += c.entr; trans += c.trans; } });
-  const total = entr + trans;
-  return {entr, trans, total, rate, eur: Math.round(total / rate)};
-}
-function budgetPeekHTML(scope){
-  const b = budgetSummary(scope);
-  const eur = n => Math.round(n / b.rate);
-  const row = (k, v) => `<div class="info-row"><span class="k">${k}</span><span class="v u-tabular">${fmtYen(v)} · ${eur(v)} €</span></div>`;
-  return `<h3 style="margin:0 0 4px">💴 Presupuesto por persona</h3>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${scope === 'trip' ? 'Todo el viaje' : 'Este día'} · estimación en Japón (entradas y transporte). Alojamiento y vuelos aparte.</div>
-    <div class="info-rows">
-      ${row('🎫 Entradas', b.entr)}
-      ${row('🚇 Transporte', b.trans)}
-      <div class="info-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span class="k"><b>Total</b></span><span class="v u-tabular"><b>${fmtYen(b.total)} · ${b.eur} €</b></span></div>
-    </div>`;
-}
-function openBudget(scope){ openModal(budgetPeekHTML(scope || 'trip')); }
 /* ================================================================
    SEASONS (Fase 12 · Stage 7) · el producto evoluciona con el viaje:
    planning → countdown → threshold → during → after. Umbrales objetivos.
@@ -3313,8 +3261,7 @@ function tripPhase(now){
 function dayRecap(d){
   const stops = d && d.stops ? d.stops.length : 0;
   const done = d && d.stops ? d.stops.filter(s => s.done).length : 0;
-  const c = d ? dayCosts(d) : {entr: 0, trans: 0};
-  return {stops, done, entr: c.entr, trans: c.trans};
+  return {stops, done};
 }
 function seasonDayExtras(d){
   const phase = tripPhase();
@@ -3329,7 +3276,7 @@ function seasonDayExtras(d){
     const now = new Date();
     html += `<div class="now-line"><span class="now-dot"></span>Ahora · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}</div>`;
   }
-  if(r.stops) html += `<div class="day-recap u-tabular">${today ? 'Hoy' : 'Ese día'}: ${r.done}/${r.stops} lugares${r.entr ? ' · 🎫 ' + fmtYen(r.entr) : ''}${r.trans ? ' · 🚇 ' + fmtYen(r.trans) : ''}</div>`;
+  if(r.stops) html += `<div class="day-recap u-tabular">${today ? 'Hoy' : 'Ese día'}: ${r.done}/${r.stops} lugares</div>`;
   return html;
 }
 function renderInicio(){
@@ -3344,15 +3291,8 @@ function renderInicio(){
   ).join('<div style="align-self:center;color:var(--muted);font-weight:800">→</div>');
   $('#routeSummary').textContent = '+ excursiones a Nikkō, Kamakura, Fuji, Nara, Hiroshima y Miyajima';
 
-  // Home = Confirmado (Wallet): sin fila de KPIs ni precios ambientales
-  // (DIRECTION §7 / §6.12). Lo confirmado son los vuelos y hoteles; el
-  // presupuesto por persona vive BAJO DEMANDA (BudgetPeek).
-  $('#statRow').innerHTML = `<button class="conf-strip" id="statBudget" aria-label="Ver presupuesto por persona">
-    <span class="cs-title">✈️ Vuelos y 🏨 hoteles reservados</span>
-    <span class="cs-sub">Lo confirmado del viaje · toca para ver el presupuesto</span>
-  </button>`;
-  onClick('#statBudget', () => openBudget('trip'));
-
+  // Home = Confirmado (Wallet): sin fila de KPIs ni precios (DIRECTION §7).
+  // Lo confirmado son los vuelos y los hoteles reservados, directamente.
   $('#flightCards').innerHTML = FLIGHTS.map(f => `
     <div class="m-foil is-flight flight">
       <div class="route"><span>${esc(f.from.split(' (')[1].replace(')',''))}</span><div class="arrow"><span>✈️</span></div><span>${esc(f.to.split(' (')[1].replace(')',''))}</span></div>
@@ -3687,7 +3627,6 @@ function renderItinerary(){
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
   fixTransfers(d);
-  const c = dayCosts(d);
   const doneN = d.stops.filter(s => s.done).length;
   let html = `<div class="card day-head">
     <div class="dh-main">
@@ -3697,7 +3636,6 @@ function renderItinerary(){
     <div class="tots">
       <span class="pill" style="color:${CITY_COLORS[d.city]}">📍 ${esc(d.city)}</span>
       ${d.stops.length ? `<span class="pill green">✓ ${doneN}/${d.stops.length}</span>` : ''}
-      ${(c.entr || c.trans) ? `<button class="pill pill-btn" id="dayBudgetBtn" title="Ver el gasto estimado de este día">💴 gasto del día</button>` : ''}
     </div>
     ${d.stops.length ? `<div class="progress"><i style="width:${d.stops.length ? Math.round(doneN / d.stops.length * 100) : 0}%"></i></div>` : ''}
   </div>`;
@@ -3743,8 +3681,6 @@ function renderItinerary(){
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
   onClick('#dayPanel .add-stop', () => openAddStop(curDay));
-  onClick('#dayBudgetBtn', () => openBudget(curDay)); // presupuesto del día, bajo demanda
-
   $$('#dayPanel .e-plant').forEach(b => b.addEventListener('click', () => {
     const di = +b.dataset.day, day = state.days[di], p = placeById(b.dataset.pid);
     day.stops.push({id: uid(), pid: b.dataset.pid, time: inferTimeForInsert(day.stops, day.stops.length, null), dur: (p && p.dur) || 60, note: '', done: false});
@@ -4736,12 +4672,9 @@ function renderGuia(){
   $('#checkProgress').textContent = `${done}/${CHECKLIST.length} listos`;
   $('#tipsList').innerHTML = TIPS.map(t => `<div class="card tip-card"><b>${t[0]} ${esc(t[1])}</b><p>${esc(t[2])}</p></div>`).join('');
   $('#phrases').innerHTML = PHRASES.map(p => `<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td style="color:var(--muted)">${esc(p[2])}</td></tr>`).join('');
-  $('#rateInput').value = state.rate || 170;
 }
-$('#rateInput').addEventListener('change', e => {
-  state.rate = Math.max(100, +e.target.value || 170);
-  commit(); renderInicio();
-});
+// Nota: state.rate se conserva en el modelo/payload v2 (esquema compartido,
+// invariante §5) aunque el presupuesto haya salido del producto.
 
 /* ================================================================
    EXPORT / IMPORT / RESET
@@ -4862,7 +4795,6 @@ $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 $('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
 onClick('#cordBack', () => zoomOut());
-onClick('#btnBudget', () => openBudget('trip'));
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
 applyTripTitle();

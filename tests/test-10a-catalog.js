@@ -44,7 +44,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   '"use strict";' + appJs + `
   ;return { state, PLACES, LEGACY_PID_MAP, CATALOG_VERSION,
     placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
-    renderSitios, renderHoteles, dayCosts, openAddStop, hotelBasePlaceholders,
+    renderSitios, renderHoteles, openAddStop, hotelBasePlaceholders,
     setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; },
     setRegion: v => { placeRegion = v; } };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
@@ -117,9 +117,9 @@ check('pids: curated-only pids kept as-is (nrt, hotel_tokyo on day 1)',
 check('pids: placeById resolves canonical id with rich view', api.placeById('catalog_kinkakuji').price === '¥500');
 check('pids: placeById does NOT resolve legacy slugs (single store, no dual layer)', api.placeById('sensoji') === null);
 
-// ---- 6) budget still counts entradas through the merged catalog ----
-const c = api.dayCosts(api.state.days[2]);
-check('budget: day-2 entradas > 0 via merged yen fields', c.entr > 0);
+// ---- 6) merged yen fields survive the fold (informational price on the place) ----
+const sensojiYen = api.state.places.filter(p => api.state.days[2].stops.some(s => s.pid === p.id) && p.yen > 0);
+check('fold: day-2 references places with merged yen fields', sensojiYen.length > 0);
 
 // ---- 7) Sitios list: one source, no dups, right exclusions ----
 const gridIds = () => {
