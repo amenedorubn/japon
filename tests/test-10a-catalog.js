@@ -132,32 +132,40 @@ const gridIds = () => {
 // para comprobar la presencia de un lugar concreto se fuerza el modo plano
 // fijando su región (con región elegida se listan todos los de esa región).
 const idsFor = (src, region) => { api.setSrc(src); api.setRegion(region || ''); api.renderSitios(); return gridIds(); };
-for (const f of ['ours', 'dani', 'insta', 'all']) {
-  api.setSrc(f); api.renderSitios();
+// Los filtros de Ideas son por PROCEDENCIA (curador), cubos exclusivos.
+for (const f of ['all', 'ours', 'dani', 'maria', 'instagram', 'ai']) {
+  api.setSrc(f); api.setRegion(''); api.renderSitios();
   const g = gridIds();
   const dups = g.filter((x, i) => g.indexOf(x) !== i);
-  check(`sitios[${f}]: ${g.length} items, no dup ids`, (g.length > 0) === (f !== 'insta') && dups.length === 0);
+  check(`sitios[${f}]: no dup ids`, dups.length === 0);
 }
-let g = idsFor('ours', byId('catalog_sensoji').region);
-check('sitios[ours]: merged twin listed once (catalog_sensoji), legacy slug gone',
+// El catálogo semilla es procedencia 'ai' (andamiaje de exploración), NO "Nuestros".
+let g = idsFor('ai', byId('catalog_sensoji').region);
+check('sitios[ai]: merged twin listed once (catalog_sensoji), legacy slug gone',
   g.includes('catalog_sensoji') && !g.includes('sensoji'));
-check('sitios[ours]: unaliased catalog zone listed (catalog_harajuku)',
-  idsFor('ours', byId('catalog_harajuku').region).includes('catalog_harajuku'));
-check('sitios[ours]: curated-only entry listed (nakamise)',
-  idsFor('ours', byId('nakamise').region).includes('nakamise'));
-check('sitios[ours]: no dani, no city bases, no airports, no hotels, no transporte',
+check('sitios[ai]: unaliased catalog zone listed (catalog_harajuku)',
+  idsFor('ai', byId('catalog_harajuku').region).includes('catalog_harajuku'));
+check('sitios[ai]: curated-only entry listed (nakamise)',
+  idsFor('ai', byId('nakamise').region).includes('nakamise'));
+check('sitios[ai]: no city bases, airports, hotels, transporte',
   !g.some(i => i.startsWith('dani_')) && !g.includes('catalog_tokio') &&
   !g.includes('airport_narita_llegada') && !g.includes('nrt') && !g.includes('hotel_tokyo'));
+// "Nuestros" ya NO contiene el catálogo 'ai': AI y Ours quedan separados.
+check('sitios[ours]: seed catalog separated out (catalog_sensoji NOT here)',
+  !idsFor('ours', byId('catalog_sensoji').region).includes('catalog_sensoji'));
 g = idsFor('dani', byId('dani_fushimi_inari').region);
 check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_fushimi_inari') && !g.includes('dani_rise_osaka'));
+(function(){ const m = api.state.places.find(p => /^maria_/.test(p.id));
+  check('sitios[maria]: María curation listed under her bucket', !!(m && idsFor('maria', m.region).includes(m.id))); })();
 
-// ---- 8) adoption flow unchanged ----
+// ---- 8) adoption: provenance is immutable (§12.13) ----
 (function(){
   const dp = byId('dani_kagetsudo');
   const rgn = dp.region;
   dp.source = 'user'; dp.dani = false; dp.daniAdopted = true; dp.catalogItem = false;
-  check('adopt: gone from dani filter', !idsFor('dani', rgn).includes('dani_kagetsudo'));
-  check('adopt: appears under ours', idsFor('ours', rgn).includes('dani_kagetsudo'));
+  // Adoptar cambia el estado (pasa a plantable), NO la procedencia: sigue bajo "Dani".
+  check('adopt: stays under dani (provenance immutable)', idsFor('dani', rgn).includes('dani_kagetsudo'));
+  check('adopt: not relabeled into ours', !idsFor('ours', rgn).includes('dani_kagetsudo'));
 })();
 
 // ---- 9) Hoteles: APA now a real booked card; bases stay placeholders ----

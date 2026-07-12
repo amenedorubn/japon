@@ -2732,17 +2732,15 @@ function provTag(prov){
   return t ? `<span class="prov-tag prov-${prov}">${t}</span>` : '';
 }
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
+/* Filtro de Ideas por PROCEDENCIA (curador), no por source: cada cubo es
+   exclusivo y no se mezclan. Las claves del filtro SON valores de procedencia
+   (ours|dani|instagram|maria|ai). El catálogo semilla es 'ai' (andamiaje de
+   exploración), NO "Nuestros": así "Nuestros" son sólo lugares que añadimos
+   nosotros. Adoptar NO cambia la procedencia (§12.13): un lugar de Dani sigue
+   bajo "Dani" tras adoptarlo; lo que cambia es que pasa a ser plantable. */
 function sourceMatchesFilter(p, filter){
-  const source = sourceValueForPlace(p);
-  const prov = p.provenance || provenanceOf(p);
-  // María es una CURADORA de Exploración de primera clase (eje de procedencia,
-  // no de source): se filtra por provenance y se excluye del cubo "Nuestros"
-  // para no mezclarla con lo verdaderamente nuestro.
-  if(filter === 'maria') return prov === 'maria';
-  if(filter === 'ours') return source === 'user' && prov !== 'maria';
-  if(filter === 'dani') return source === 'dani';
-  if(filter === 'insta') return source === 'insta';
-  return true;
+  if(filter === 'all' || !filter) return true;
+  return (p.provenance || provenanceOf(p)) === filter;
 }
 /* Lugares del catálogo único que van a la lista de Sitios: fuera capas base
    de ciudad, aeropuertos, transporte y hoteles (tienen su propia pestaña). */
@@ -2751,7 +2749,7 @@ function listablePlaces(){
     !p.baseLayer && !p.cityBase && !p.airport &&
     p.category !== 'alojamiento' && p.category !== 'transporte');
 }
-const SRC_FILTER_OPTS = [['all','Todos'],['ours','Nuestros'],['dani','Dani'],['maria','María'],['insta','Insta']];
+const SRC_FILTER_OPTS = [['all','Todos'],['ours','Nuestros'],['dani','Dani'],['maria','María'],['instagram','Instagram'],['ai','IA']];
 function srcChipsHTML(active){
   return SRC_FILTER_OPTS.map(([v, l]) =>
     `<button class="fchip ${active === v ? 'active' : ''}" data-s="${v}">${l}</button>`).join('');
@@ -4620,7 +4618,7 @@ async function renderMapDay(){
 /* ================================================================
    SITIOS
 ================================================================ */
-let placeQ = '', placeRegion = '', placeCat = '', placeSrc = 'ours';
+let placeQ = '', placeRegion = '', placeCat = '', placeSrc = 'all';
 function renderSitios(){
   $('#srcChips').innerHTML = srcChipsHTML(placeSrc);
   $$('#srcChips .fchip').forEach(b => b.addEventListener('click', () => { placeSrc = b.dataset.s; renderSitios(); }));
@@ -4667,7 +4665,10 @@ function renderSitios(){
   const grid = $('#placesGrid');
   if(!items.length){
     grid.classList.remove('grouped');
-    grid.innerHTML = '<p style="color:var(--muted)">Sin resultados.</p>';
+    const msg = placeSrc === 'ours' && !placeQ && !placeRegion && !placeCat
+      ? 'Aún no habéis añadido sitios propios. Explorad las ideas de IA, Dani, María o Instagram — o añadid el vuestro con ＋.'
+      : 'Sin resultados.';
+    grid.innerHTML = `<p style="color:var(--muted);padding:8px 2px;line-height:1.5">${msg}</p>`;
     return;
   }
   // Exploración editorial, sin muro (DIRECTION §7): con búsqueda o región elegida,
