@@ -43,7 +43,10 @@ const fetchStub = url => { fetchedUrls.push(String(url)); return Promise.resolve
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
   ;return { setTheme, nominatimSearch, parseTimeToMinutes, formatMinutes, inferTimeForInsert,
-    reorderStop, moveStop, moveStopToDay, addPlaceToDay, setItinMode, renderItinerary, state };`);
+    reorderStop, moveStop, moveStopToDay, addPlaceToDay, setItinMode, renderItinerary, state,
+    _reseedDays: () => { // fixture: días con las paradas de la propuesta (el plan real nace vacío, 12.49)
+      const fresh = buildSeedState();
+      state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); } };`);
 const api = boot(documentStub, windowStub, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -74,7 +77,8 @@ const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); 
   check('M11: empty day, no time -> 10:00', T([], 0, null) === '10:00');
   check('M11: parse guards', api.parseTimeToMinutes('25:00') === null && api.parseTimeToMinutes('9:30') === 570);
 
-  // ---- M11: integration with real seed (day 1: 13:05, 16:15, 17:30, 19:30) ----
+  // ---- M11: integration with the seed-proposal fixture (day 1: 13:05, 16:15, 17:30, 19:30) ----
+  api._reseedDays();
   const d1 = api.state.days[1];
   const movedId = d1.stops[0].id;
   api.reorderStop(1, 0, 3); // insert first stop between 17:30 and 19:30

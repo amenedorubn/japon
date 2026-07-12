@@ -46,7 +46,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
     renderSitios, renderHoteles, openAddStop, hotelBasePlaceholders,
     setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; },
-    setRegion: v => { placeRegion = v; } };`);
+    setRegion: v => { placeRegion = v; },
+    _seedDays: () => buildSeedState().days };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -63,8 +64,8 @@ check('seed: 283 merged places excl. María (190 shared + 92 curated + Louis Hou
 check('seed: María curation seeded as Exploración (provenance maria)', api.state.places.some(p => p.provenance === 'maria'));
 check('seed: no duplicate ids', dupIds.length === 0);
 const aliasKeys = Object.keys(api.LEGACY_PID_MAP);
-check('seed: no curated alias key survives as id (24 folded)',
-  aliasKeys.length === 24 && aliasKeys.every(k => !ids.includes(k)));
+check('seed: no legacy alias key survives as id (24 curated + APA twin)',
+  aliasKeys.length === 25 && aliasKeys.every(k => !ids.includes(k)));
 check('seed: curated-only entries exist as ids (nakamise, kagetsudo, hotel_tokyo, nrt)',
   ['nakamise', 'kagetsudo', 'hotel_tokyo', 'nrt'].every(k => ids.includes(k)));
 
@@ -103,11 +104,16 @@ check('fold: yen 0 (gratis) survives the view', api.placeById('catalog_sensoji')
 })();
 
 // ---- 5) canonical pids ----
-check('pids: seed itinerary uses canonical ids (catalog_sensoji on day 2)',
-  api.state.days[2].stops.some(s => s.pid === 'catalog_sensoji') &&
-  !api.state.days.some(d => d.stops.some(s => s.pid === 'sensoji')));
+// La propuesta ya no vive en state.days (12.49): la canonicalización de la
+// SIEMBRA se comprueba sobre buildSeedState() directamente.
+const seedDays = api._seedDays();
+check('pids: seed proposal uses canonical ids (catalog_sensoji on day 2)',
+  seedDays[2].stops.some(s => s.pid === 'catalog_sensoji') &&
+  !seedDays.some(d => d.stops.some(s => s.pid === 'sensoji')));
 check('pids: curated-only pids kept as-is (nrt, hotel_tokyo on day 1)',
-  api.state.days[1].stops.some(s => s.pid === 'nrt') && api.state.days[1].stops.some(s => s.pid === 'hotel_tokyo'));
+  seedDays[1].stops.some(s => s.pid === 'nrt') && seedDays[1].stops.some(s => s.pid === 'hotel_tokyo'));
+check('pids: the retired plan holds no proposal stops (canonical trip only)',
+  api.state.days.every((d, i) => !d.stops.some(s => seedDays[i].stops.some(x => x.pid === s.pid))));
 (function(){
   const days = [{ stops: [{ pid: 'sensoji' }, { pid: 'nrt' }, { pid: 'dani_gion' }] }];
   const changed = api.canonicalizeDayPids(days);
@@ -118,8 +124,8 @@ check('pids: placeById resolves canonical id with rich view', api.placeById('cat
 check('pids: placeById does NOT resolve legacy slugs (single store, no dual layer)', api.placeById('sensoji') === null);
 
 // ---- 6) merged yen fields survive the fold (informational price on the place) ----
-const sensojiYen = api.state.places.filter(p => api.state.days[2].stops.some(s => s.pid === p.id) && p.yen > 0);
-check('fold: day-2 references places with merged yen fields', sensojiYen.length > 0);
+const seedYen = api.state.places.filter(p => seedDays[2].stops.some(s => s.pid === p.id) && p.yen > 0);
+check('fold: seed day-2 references places with merged yen fields', seedYen.length > 0);
 
 // ---- 7) Sitios list: one source, no dups, right exclusions ----
 const gridIds = () => {

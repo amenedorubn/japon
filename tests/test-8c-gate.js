@@ -75,7 +75,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   api.pushRemote();
   check('policy: pushRemote targets state/v2 only', writes.length === 1 && writes[0].node === 'NODE:state/v2');
   const v2keys = Object.keys(writes[0].payload).sort();
-  check('policy: v2 payload = {check,days,migratedOrig,rate,updatedAt,v} exactly', JSON.stringify(v2keys) === JSON.stringify(['check','days','migratedOrig','rate','updatedAt','v']));
+  check('policy: v2 payload = {check,days,migratedOrig,rate,seedRetired,updatedAt,v} exactly', JSON.stringify(v2keys) === JSON.stringify(['check','days','migratedOrig','rate','seedRetired','updatedAt','v']));
   check('policy: v2 payload has NO places/transfers/tripTitle/origDays',
     !('places' in writes[0].payload) && !('transfers' in writes[0].payload) &&
     !('tripTitle' in writes[0].payload) && !('origDays' in writes[0].payload));

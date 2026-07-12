@@ -45,7 +45,11 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   ;return { state, adoptRemote, pushRemote, maybeMigrateOriginal,
     parseLegacyMinutes, parseLegacyYen, legacyMode, legacyOptionToV2,
     _setFb: (f, on) => { fb = f; syncOn = on; },
-    _clearFlag: () => { state.migratedOrig = null; } };`);
+    _clearFlag: () => { state.migratedOrig = null; },
+    _reseedDays: () => { // reconstruye el escenario histórico 10b: el plan aún llevaba la propuesta (huecos seed)
+      const fresh = buildSeedState();
+      state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; });
+      state.seedRetired = null; } };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -73,6 +77,9 @@ const dayByDate = date => api.state.days.find(d => d.date === date);
   check('convert: unparseable price preserved in the note', conv.y === null && conv.n.includes('Precio: depende') && conv.n.includes('https://ejemplo.jp'));
 
   // ---- 2) one-time migration: transfers -> gaps, dayId -> stops ----
+  // Escenario histórico: cuando la 10b corrió en producción, el plan aún
+  // llevaba la propuesta dentro (los huecos seed existían). Se reconstruye.
+  api._reseedDays();
   api.state.places.push({ id: 'id_test1', name: 'Sitio prueba', lat: 35.0, lng: 135.0, category: 'otro', dayId: 'd_2027-04-20', time: '12:30' });
   api.state.places.push({ id: 'id_test2', name: 'Sitio B', lat: 35.01, lng: 135.01, category: 'otro', dayId: 'd_2027-04-20', order: 1 });
   api.state.places.push({ id: 'id_flightday', name: 'En día de vuelo', lat: 35, lng: 135, category: 'otro', dayId: 'd_2027-04-08' });
@@ -139,8 +146,8 @@ const dayByDate = date => api.state.days.find(d => d.date === date);
     v2Node: 'NODE:state/v2', titleNode: 'NODE:tripTitle', placesNode: 'NODE:state/places', rootNode: 'NODE:root' }, true);
   api.pushRemote();
   const keys = Object.keys(writes[0].payload).sort();
-  check('policy: v2 payload = {check,days,migratedOrig,rate,updatedAt,v} exactly',
-    JSON.stringify(keys) === JSON.stringify(['check', 'days', 'migratedOrig', 'rate', 'updatedAt', 'v']));
+  check('policy: v2 payload = {check,days,migratedOrig,rate,seedRetired,updatedAt,v} exactly',
+    JSON.stringify(keys) === JSON.stringify(['check', 'days', 'migratedOrig', 'rate', 'seedRetired', 'updatedAt', 'v']));
   check('policy: still no places/transfers/tripTitle in the v2 payload',
     !('places' in writes[0].payload) && !('transfers' in writes[0].payload) && !('tripTitle' in writes[0].payload));
 

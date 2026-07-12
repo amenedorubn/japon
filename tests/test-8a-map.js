@@ -72,6 +72,9 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay,
     setFlights: v => { flightsVisible = v; },
     srcState, activeMapCategories, CATS, FLIGHTS,
+    _reseedDays: () => { // fixture: días con paradas (el plan real nace vacío, 12.49)
+      const fresh = buildSeedState();
+      state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
   };`);
 const api = boot(documentStub, windowStub, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
@@ -89,6 +92,7 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
 
   // Open the map tab (initMapView is deferred by 60ms), then let the
   // day-mode OSRM queue drain fully (1 job / 250ms) before measuring.
+  api._reseedDays(); // el mapa por día necesita días con paradas (fixture)
   api.showTab('mapa');
   await sleep(1500);
   check('R1: initial tiles are light (voyager)', tileUrls.length === 1 && tileUrls[0].includes('voyager'));

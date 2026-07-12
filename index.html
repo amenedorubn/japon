@@ -425,6 +425,16 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .fchip.ref{font-size:12px;padding:5px 10px;}
 .fchip.ref:not(.active){background:transparent;border-color:transparent;}
 @media(hover:hover){.fchip.ref:not(.active):hover{background:var(--card);border-color:var(--line);}}
+/* Vista "Propuesta" (12.49): la propuesta de desarrollo como referencia Washi */
+.seed-day{padding:12px 14px;margin-bottom:10px;}
+.seed-day .sd-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
+.seed-day .sd-head small{color:var(--muted);font-size:11.5px;flex:none;}
+.seed-day .sd-flight{font-size:12.5px;color:var(--muted);}
+.seed-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;
+  border-top:1px solid var(--hairline);}
+.seed-row:first-of-type{border-top:none;}
+.seed-row .sr-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);min-width:38px;}
+.seed-row .sr-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .places-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
 .places-grid.grouped{display:block;}
 .ideas-group{margin-bottom:26px;}
@@ -596,11 +606,6 @@ table.phr tr:last-child td{border-bottom:none;}
 .cord-glyph{font-size:20px;line-height:1;flex:none;}
 .cord-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
 .cord-city{font-weight:600;font-size:15px;line-height:1.2;}
-/* "propuesta": día que sólo lleva la semilla 'ai' (aún no elegido). Susurro, no alarma. */
-.cord-tag{display:inline-block;margin-left:7px;font-size:9px;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--muted);vertical-align:middle;
-  border:1px solid var(--hairline);border-radius:999px;padding:1px 7px;}
-.cord-day.is-suggestion .cord-rail{opacity:.38;}
 .cord-stops{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cord-fill{display:flex;gap:3px;flex:none;}
 .cord-fill i{width:5px;height:5px;border-radius:50%;background:var(--line);}
@@ -620,11 +625,7 @@ table.phr tr:last-child td{border-bottom:none;}
 /* Reservado ≠ planificado: una parada confirmada se siente Foil (permanente),
    frente a la tinta de una parada planificada */
 .stop.is-confirmed .stop-card{box-shadow:var(--shadow-lg),inset 0 0 0 1px var(--foil-edge-red);}
-/* Parada propuesta (semilla 'ai', no elegida aún): material Washi — plana,
-   recesiva, "todavía no es el viaje". Una parada elegida conserva la Ink. */
-.stop.is-suggestion .stop-card{box-shadow:none;background:var(--card2);border-color:var(--hairline);}
-.stop.is-suggestion .dotn{opacity:.55;}
-/* Susurro de procedencia en una parada elegida: quién la eligió, sin gritar. */
+/* Susurro de procedencia en una parada: quién la trajo, sin gritar. */
 .pill.pill-prov{background:transparent;border-color:var(--hairline);color:var(--muted);}
 /* Pase de noche (Fase 12): el hotel reservado que cubre esta noche, en Foil */
 .night-pass{position:relative;padding:12px 14px;margin:12px 0;border-radius:var(--radius);font-size:14px;}
@@ -758,8 +759,9 @@ table.phr tr:last-child td{border-bottom:none;}
   <section class="view" id="view-itinerario" data-alt="trip">
     <div class="filter-bar" style="justify-content:space-between">
       <div class="itin-mode-group">
-        <button class="fchip active" id="itinModeOurs">🗓️ Nuestro plan</button>
+        <button class="fchip active" id="itinModeOurs">🗓️ Nuestro viaje</button>
         <span class="itin-ref-sep">referencias</span>
+        <button class="fchip ref" id="itinModeSeed" title="Propuesta generada durante el desarrollo · referencia, no es el viaje">✨ Propuesta</button>
         <button class="fchip ref" id="itinModeDani" title="Ruta que sugirió Dani · exploración, no es el plan">🧭 Dani</button>
         <button class="fchip ref" id="itinModeOrig" title="Itinerario de la app original · archivo de solo lectura">📄 Original</button>
       </div>
@@ -831,7 +833,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <div class="btn-row">
         <button class="btn ghost" id="btnExport2">⬇️ Exportar plan (JSON)</button>
         <button class="btn ghost" id="btnImport2">⬆️ Importar plan</button>
-        <button class="btn danger" id="btnReset">Restablecer plan sugerido</button>
+        <button class="btn danger" id="btnReset">Vaciar el plan</button>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Todo lo que edites se guarda en este dispositivo automáticamente y, si la nube está activada (☁️), se comparte con el resto de viajeros.</p>
     </div>
@@ -1885,7 +1887,10 @@ const LEGACY_PID_MAP = {
   teramachi: 'catalog_shijo_kawaramachi', bamboo: 'catalog_arashiyama',
   nara_park: 'catalog_nara', kanazawa: 'catalog_kanazawa',
   uji: 'catalog_uji_excursion', hakone: 'catalog_hakone_fuji_excursion',
-  takayama: 'catalog_takayama_kamikochi_excursion'
+  takayama: 'catalog_takayama_kamikochi_excursion',
+  // Gemelo del APA creado a mano en la app original (fusionado en 12.17): si
+  // una parada del itinerario aún apunta al gemelo, resuelve al id canónico.
+  id_fyw0cew7mr4ik77a: 'apa_asakusabashi'
 };
 const canonicalPid = pid => LEGACY_PID_MAP[pid] || pid;
 function canonicalizeDayPids(days){
@@ -2099,6 +2104,34 @@ function buildSeedState(){
   return {v: SEED_VERSION, days, rate: 170, check: {}, updatedAt: 0,
     places, catalogVersion: CATALOG_VERSION,
     tripTitle: "Japón '27", origDays: []};
+}
+/* ================================================================
+   RETIRADA DE LA PROPUESTA (corrección 12.49) · el viaje CANÓNICO es lo
+   DECIDIDO: el itinerario real de la app original (consolidado en v2 por la
+   migración 10b) más lo que plantamos a propósito. La propuesta sembrada en
+   desarrollo deja de vivir dentro del plan editable: se retira UNA VEZ y pasa
+   a ser solo la referencia "Propuesta" (renderSeedItinerary).
+   - Marca `seedRetired` (fecha ISO): viaja en el payload v2 y pertenece al
+     LINAJE de los días (al adoptar días remotos se adopta su marca; un linaje
+     sin marca es pre-retirada y se limpia al adoptarse).
+   - Elimina de cada día v2 las paradas cuyo pid canónico coincide con la
+     propuesta de ESE día; lo demás (decisiones reales, paradas migradas de la
+     app original, plantados) se conserva. Determinista e idempotente. */
+function retireSeedProposal(){
+  if(!state || state.seedRetired) return false;
+  const seedPids = SEED_DAYS.map(sd => new Set((sd.stops || []).map(s => canonicalPid(s.pid))));
+  (state.days || []).forEach((d, i) => {
+    const set = seedPids[i];
+    if(!d || !set || !Array.isArray(d.stops)) return;
+    const kept = d.stops.filter(s => s && !set.has(canonicalPid(s.pid)));
+    if(kept.length !== d.stops.length){
+      d.stops = kept;
+      if(!kept.length){ d.pre = null; d.post = null; } // los trayectos de excursión eran de la propuesta
+      fixTransfers(d);
+    }
+  });
+  state.seedRetired = new Date().toISOString().slice(0, 10);
+  return true;
 }
 /* Campos compartidos (places/catalogVersion/tripTitle) + origDays (archivo
    de solo lectura del itinerario original). El espejo state.transfers
@@ -2339,6 +2372,13 @@ if(applyCatalogUpdate()) persistLocal();
 if(ensureProvenance(state.places)) persistLocal(); // Fase 12: fija procedencia (una vez) y persiste
 if(ensureHotelFixes()) persistLocal(); // Fase 12 §9.4: fusión APA + alta Louis House (idempotente)
 if(ensureMariaPlaces()) persistLocal(); // Fase 12: siembra de la exploración de María (no-op si vacía)
+// Corrección 12.49: la propuesta sembrada sale del plan editable (una vez).
+// En un linaje real (updatedAt>0) la retirada es una edición del plan y debe
+// ganar a la nube; en una semilla fresca (updatedAt=0) la nube sigue mandando.
+if(retireSeedProposal()){
+  if((state.updatedAt || 0) > 0) state.updatedAt = Date.now();
+  persistLocal();
+}
 
 function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 let pushTimer = null;
@@ -2387,6 +2427,7 @@ function pushRemote(){
     rate: state.rate || 170,
     check: state.check || {},
     migratedOrig: state.migratedOrig || null, // marca de consolidación 10b
+    seedRetired: state.seedRetired || null,   // marca de retirada de la propuesta (12.49)
     updatedAt: state.updatedAt || 0
   }).catch(() => {});
 }
@@ -2433,6 +2474,9 @@ function adoptRemote(payload){
         state.rate = v2.rate || state.rate;
         state.check = v2.check || {};
         state.updatedAt = v2.updatedAt;
+        // La marca de retirada pertenece al LINAJE de los días adoptados: un
+        // linaje sin marca es pre-retirada y se limpiará más abajo (12.49).
+        state.seedRetired = v2.seedRetired || null;
         res.changed = true;
         toast('☁️ Plan actualizado desde la nube');
       } else if((state.updatedAt || 0) > (v2.updatedAt || 0)){
@@ -2443,6 +2487,13 @@ function adoptRemote(payload){
     // Fase 10b: si la nube aún trae el modelo original sin consolidar,
     // incorporarlo al plan v2 (una sola vez; el archivo remoto no se toca).
     if(maybeMigrateOriginal(rs.transfers)) res.changed = true;
+    // 12.49: si el linaje adoptado aún lleva la propuesta sembrada dentro del
+    // plan, retirarla y re-subir el plan ya limpio (vía localNewer).
+    if(!state.seedRetired && retireSeedProposal()){
+      state.updatedAt = Date.now();
+      res.changed = true;
+      res.localNewer = true;
+    }
   }
   // Higiene de hoteles sobre los datos adoptados (repunta paradas + propaga)
   if(ensureHotelFixes()){ res.changed = true; pushPlaces(); }
@@ -3431,12 +3482,11 @@ function transferHTML(t, a, b, dayIdx, gapIdx, label){
 function stopHTML(s, idx, dayIdx){
   const p = placeById(s.pid) || {name: '(sitio eliminado)', cat: 'otro'};
   const c = catOf(p);
-  // Parada elegida (Ink) vs propuesta de la semilla 'ai' (Washi, aún no elegida).
-  const suggestion = !p.confirmed && (p.provenance || 'ai') === 'ai';
+  // Toda parada del plan es una decisión (12.49): material Ink. El susurro de
+  // procedencia acredita al curador que la trajo, sin gritar.
   const cls = ['stop'];
   if(s.done) cls.push('done');
   if(p.confirmed) cls.push('is-confirmed');
-  if(suggestion) cls.push('is-suggestion');
   return `<div class="${cls.join(' ')}" data-day="${dayIdx}" data-stop="${idx}">
     <div class="dotn">${idx + 1}</div>
     <div class="card stop-card">
@@ -3446,7 +3496,7 @@ function stopHTML(s, idx, dayIdx){
           <b class="pname">${esc(p.name)} <span style="font-weight:400">${p.web || p.insta ? '🔗' : ''}</span></b>
           <div class="chips">
             <span class="pill" style="color:${c.color}">${c.emoji} ${esc(c.label)}</span>
-            ${!suggestion && !p.confirmed && provenanceLabel(p.provenance) ? `<span class="pill pill-prov">${provenanceLabel(p.provenance)}</span>` : ''}
+            ${!p.confirmed && provenanceLabel(p.provenance) ? `<span class="pill pill-prov">${provenanceLabel(p.provenance)}</span>` : ''}
             ${p.confirmed ? '<span class="pill green" title="Reserva confirmada">✓ sellado</span>' : ''}
             <span class="dur-wrap">🕐 <input type="number" class="dur" min="5" step="5" value="${s.dur}"> min</span>
             ${p.yen ? `<span class="pill">💴 ${esc(p.price || fmtYen(p.yen))}</span>` : p.yen === 0 ? '<span class="pill green">Gratis</span>' : ''}
@@ -3474,6 +3524,7 @@ function setItinAlt(alt){
 function setItinMode(mode){
   itinMode = mode;
   $('#itinModeOurs').classList.toggle('active', mode === 'ours');
+  const seedChip = $('#itinModeSeed'); if(seedChip) seedChip.classList.toggle('active', mode === 'seed');
   $('#itinModeDani').classList.toggle('active', mode === 'dani');
   $('#itinModeOrig').classList.toggle('active', mode === 'orig');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
@@ -3569,6 +3620,55 @@ function renderDaniItinerary(){
   $$('#dayPanel .b-pasar').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); adoptPlace(b.dataset.pid); }));
   bindPlaceOpen('#dayPanel .dani-row');
 }
+/* --- Vista "Propuesta" (corrección 12.49) · la propuesta de itinerario
+   generada durante el desarrollo, como REFERENCIA de solo lectura (Washi).
+   Ya no vive dentro del plan: cada parada se puede plantar a propósito en
+   su día con ＋ (el acto deliberado que la convierte en decisión). --- */
+function renderSeedItinerary(){
+  const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
+  let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
+    ✨ <b>Propuesta de desarrollo</b> · una idea de itinerario generada al construir la app.
+    No es el viaje: plantad con ＋ lo que os convenza, día a día.</div>`;
+  html += SEED_DAYS.map((sd, i) => {
+    const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
+    const rows = (sd.stops || []).map(s => {
+      const pid = canonicalPid(s.pid);
+      const p = placeById(pid);
+      if(!p) return '';
+      const inPlan = planned.has(pid);
+      return `<div class="seed-row" data-pid="${esc(pid)}">
+        <span class="sr-time u-tabular">${esc(s.time || '')}</span>
+        <span class="sr-name">${esc(p.name)}</span>
+        ${inPlan ? '<span class="pill green" style="flex:none">✓ en el plan</span>'
+                 : `<button class="btn small ghost b-plant" data-pid="${esc(pid)}" data-day="${i}" title="Plantar en nuestro viaje" style="flex:none">＋</button>`}
+      </div>`;
+    }).join('');
+    if(!rows && !sd.flight) return '';
+    return `<div class="m-washi seed-day">
+      <div class="sd-head"><b>${esc(sd.icon || '')} Día ${i + 1} · ${esc(sd.city || sd.title || '')}</b><small>${fmtDateShort(sd.date)}</small></div>
+      ${sd.flight ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
+    </div>`;
+  }).join('');
+  $('#dayPanel').innerHTML = html;
+  // Plantar detiene la propagación para no abrir la ficha
+  $$('#dayPanel .b-plant').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation(); plantFromProposal(b.dataset.pid, +b.dataset.day);
+  }));
+  bindPlaceOpen('#dayPanel .seed-row');
+}
+/* Plantar una parada de la propuesta en NUESTRO viaje (acto deliberado). */
+function plantFromProposal(pid, dayIdx){
+  const day = state.days[dayIdx];
+  const p = placeById(pid);
+  if(!day || !p) return;
+  if(day.stops.some(s => s.pid === pid)){ toast('Ya está en ese día'); return; }
+  day.stops.push({id: uid(), pid, time: inferTimeForInsert(day.stops, day.stops.length, null),
+    dur: (p && p.dur) || 60, note: '', done: false});
+  fixTransfers(day);
+  commit();
+  renderSeedItinerary(); // el botón pasa a "✓ en el plan" sin salir de la referencia
+  toast('Plantado en ' + fmtDateShort(day.date) + ' ✓');
+}
 /* ================================================================
    CORD (Fase 12 · Stage 3) · Altitud de Viaje del Plan: los 21 días
    como un solo objeto. Cada fila es un DayNode; el Hilo de hoteles
@@ -3592,19 +3692,9 @@ function cordFill(n){
   for(let k = 0; k < 3; k++) s += `<i class="${k < f ? 'on' : ''}"></i>`;
   return s;
 }
-/* ¿Una parada es una ELECCIÓN nuestra o andamiaje de desarrollo?
-   El itinerario semilla se sembró con lugares de procedencia 'ai' (una
-   PROPUESTA, no el viaje). Una parada representa una decisión real cuando el
-   lugar que referencia NO es 'ai' (es nuestro / de Dani / de María / de
-   Instagram: entró porque alguien lo eligió). Así la semilla recede día a día
-   según entran elecciones reales, sin vaciar nunca el plan (PROJECT §12.14). */
-function stopIsChosen(s){
-  if(!s) return false;
-  const p = placeById(s.pid);
-  return !!(p && (p.provenance || 'ai') !== 'ai');
-}
-function dayIsChosen(d){ return !!(d && (d.stops || []).some(stopIsChosen)); }
-function dayIsSuggestion(d){ return !!(d && !d.flight && (d.stops || []).length > 0 && !dayIsChosen(d)); }
+/* Desde la corrección 12.49 la propuesta ya NO vive dentro del plan: toda
+   parada del plan es una decisión (real de la app original o plantada a
+   propósito). La distinción elegido-vs-propuesta por parada quedó obsoleta. */
 function renderCord(){
   const host = $('#cord'); if(!host) return;
   const days = state.days || [];
@@ -3617,26 +3707,22 @@ function renderCord(){
     const isFlight = !!d.flight;
     const isToday = d.date === todayISO;
     const completed = nStops > 0 && doneN === nStops;
-    const chosen = dayIsChosen(d);
-    const suggestion = dayIsSuggestion(d);
-    // Material = certeza: día elegido o de vuelo → Ink (asentado); día que sólo
-    // lleva la propuesta 'ai' → Washi (aún no es el viaje); día libre → Washi.
-    const cls = ['cord-day', (isFlight || chosen) ? 'm-ink' : 'm-washi'];
+    // Material = certeza: día con decisiones o de vuelo → Ink (asentado);
+    // día libre → Washi (invitación). La propuesta ya no vive en el plan (12.49).
+    const cls = ['cord-day', (isFlight || nStops > 0) ? 'm-ink' : 'm-washi'];
     if(isToday) cls.push('is-today');
     if(completed) cls.push('is-done');
     if(isFlight) cls.push('is-flight-day');
-    if(suggestion) cls.push('is-suggestion');
     const names = stops.slice(0, 3).map(s => { const p = placeById(s.pid); return p ? esc(p.name) : ''; }).filter(Boolean).join(' · ');
     const sub = isFlight ? 'Día de vuelos' : (nStops ? names : 'Día libre');
-    const tag = suggestion ? '<span class="cord-tag">propuesta</span>' : '';
     const rail = isFlight ? '' : `--stay:var(--stay-${stays[i].tone})`;
     return `<button class="${cls.join(' ')}" data-day="${i}" style="${rail}"
-      aria-label="Día ${i + 1}, ${esc(d.city || d.title || '')}, ${isFlight ? 'vuelos' : (suggestion ? 'propuesta, ' : '') + nStops + ' paradas'}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
+      aria-label="Día ${i + 1}, ${esc(d.city || d.title || '')}, ${isFlight ? 'vuelos' : nStops + ' paradas'}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
       <span class="cord-rail" aria-hidden="true"></span>
       <span class="cord-idx u-tabular">${isFlight ? '✈' : (i + 1)}</span>
       <span class="cord-glyph" aria-hidden="true">${esc(d.icon || '')}</span>
       <span class="cord-body">
-        <span class="cord-city">${esc(d.city || d.title || '')}${tag}</span>
+        <span class="cord-city">${esc(d.city || d.title || '')}</span>
         <span class="cord-stops">${sub}</span>
       </span>
       <span class="cord-fill" aria-hidden="true">${cordFill(nStops)}</span>
@@ -3660,6 +3746,7 @@ function zoomOut(){
 }
 function renderItinerary(){
   const cord = $('#cord');
+  if(itinMode === 'seed'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderSeedItinerary(); return; }
   if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderDaniItinerary(); return; }
   if(itinMode === 'orig'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderOrigItinerary(); return; }
   renderCord();
@@ -4771,6 +4858,8 @@ $('#importFile').addEventListener('change', async e => {
         state.days = v2Days;
         state.rate = s.rate || state.rate;
         state.check = s.check || {};
+        // La marca de retirada viaja con el linaje de días de la copia (12.49).
+        state.seedRetired = s.seedRetired || null;
         daysChanged = true;
       } else {
         state.origDays = inDays; // copia de la app original: su itinerario es solo espejo
@@ -4787,6 +4876,8 @@ $('#importFile').addEventListener('change', async e => {
     // Consolidación 10b: si la copia trae el modelo original sin migrar,
     // sus transfers y días asignados se incorporan al plan v2 (una vez).
     maybeMigrateOriginal(s.transfers);
+    // 12.49: una copia pre-retirada trae la propuesta dentro del plan; se retira.
+    if(!state.seedRetired && retireSeedProposal()) daysChanged = true;
     applyTripTitle();
     if(daysChanged) commit(); else persistLocal();
     if(placesChanged) pushPlaces();
@@ -4801,14 +4892,16 @@ $('#btnImport').addEventListener('click', doImport);
 $('#btnImport2').addEventListener('click', doImport);
 onClick('#btnMoreActions', () => { const ta = $('#topActions'); if(ta) ta.classList.toggle('open'); });
 $('#btnReset').addEventListener('click', () => {
-  if(!confirm('Esto sustituye tu plan actual por el itinerario sugerido original. ¿Seguro?')) return;
-  // Restablecer solo resetea NUESTRO itinerario (v2); el catálogo, el título,
-  // el archivo original y la marca de consolidación se conservan.
+  if(!confirm('Esto VACÍA el plan de los 21 días (las paradas se quitan; vuelos, hoteles, catálogo y la referencia "Propuesta" no se tocan). ¿Seguro?')) return;
+  // Vaciar solo resetea NUESTRO itinerario (v2); el catálogo, el título,
+  // el archivo original y la marca de consolidación se conservan. La propuesta
+  // ya no entra en el plan (corrección 12.49): renace vacío, listo para plantar.
   const shared = {places: state.places, catalogVersion: state.catalogVersion,
     tripTitle: state.tripTitle, origDays: state.origDays, migratedOrig: state.migratedOrig};
   state = Object.assign(buildSeedState(), shared);
+  retireSeedProposal(); // el esqueleto de 21 días queda sin la propuesta dentro
   commit(); renderAll();
-  toast('Plan restablecido');
+  toast('Plan vaciado');
 });
 
 /* ================================================================
@@ -4826,6 +4919,7 @@ maybeMigrateOriginal(_legacyTransfers);
 
 buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
+$('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 $('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
 onClick('#cordBack', () => zoomOut());
