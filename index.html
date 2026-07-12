@@ -172,11 +172,13 @@ a{color:var(--indigo);}
   color:#fff;font-family:var(--serif);font-weight:900;font-size:15px;}
 .logo h1{font-size:17px;font-weight:800;letter-spacing:-.02em;}
 .logo small{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:-2px;}
-.topnav{display:none;gap:2px;margin-left:auto;}
+.topnav{display:none;gap:2px;margin-left:auto;align-items:center;}
 @media(min-width:900px){.topnav{display:flex;}}
 .topnav button{padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted);}
 @media(hover:hover){.topnav button:hover{color:var(--ink);background:var(--card2);}}
 .topnav button.active{background:var(--ink);color:var(--bg);}
+.topnav-sep{width:1px;height:16px;background:var(--line);margin:0 8px;flex:none;}
+.topnav button.lens{font-size:13px;font-weight:500;padding:8px 11px;color:color-mix(in srgb,var(--muted) 74%,transparent);}
 .top-actions{margin-left:auto;display:flex;gap:6px;}
 @media(min-width:900px){.top-actions{margin-left:10px;}}
 .icon-btn{width:36px;height:36px;border-radius:var(--radius-s);background:var(--card);border:1px solid var(--line);
@@ -3121,7 +3123,13 @@ function axisGo(delta){
   if(next !== cur) showTab(AXIS_REGIONS[next]);
 }
 function buildNav(){
-  $('#topnav').innerHTML = TABS.map(t => `<button data-tab="${t[0]}">${t[2]}</button>`).join('');
+  // Escritorio: el mismo EJE DE CERTEZA que en móvil — Ideas · Plan · Confirmado
+  // primero; las lentes (Mapa/Hoteles/Guía) van tras un separador, atenuadas. No
+  // seis pestañas-sustantivo iguales (DIRECTION §7).
+  $('#topnav').innerHTML =
+    TABS.slice(0, 3).map(t => `<button data-tab="${t[0]}">${t[2]}</button>`).join('')
+    + '<span class="topnav-sep" aria-hidden="true"></span>'
+    + TABS.slice(3).map(t => `<button class="lens" data-tab="${t[0]}">${t[2]}</button>`).join('');
   // Barra inferior = el EJE DE CERTEZA (Ideas · Plan · Confirmado); las lentes
   // (Mapa/Hoteles/Guía) viven tras "Más". Ya no seis pestañas de app de listas.
   const primary = TABS.slice(0, 3);
