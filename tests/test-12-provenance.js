@@ -65,19 +65,31 @@ check('maria_* place → maria (Exploración curator, immutable)',
   api.state.places.splice(api.state.places.indexOf(corrupt), 1);
 })();
 
-// ---- 2) id prefix is the historical signal ----
+// ---- 2) the source of truth for 'ours' is Itinerario.docx (12.48) ----
 check('dani_* place → dani', byId('dani_fushimi_inari') && byId('dani_fushimi_inari').provenance === 'dani');
-check('catalog_* place → ai', byId('catalog_sensoji') && byId('catalog_sensoji').provenance === 'ai');
-check('curated-key entry (nakamise) → ai', byId('nakamise') && byId('nakamise').provenance === 'ai');
+check('docx place (catalog_sensoji) → ours', byId('catalog_sensoji') && byId('catalog_sensoji').provenance === 'ours');
+check('docx excursion (catalog_kanazawa) → ours', byId('catalog_kanazawa') && byId('catalog_kanazawa').provenance === 'ours');
+check('non-docx curated entry (nakamise) → ai', byId('nakamise') && byId('nakamise').provenance === 'ai');
 check('airport marker (nrt) → ai', byId('nrt') && byId('nrt').provenance === 'ai');
+// Repair: docx places persisted as 'ai' by the old backfill are restored to
+// 'ours'; an old-definition manual 'ours' (id_*, not booked) is recomputed.
+(function(){
+  const docxStale = { id: 'catalog_gion', source: 'user', provenance: 'ai', category: 'zona' };
+  const manualStale = { id: 'id_manual_x', source: 'user', provenance: 'ours', category: 'otro' };
+  const did = api.ensureProvenance([docxStale, manualStale]);
+  check('repair: docx place stored as ai is restored to ours', did && docxStale.provenance === 'ours');
+  check('repair: manual id_* stored as ours (old definition) becomes ai', manualStale.provenance === 'ai');
+})();
 
 // ---- 3) hotels: booked reservation vs "por reservar" placeholder ----
 check('booked hotel (apa_asakusabashi) → ours', byId('apa_asakusabashi') && byId('apa_asakusabashi').provenance === 'ours');
 check('hotel base placeholder (hotel_tokyo) → ai', byId('hotel_tokyo') && byId('hotel_tokyo').provenance === 'ai');
 
 // ---- 4) provenanceOf classifies synthetic inputs correctly ----
-check('provenanceOf: user-created id_* → ours',
-  api.provenanceOf({ id: 'id_abc123', source: 'user', category: 'otro' }) === 'ours');
+check('provenanceOf: manual id_* (not docx, not booked) → ai',
+  api.provenanceOf({ id: 'id_abc123', source: 'user', category: 'otro' }) === 'ai');
+check('provenanceOf: booked hotel stays ours (PROJECT §9.4 rule kept)',
+  api.provenanceOf({ id: 'id_h1', source: 'user', category: 'alojamiento', lat: 35.7, lng: 139.7, checkIn: '2027-04-09', checkOut: '2027-04-12' }) === 'ours');
 check('provenanceOf: source insta → instagram',
   api.provenanceOf({ id: 'id_x', source: 'insta', category: 'otro' }) === 'instagram');
 check('provenanceOf: plain catalog place → ai',

@@ -400,6 +400,7 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .src-chip.src-dani.active{background:#223A5E;border-color:#223A5E;color:#fff;}
 .src-chip.src-maria.active{background:#7a4fa3;border-color:#7a4fa3;color:#fff;}
 .src-chip.src-insta.active{background:#C13584;border-color:#C13584;color:#fff;}
+.src-chip.src-ai.active{background:#8a8577;border-color:#8a8577;color:#fff;}
 .zone-tooltip{background:transparent;border:none;box-shadow:none;color:var(--ink);
   font-weight:700;font-size:11.5px;text-shadow:0 1px 2px var(--bg);}
 
@@ -776,10 +777,11 @@ table.phr tr:last-child td{border-bottom:none;}
   <section class="view" id="view-mapa">
     <div class="day-chips" id="mapDayChips"></div>
     <div class="map-toggles">
-      <button class="fchip src-chip" id="srcNos" title="Sitios del catálogo y añadidos por vosotros"><b>N</b> Nosotros</button>
+      <button class="fchip src-chip" id="srcNos" title="Nuestro itinerario (Itinerario.docx) y reservas"><b>N</b> Nuestros</button>
       <button class="fchip src-chip src-dani" id="srcDani" title="Sitios de la ruta Dani"><b>D</b> Dani</button>
       <button class="fchip src-chip src-maria" id="srcMaria" title="Listas de Google Maps que curó María"><b>M</b> María</button>
       <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
+      <button class="fchip src-chip src-ai" id="srcAI" title="Ideas del catálogo generado durante el desarrollo"><b>IA</b></button>
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
@@ -2123,6 +2125,32 @@ function ensureSharedShape(s){
    automático vive en tools/maria-import.js (Playwright, dev-time) y hornea los
    datos en MARIA_PLACES vía tools/maria-bake.js; import/maria-places.json es la
    fuente. La app en runtime NO usa Playwright ni red (single-file, offline). */
+/* NUESTROS = Itinerario.docx (corrección de producto, Fase 12.48). La fuente
+   de verdad de la procedencia 'ours' es nuestro documento curado: todo lugar
+   que aparece en Itinerario.docx es nuestro. NO se define por "añadido a
+   mano". Ids canónicos derivados 1:1 del documento (listas por región +
+   excursiones + destinos sueltos). Declarado ANTES del boot, que llama a
+   ensureProvenance (misma lección TDZ que MARIA_PLACES). */
+const DOCX_OURS = new Set([
+  // Tokio
+  'catalog_shibuya', 'catalog_sensoji', 'catalog_ueno', 'catalog_ginza',
+  'catalog_odaiba', 'catalog_harajuku', 'catalog_yoyogi', 'catalog_meiji',
+  'catalog_takeshita', 'catalog_akihabara', 'catalog_shinjuku',
+  'catalog_tokyo_metropolitan', 'catalog_mori_tower',
+  // Excursiones desde Tokio
+  'catalog_kamakura_excursion', 'catalog_takayama_kamikochi_excursion',
+  'catalog_nikko_excursion', 'catalog_hakone_fuji_excursion',
+  // Kioto
+  'catalog_arashiyama', 'catalog_pontocho', 'catalog_shijo_kawaramachi',
+  'catalog_nijo_castle', 'catalog_kinkakuji', 'catalog_higashiyama',
+  'catalog_sannenzaka', 'catalog_yasaka', 'catalog_gion',
+  // Osaka + excursiones
+  'catalog_denden_town', 'catalog_namba', 'catalog_nara',
+  'catalog_nara_inari_excursion', 'catalog_hiroshima_miyajima_excursion',
+  'catalog_uji_excursion',
+  // Destinos sueltos del documento
+  'catalog_kanazawa', 'catalog_fukuoka', 'catalog_narai_juku',
+]);
 const MARIA_MAPS = [
   {url: 'https://maps.app.goo.gl/3kJQast3HFWRjzB78', listId: 'gmTab8I4Q-OusWMU_6XHeQ'},
   {url: 'https://maps.app.goo.gl/rLjD7Kwpp72TvgDQ8', listId: null},
@@ -2684,10 +2712,11 @@ function provenanceOf(p){
   if(/^dani_/.test(id) || p.dani || p.daniAdopted || p.source === 'dani') return 'dani';
   if(p.source === 'insta') return 'instagram';
   if(p.source === 'maria' || p.maria || /^maria_/.test(id)) return 'maria';
-  // Reserva confirmada (mismo predicado que bookedHotels) o lugar creado por
-  // un viajero (id_*) → nuestro. El resto de la semilla (curado + catálogo +
-  // placeholders "por reservar") → IA.
-  if(/^id_/.test(id) || isBookedHotel(p)) return 'ours';
+  // NUESTROS = el documento curado (Itinerario.docx). Además, una reserva
+  // confirmada de hotel es siempre nuestra (regla previa, PROJECT §9.4).
+  if(DOCX_OURS.has(id) || isBookedHotel(p)) return 'ours';
+  // Todo lo demás (semilla de desarrollo, curado no-docx, añadidos a mano
+  // sin otra procedencia) → IA.
   return 'ai';
 }
 /* Backfill único e idempotente: sólo rellena la procedencia que falta,
@@ -2699,12 +2728,22 @@ function ensureProvenance(places){
   let changed = false;
   places.forEach(p => {
     if(!p) return;
-    // Reparación: un id maria_* (o source 'maria') es SIEMPRE procedencia
-    // 'maria'. Una versión anterior llegó a guardarlos como 'ai' (catalogItem),
-    // dejándolos invisibles en el filtro/capa de María. Corregir esa corrupción
-    // no cambia la historia: la restaura (la procedencia sigue siendo inmutable).
-    if((/^maria_/.test(String(p.id || '')) || p.source === 'maria') && p.provenance !== 'maria'){
+    const id = String(p.id || '');
+    // Reparación 1: un id maria_* (o source 'maria') es SIEMPRE 'maria'. Una
+    // versión anterior los guardó como 'ai', dejándolos invisibles.
+    if((/^maria_/.test(id) || p.source === 'maria') && p.provenance !== 'maria'){
       p.provenance = 'maria'; changed = true; return;
+    }
+    // Reparación 2 (corrección 12.48): NUESTROS = Itinerario.docx. El backfill
+    // original marcó los lugares del documento como 'ai'; restaurar su
+    // procedencia verdadera no reescribe la historia: la corrige.
+    if(DOCX_OURS.has(id) && p.provenance !== 'ours'){
+      p.provenance = 'ours'; changed = true; return;
+    }
+    // Reparación 3: un 'ours' que NO viene del documento ni es reserva
+    // confirmada era la definición antigua ("añadido a mano"); se recalcula.
+    if(p.provenance === 'ours' && !DOCX_OURS.has(id) && !isBookedHotel(p)){
+      p.provenance = provenanceOf(p); if(p.provenance !== 'ours') changed = true; return;
     }
     if(VALID.indexOf(p.provenance) < 0){ p.provenance = provenanceOf(p); changed = true; }
   });
@@ -4162,16 +4201,18 @@ function initMapView(){
   syncFlightsChip();
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
 }
-/* --- Capas de origen: Nosotros / Dani / María / Insta (persistidas) --- */
-let srcState = {n: true, d: false, i: false, m: false}; // "Nosotros" activo por defecto
+/* --- Capas por PROCEDENCIA: Nuestros(docx) / Dani / María / Insta / IA
+   (persistidas). El mismo modelo de curadores que en Ideas. --- */
+let srcState = {n: true, d: false, i: false, m: false, a: false}; // "Nuestros" activo por defecto
 try{ srcState = Object.assign(srcState, JSON.parse(localStorage.getItem('jp27_map_sources') || '{}')); }catch(e){}
 function syncSrcChips(){
   $('#srcNos').classList.toggle('active', srcState.n);
   $('#srcDani').classList.toggle('active', srcState.d);
   $('#srcInsta').classList.toggle('active', srcState.i);
   const sm = $('#srcMaria'); if(sm) sm.classList.toggle('active', srcState.m);
+  const sa = $('#srcAI'); if(sa) sa.classList.toggle('active', srcState.a);
 }
-[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i'], ['#srcMaria','m']].forEach(([sel, key]) => {
+[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i'], ['#srcMaria','m'], ['#srcAI','a']].forEach(([sel, key]) => {
   const el = $(sel); if(!el) return;
   el.addEventListener('click', () => {
     srcState[key] = !srcState[key];
@@ -4451,30 +4492,26 @@ async function renderMapDay(){
   const poiPts = [];
 
   renderZones();
-  // Capas por origen: N (catálogo + nuestros), D (ruta Dani), I (Instagram)
+  // Capas por PROCEDENCIA (mismo modelo que Ideas): N (Itinerario.docx +
+  // reservas), D (Dani), M (María), I (Instagram), IA (catálogo de desarrollo).
+  const LAYER_DEFS = [
+    {key: 'n', prov: 'ours', ring: '#fff', badge: ''},
+    {key: 'd', prov: 'dani', ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'},
+    {key: 'm', prov: 'maria', ring: '#7a4fa3', badge: ' <span style="color:#7a4fa3;font-weight:800">M</span>'},
+    {key: 'i', prov: 'instagram', ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'},
+    {key: 'a', prov: 'ai', ring: '#8a8577', badge: ' <span style="color:#8a8577;font-weight:800">IA</span>'},
+  ];
   const pois = [];
-  if(srcState.n){
+  LAYER_DEFS.forEach(def => {
+    if(!srcState[def.key]) return;
     state.places.forEach(sp => {
       if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
-      if(sourceValueForPlace(sp) !== 'user') return;
-      if((sp.provenance || provenanceOf(sp)) === 'maria') return; // María tiene su propia capa
+      if((sp.provenance || provenanceOf(sp)) !== def.prov) return;
       const v = placeView(sp);
-      pois.push({pid: sp.id, p: v, ring: '#fff',
-        badge: v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : ''});
+      pois.push({pid: sp.id, p: v, ring: def.ring,
+        badge: def.badge || (v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : '')});
     });
-  }
-  if(srcState.d){
-    state.places.forEach(sp => { if(sp && sp.dani && sp.lat != null)
-      pois.push({pid: sp.id, p: placeView(sp), ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'}); });
-  }
-  if(srcState.m){
-    state.places.forEach(sp => { if(sp && (sp.provenance || provenanceOf(sp)) === 'maria' && sp.lat != null)
-      pois.push({pid: sp.id, p: placeView(sp), ring: '#7a4fa3', badge: ' <span style="color:#7a4fa3;font-weight:800">M</span>'}); });
-  }
-  if(srcState.i){
-    state.places.forEach(sp => { if(sp && sp.source === 'insta' && sp.lat != null)
-      pois.push({pid: sp.id, p: placeView(sp), ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'}); });
-  }
+  });
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
@@ -4617,10 +4654,7 @@ function renderSitios(){
   const grid = $('#placesGrid');
   if(!items.length){
     grid.classList.remove('grouped');
-    const msg = placeSrc === 'ours' && !placeQ && !placeRegion && !placeCat
-      ? 'Aún no habéis añadido sitios propios. Explorad las ideas de IA, Dani, María o Instagram — o añadid el vuestro con ＋.'
-      : 'Sin resultados.';
-    grid.innerHTML = `<p style="color:var(--muted);padding:8px 2px;line-height:1.5">${msg}</p>`;
+    grid.innerHTML = '<p style="color:var(--muted);padding:8px 2px;line-height:1.5">Sin resultados.</p>';
     return;
   }
   // Exploración editorial, sin muro (DIRECTION §7): con búsqueda o región elegida,

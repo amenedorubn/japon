@@ -111,7 +111,15 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   await sleep(400); // let any stale async route callbacks fire (token guard must block them)
   check('P6: all-days draws zero route polylines', Lstats.polyline === polyBefore);
   check('P6: all-days triggers no new OSRM/rail fetches', fetchCount === fetchBefore);
-  check('P6: all-days draws POI markers', layersOfType('circleMarker').length > 80);
+  // Capas por procedencia (12.48): N = Itinerario.docx (pequeña y honesta);
+  // N + IA equivale al antiguo "todo el catálogo".
+  const nOnly = layersOfType('circleMarker').length;
+  check('P6: all-days draws the docx POI markers (N layer)', nOnly > 10);
+  api.srcState.a = true; api.renderMapDay();
+  await sleep(150);
+  check('P6: N+IA draws the full catalog', layersOfType('circleMarker').length > 80);
+  api.srcState.a = false; api.renderMapDay();
+  await sleep(150);
   check('P6: routeStatus hidden', els['#routeStatus'].style.display === 'none');
   check('P6: day chips include Todos active', els['#mapDayChips'].innerHTML.includes('Todos'));
 

@@ -139,20 +139,23 @@ for (const f of ['all', 'ours', 'dani', 'maria', 'instagram', 'ai']) {
   const dups = g.filter((x, i) => g.indexOf(x) !== i);
   check(`sitios[${f}]: no dup ids`, dups.length === 0);
 }
-// El catálogo semilla es procedencia 'ai' (andamiaje de exploración), NO "Nuestros".
-let g = idsFor('ai', byId('catalog_sensoji').region);
-check('sitios[ai]: merged twin listed once (catalog_sensoji), legacy slug gone',
+// NUESTROS = Itinerario.docx (12.48): los lugares del documento van a 'ours';
+// el resto de la semilla (curado no-docx) es 'ai'.
+let g = idsFor('ours', byId('catalog_sensoji').region);
+check('sitios[ours]: docx twin listed once (catalog_sensoji), legacy slug gone',
   g.includes('catalog_sensoji') && !g.includes('sensoji'));
-check('sitios[ai]: unaliased catalog zone listed (catalog_harajuku)',
-  idsFor('ai', byId('catalog_harajuku').region).includes('catalog_harajuku'));
-check('sitios[ai]: curated-only entry listed (nakamise)',
+check('sitios[ours]: docx zone listed (catalog_harajuku)',
+  idsFor('ours', byId('catalog_harajuku').region).includes('catalog_harajuku'));
+check('sitios[ai]: non-docx curated entry listed (nakamise)',
   idsFor('ai', byId('nakamise').region).includes('nakamise'));
-check('sitios[ai]: no city bases, airports, hotels, transporte',
+check('sitios[ours]: no dani, city bases, airports, hotels, transporte',
   !g.some(i => i.startsWith('dani_')) && !g.includes('catalog_tokio') &&
   !g.includes('airport_narita_llegada') && !g.includes('nrt') && !g.includes('hotel_tokyo'));
-// "Nuestros" ya NO contiene el catálogo 'ai': AI y Ours quedan separados.
-check('sitios[ours]: seed catalog separated out (catalog_sensoji NOT here)',
-  !idsFor('ours', byId('catalog_sensoji').region).includes('catalog_sensoji'));
+// AI y Nuestros son cubos exclusivos: lo no-docx no entra en Nuestros ni al revés.
+check('sitios[ours]: non-docx seed separated out (nakamise NOT here)',
+  !idsFor('ours', byId('nakamise').region).includes('nakamise'));
+check('sitios[ai]: docx place separated out (catalog_sensoji NOT here)',
+  !idsFor('ai', byId('catalog_sensoji').region).includes('catalog_sensoji'));
 g = idsFor('dani', byId('dani_fushimi_inari').region);
 check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_fushimi_inari') && !g.includes('dani_rise_osaka'));
 (function(){ const m = api.state.places.find(p => /^maria_/.test(p.id));
