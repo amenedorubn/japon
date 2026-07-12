@@ -4279,6 +4279,12 @@ function initMapView(){
   if(mapDay == null) mapDay = curDay;
   if(!map){
     map = L.map('map', {zoomControl: true, attributionControl: true}).setView([35.68, 139.76], 11);
+    // PRIORIDAD DE CLIC (corrección 12.50): los polígonos de zona viven en un
+    // pane PROPIO por debajo del overlayPane (350 < 400), de modo que un sitio
+    // siempre gana el clic sobre el área que lo rodea; el área sigue siendo
+    // inspeccionable tocando mapa vacío. Sin esto, renderZones (que se redibuja
+    // en cada zoom) dejaba los polígonos POR ENCIMA de los sitios en el SVG.
+    if(map.createPane){ map.createPane('zones').style.zIndex = 350; }
     applyMapTheme(map);
     // Las zonas dependen del nivel de zoom: redibujar al hacer zoom
     let zoomT = null;
@@ -4426,14 +4432,15 @@ function zonePolygonZoomThreshold(p){
   return 10;
 }
 function zoneStyle(p, cat){
+  // pane 'zones' (bajo el overlayPane): el área nunca roba el clic a un sitio.
   if(isBaseCityZone(p)){
-    return {color: p.id === 'catalog_tokio' ? '#223A5E' : '#6B6152',
+    return {pane: 'zones', color: p.id === 'catalog_tokio' ? '#223A5E' : '#6B6152',
       weight: p.id === 'catalog_tokio' ? 0.8 : 1.2,
       opacity: p.id === 'catalog_tokio' ? .24 : .34,
       fillColor: p.id === 'catalog_tokio' ? '#223A5E' : '#7C6A46',
       fillOpacity: p.id === 'catalog_tokio' ? .14 : .09, lineCap: 'round', interactive: true};
   }
-  return {color: cat.color, weight: 2, opacity: .72, fillColor: cat.color,
+  return {pane: 'zones', color: cat.color, weight: 2, opacity: .72, fillColor: cat.color,
     fillOpacity: p.category === 'zona' ? .13 : .10, lineCap: 'round', lineJoin: 'round', interactive: true};
 }
 function zoneLatLngs(p){
@@ -4476,7 +4483,7 @@ function renderZones(){
     const style = zoneStyle(p, cat);
     if(geoms.length){
       geoms.forEach(g => {
-        const layer = L.geoJSON(g, {style}).addTo(zonesLayer);
+        const layer = L.geoJSON(g, {style, pane: 'zones'}).addTo(zonesLayer);
         layer.bindTooltip(esc(p.name), {direction: 'center', className: 'zone-tooltip'});
         layer.on('click', () => openPlace(p.id));
       });
