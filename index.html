@@ -274,6 +274,8 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .flight .times small{display:block;color:var(--muted);font-size:11.5px;font-weight:600;}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;
   border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+.pill-btn{cursor:pointer;}
+@media(hover:hover){.pill-btn:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
 .pill.red{background:var(--accent-soft);color:var(--accent);border-color:transparent;}
 .pill.blue{background:var(--indigo-soft);color:var(--indigo);border-color:transparent;}
 .pill.green{background:var(--green-soft);color:var(--green);border-color:transparent;}
@@ -3681,9 +3683,8 @@ function renderItinerary(){
     </div>
     <div class="tots">
       <span class="pill" style="color:${CITY_COLORS[d.city]}">📍 ${esc(d.city)}</span>
-      ${c.entr ? `<span class="pill">🎫 entradas ${fmtYen(c.entr)} pp</span>` : ''}
-      ${c.trans ? `<span class="pill">🚇 transporte ${fmtYen(c.trans)} pp</span>` : ''}
       ${d.stops.length ? `<span class="pill green">✓ ${doneN}/${d.stops.length}</span>` : ''}
+      ${(c.entr || c.trans) ? `<button class="pill pill-btn" id="dayBudgetBtn" title="Ver el gasto estimado de este día">💴 gasto del día</button>` : ''}
     </div>
     ${d.stops.length ? `<div class="progress"><i style="width:${d.stops.length ? Math.round(doneN / d.stops.length * 100) : 0}%"></i></div>` : ''}
   </div>`;
@@ -3729,6 +3730,8 @@ function renderItinerary(){
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
   $('#dayPanel').innerHTML = html;
   onClick('#dayPanel .add-stop', () => openAddStop(curDay));
+  onClick('#dayBudgetBtn', () => openBudget(curDay)); // presupuesto del día, bajo demanda
+
   $$('#dayPanel .e-plant').forEach(b => b.addEventListener('click', () => {
     const di = +b.dataset.day, day = state.days[di], p = placeById(b.dataset.pid);
     day.stops.push({id: uid(), pid: b.dataset.pid, time: inferTimeForInsert(day.stops, day.stops.length, null), dur: (p && p.dur) || 60, note: '', done: false});
