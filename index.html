@@ -282,11 +282,16 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .pill.blue{background:var(--indigo-soft);color:var(--indigo);border-color:transparent;}
 .pill.green{background:var(--green-soft);color:var(--green);border-color:transparent;}
 
+/* La ruta = tira de escalas, calmada y premium: papel con un hilo de color de
+   ciudad (susurro, no relleno saturado). El color no compite con el rojo ganado. */
 .route-overview{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;}
-.city-block{flex:none;min-width:118px;border-radius:16px;padding:12px 14px;color:#fff;position:relative;}
-.city-block b{font-size:15px;display:block;}
-.city-block small{font-size:11px;opacity:.85;font-weight:600;}
-.city-block .nts{position:absolute;top:8px;right:10px;font-size:10.5px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:99px;font-weight:700;}
+.city-block{flex:none;min-width:132px;border-radius:14px;padding:12px 14px 12px 18px;position:relative;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);}
+.city-block::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--city,var(--muted));}
+.city-block b{font-size:15px;display:block;color:var(--ink);}
+.city-block small{font-size:11px;color:var(--muted);font-weight:600;}
+.city-block .nts{position:absolute;top:8px;right:10px;font-size:10px;color:var(--muted);font-weight:700;
+  background:var(--card2);border:1px solid var(--line);padding:2px 7px;border-radius:99px;}
 
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;}
 .stat{padding:14px 16px;}
@@ -3335,7 +3340,7 @@ function renderInicio(){
     {city: 'Tokio', from: '22 abr', to: '27 abr', n: 5},
   ];
   $('#routeOverview').innerHTML = legs.map(l =>
-    `<div class="city-block" style="background:${CITY_COLORS[l.city]}"><span class="nts">${l.n} noches</span><b>${l.city}</b><small>${l.from} → ${l.to}</small></div>`
+    `<div class="city-block" style="--city:${CITY_COLORS[l.city]}"><span class="nts">${l.n} noches</span><b>${l.city}</b><small>${l.from} → ${l.to}</small></div>`
   ).join('<div style="align-self:center;color:var(--muted);font-weight:800">→</div>');
   $('#routeSummary').textContent = '+ excursiones a Nikkō, Kamakura, Fuji, Nara, Hiroshima y Miyajima';
 
