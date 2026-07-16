@@ -1,0 +1,1377 @@
+{
+  "_comment": "Datos estructurados de la ruta de Dani (Fase 3A). Los ids son INMUTABLES: los referencian TWIN_GROUPS (60 gemelos) y DANI_ROUTE_GROUPS (Ruta Dani). El PDF (JAPON-DEFINITIVO-Dani.pdf) es la fuente del CONTENIDO (qué sitios, qué días, sus notas), pero no trae coordenadas, categorías ni ids: eso es curación manual hecha en su día sobre el PDF y vive aquí. tools/dani-import.js verifica cada entrada contra el texto real del PDF y escribe import/dani-places.json.",
+  "_viaje": "ESTO ES EL VIAJE DE DANI DE JUNIO DE 2025, YA REALIZADO. Es material de REFERENCIA/INSPIRACIÓN, no nuestro plan (el nuestro es 8-28 de abril de 2027).",
+  "_fechas": "Las fechas 2025-06-* de checkIn/checkOut y los importes de bookingRef son las reservas que DANI tuvo en SU viaje. NO son reservas nuestras y NUNCA deben contar como confirmadas en nuestra app: lo único real nuestro son apa_asakusabashi, id_louis_otsuka_nishi y FLIGHTS. Todo lo de Dani es propuesta, incluidos sus hoteles.",
+  "places": [
+    {
+      "id": "dani_kix",
+      "name": "Aeropuerto Internacional de Kansai",
+      "category": "otro",
+      "region": "Dani · Osaka",
+      "lat": 34.4347,
+      "lng": 135.2441,
+      "notes": "Llegada a Japón del documento Dani. Punto de inicio en Japón; no incluye el vuelo internacional."
+    },
+    {
+      "id": "dani_rise_osaka",
+      "name": "The Rise Osaka Kitashinchi",
+      "category": "alojamiento",
+      "region": "Dani · Osaka",
+      "lat": 34.6966,
+      "lng": 135.4994,
+      "notes": "Hotel en Osaka 9-11 junio. 2 habitaciones dobles y una individual. Pagado.",
+      "address": "1 Chome Kitashinchi / zona Kitashinchi, Osaka",
+      "checkIn": "2025-06-09",
+      "checkOut": "2025-06-11",
+      "bookingRef": "380,22 €, pagado"
+    },
+    {
+      "id": "dani_shinsaibashi",
+      "name": "Shinsaibashisuji",
+      "category": "compras",
+      "region": "Dani · Osaka",
+      "lat": 34.6747,
+      "lng": 135.5002,
+      "notes": "Calle comercial de Shinsaibashi-Suji."
+    },
+    {
+      "id": "dani_dotonbori",
+      "name": "Dotonbori y Glico Man",
+      "category": "comida",
+      "region": "Dani · Osaka",
+      "lat": 34.6687,
+      "lng": 135.5013,
+      "notes": "Paseo por Dotonbori y Namba para ver neones, Glico Man, entretenimiento y comida."
+    },
+    {
+      "id": "dani_namba",
+      "name": "Namba",
+      "category": "zona",
+      "region": "Dani · Osaka",
+      "lat": 34.6661,
+      "lng": 135.5017,
+      "notes": "Zona de entretenimiento, compras, neones y luces."
+    },
+    {
+      "id": "dani_hozenji",
+      "name": "Templo Hozen-ji",
+      "category": "templo",
+      "region": "Dani · Osaka",
+      "lat": 34.6677,
+      "lng": 135.5035,
+      "notes": "Templo en callejón estrecho con la escultura cubierta de musgo Mizukake Fudo."
+    },
+    {
+      "id": "dani_doguyasuji",
+      "name": "Sennichimae Doguyasuji",
+      "category": "compras",
+      "region": "Dani · Osaka",
+      "lat": 34.6651,
+      "lng": 135.5035,
+      "notes": "Calle de artículos de cocina, amuletos japoneses y réplicas de comida."
+    },
+    {
+      "id": "dani_kuromon",
+      "name": "Mercado Kuromon Ichiba",
+      "category": "comida",
+      "region": "Dani · Osaka",
+      "lat": 34.6646,
+      "lng": 135.5061,
+      "notes": "Mercado para probar takoyaki, okonomiyaki, fugu, kushiage y otros platos de Osaka."
+    },
+    {
+      "id": "dani_nipponbashi",
+      "name": "Nipponbashi / Den Den Town",
+      "category": "compras",
+      "region": "Dani · Osaka",
+      "lat": 34.6606,
+      "lng": 135.5063,
+      "notes": "Barrio del manga, cine, electrónica y tiendas otaku."
+    },
+    {
+      "id": "dani_shinsekai",
+      "name": "Shinsekai y Torre Tsutenkaku",
+      "category": "otro",
+      "region": "Dani · Osaka",
+      "lat": 34.6525,
+      "lng": 135.5063,
+      "notes": "Zona “Nuevo Mundo”, ambiente retro, torre Tsutenkaku y restaurantes de fugu."
+    },
+    {
+      "id": "dani_shitennoji",
+      "name": "Templo Shitenno-ji",
+      "category": "templo",
+      "region": "Dani · Osaka",
+      "lat": 34.6546,
+      "lng": 135.5161,
+      "notes": "Primer templo budista de Japón, datado en el año 593 aunque reconstruido."
+    },
+    {
+      "id": "dani_shin_osaka",
+      "name": "Estación Shin-Osaka",
+      "category": "otro",
+      "region": "Dani · Osaka",
+      "lat": 34.7335,
+      "lng": 135.5002,
+      "notes": "Salida en shinkansen hacia Hiroshima."
+    },
+    {
+      "id": "dani_hiroshima_station",
+      "name": "Estación de Hiroshima",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3974,
+      "lng": 132.4755,
+      "notes": "Llegada en shinkansen desde Osaka."
+    },
+    {
+      "id": "dani_hiroshima_castle",
+      "name": "Hiroshima-jo",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.4026,
+      "lng": 132.4594,
+      "notes": "Castillo de 1589 destruido por la bomba y restaurado. Acceso indicado como gratis."
+    },
+    {
+      "id": "dani_hiroshima_art",
+      "name": "Museo del Arte de Hiroshima",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.4008,
+      "lng": 132.4594,
+      "notes": "Museo del Arte de Hiroshima."
+    },
+    {
+      "id": "dani_gate_park",
+      "name": "Hiroshima Gate Park",
+      "category": "naturaleza",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3952,
+      "lng": 132.454,
+      "notes": "Parque inaugurado en 2023 donde antes había un campo de béisbol; zona con cafeterías."
+    },
+    {
+      "id": "dani_orizuru",
+      "name": "Torre Orizuru",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3957,
+      "lng": 132.4522,
+      "notes": "Mirador cerca de la Cúpula de la Bomba Atómica."
+    },
+    {
+      "id": "dani_atomic_dome",
+      "name": "Cúpula de la Bomba Atómica",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3955,
+      "lng": 132.4536,
+      "notes": "Patrimonio de la Humanidad, construida en 1915 y muy cerca del hipocentro."
+    },
+    {
+      "id": "dani_rest_house",
+      "name": "Rest House",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3937,
+      "lng": 132.453,
+      "notes": "Edificio que conserva partes previas a la bomba; se menciona el sótano donde se refugió Eizo Nomura."
+    },
+    {
+      "id": "dani_peace_park",
+      "name": "Parque y Museo Memorial de la Paz",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3929,
+      "lng": 132.4529,
+      "notes": "Parque de la Paz y Museo Memorial de la Paz de Hiroshima."
+    },
+    {
+      "id": "dani_peace_bridges",
+      "name": "Puentes de la Paz",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3917,
+      "lng": 132.4537,
+      "notes": "Puentes próximos al Parque de la Paz."
+    },
+    {
+      "id": "dani_heritage_pier",
+      "name": "Hiroshima World Heritage Sea Route",
+      "category": "otro",
+      "region": "Dani · Hiroshima",
+      "lat": 34.3925,
+      "lng": 132.452,
+      "notes": "Muelle para ferry directo a Miyajima, unos 45 minutos según el documento."
+    },
+    {
+      "id": "dani_miyajima_pier",
+      "name": "Muelle de Miyajima",
+      "category": "otro",
+      "region": "Dani · Miyajima",
+      "lat": 34.302,
+      "lng": 132.322,
+      "notes": "Llegada en ferry a la isla de Miyajima."
+    },
+    {
+      "id": "dani_otorii",
+      "name": "Gran Otorii de Miyajima",
+      "category": "templo",
+      "region": "Dani · Miyajima",
+      "lat": 34.2971,
+      "lng": 132.3198,
+      "notes": "Gran puerta roja sobre el mar, símbolo de Miyajima."
+    },
+    {
+      "id": "dani_itsukushima",
+      "name": "Santuario Itsukushima",
+      "category": "templo",
+      "region": "Dani · Miyajima",
+      "lat": 34.2959,
+      "lng": 132.3198,
+      "notes": "Santuario con forma actual de 1168 y pagoda cercana."
+    },
+    {
+      "id": "dani_daishoin",
+      "name": "Daisho-in",
+      "category": "templo",
+      "region": "Dani · Miyajima",
+      "lat": 34.2925,
+      "lng": 132.318,
+      "notes": "Templo budista más antiguo de la isla, con estatuillas de monjes de gorro rojo."
+    },
+    {
+      "id": "dani_senjokaku",
+      "name": "Senjo-kaku",
+      "category": "templo",
+      "region": "Dani · Miyajima",
+      "lat": 34.2969,
+      "lng": 132.3204,
+      "notes": "Pabellón con vistas a la pagoda de cinco plantas."
+    },
+    {
+      "id": "dani_misen",
+      "name": "Monte Misen",
+      "category": "naturaleza",
+      "region": "Dani · Miyajima",
+      "lat": 34.2793,
+      "lng": 132.3192,
+      "notes": "Subida opcional para evitar multitudes; teleférico en dos fases y vistas 360º."
+    },
+    {
+      "id": "dani_kakiya",
+      "name": "Kakiya",
+      "category": "comida",
+      "region": "Dani · Miyajima",
+      "lat": 34.2994,
+      "lng": 132.3217,
+      "notes": "Restaurante recomendado para ostras."
+    },
+    {
+      "id": "dani_cafe_lente",
+      "name": "Café Lente",
+      "category": "comida",
+      "region": "Dani · Miyajima",
+      "lat": 34.2961,
+      "lng": 132.3189,
+      "notes": "Cafetería recomendada en Miyajima."
+    },
+    {
+      "id": "dani_kintetsu_nara",
+      "name": "Kintetsu Nara Station",
+      "category": "otro",
+      "region": "Dani · Nara",
+      "lat": 34.6844,
+      "lng": 135.8276,
+      "notes": "Llegada desde Osaka-Namba; estación cercana al parque."
+    },
+    {
+      "id": "dani_isuien",
+      "name": "Jardines Isui-en",
+      "category": "naturaleza",
+      "region": "Dani · Nara",
+      "lat": 34.6858,
+      "lng": 135.8397,
+      "notes": "Jardines con zona del siglo XX y zona de 1670; casa de té Sanshutei."
+    },
+    {
+      "id": "dani_nandaimon",
+      "name": "Nandai-mon",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6888,
+      "lng": 135.8392,
+      "notes": "Gran puerta de templo con guardianes Nio de 8 metros."
+    },
+    {
+      "id": "dani_todaiji",
+      "name": "Templo Todai-ji",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6889,
+      "lng": 135.8398,
+      "notes": "Templo del Gran Buda Daibutsu y puerta Nandai-mon."
+    },
+    {
+      "id": "dani_nigatsudo",
+      "name": "Nigatsu-do",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6897,
+      "lng": 135.8466,
+      "notes": "Mirador dentro del entorno de Todai-ji."
+    },
+    {
+      "id": "dani_hokkedo",
+      "name": "Hokke-do",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6894,
+      "lng": 135.8455,
+      "notes": "Templo del itinerario sugerido."
+    },
+    {
+      "id": "dani_mizuya",
+      "name": "Mizuya Chaya",
+      "category": "comida",
+      "region": "Dani · Nara",
+      "lat": 34.6839,
+      "lng": 135.8448,
+      "notes": "Casa de té para té, pastas, udon, helados y comidas sencillas."
+    },
+    {
+      "id": "dani_kasuga",
+      "name": "Kasuga Taisha",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6814,
+      "lng": 135.8484,
+      "notes": "Santuario famoso por farolillos de bronce y lámparas de piedra."
+    },
+    {
+      "id": "dani_wakamiya",
+      "name": "Wakamiya-jinja",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6808,
+      "lng": 135.8482,
+      "notes": "Santuario incluido en el recorrido de Nara."
+    },
+    {
+      "id": "dani_ichino_torii",
+      "name": "Ichi-no Torii",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6837,
+      "lng": 135.8369,
+      "notes": "Torii de entrada hacia Kasuga Taisha."
+    },
+    {
+      "id": "dani_kofukuji",
+      "name": "Kofuku-ji",
+      "category": "templo",
+      "region": "Dani · Nara",
+      "lat": 34.6826,
+      "lng": 135.8316,
+      "notes": "Templo con pagoda de cinco pisos y Tokondo."
+    },
+    {
+      "id": "dani_nara_museum",
+      "name": "Museo Nacional de Nara",
+      "category": "otro",
+      "region": "Dani · Nara",
+      "lat": 34.6833,
+      "lng": 135.8399,
+      "notes": "Visita posible tras el tour."
+    },
+    {
+      "id": "dani_nara_park",
+      "name": "Parque de Nara",
+      "category": "naturaleza",
+      "region": "Dani · Nara",
+      "lat": 34.6851,
+      "lng": 135.843,
+      "notes": "Parque con más de 1200 ciervos considerados mensajeros de los dioses."
+    },
+    {
+      "id": "dani_ukimido",
+      "name": "Estanque Sagi y pabellón Ukimido",
+      "category": "naturaleza",
+      "region": "Dani · Nara",
+      "lat": 34.6782,
+      "lng": 135.8397,
+      "notes": "Pabellón hexagonal que parece flotar sobre el estanque."
+    },
+    {
+      "id": "dani_nakatanido",
+      "name": "Nakatanido",
+      "category": "comida",
+      "region": "Dani · Nara",
+      "lat": 34.6827,
+      "lng": 135.8279,
+      "notes": "Confitería famosa por el yomogi mochi."
+    },
+    {
+      "id": "dani_naramachi",
+      "name": "Naramachi",
+      "category": "zona",
+      "region": "Dani · Nara",
+      "lat": 34.6776,
+      "lng": 135.8316,
+      "notes": "Antiguo distrito comercial con callejones, casas tradicionales, tiendas y cafeterías."
+    },
+    {
+      "id": "dani_yukari_kyoto",
+      "name": "Yukari Shijo Kyoto",
+      "category": "alojamiento",
+      "region": "Dani · Kioto",
+      "lat": 35.0018,
+      "lng": 135.7553,
+      "notes": "Alojamiento en Kioto 11-13 junio. Casa de 3 dormitorios. Pagado.",
+      "address": "Zona Shijo, Kioto",
+      "checkIn": "2025-06-11",
+      "checkOut": "2025-06-13",
+      "bookingRef": "367,98 €, pagado"
+    },
+    {
+      "id": "dani_fushimi_inari",
+      "name": "Fushimi Inari-Taisha",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 34.9671,
+      "lng": 135.7727,
+      "notes": "Santuario con sendero de 4 km de torii rojos. Abierto 24h y gratuito."
+    },
+    {
+      "id": "dani_vermillion",
+      "name": "Vermillion Espresso Bar",
+      "category": "comida",
+      "region": "Dani · Kioto",
+      "lat": 34.9672,
+      "lng": 135.7714,
+      "notes": "Café recomendado para descansar después de Fushimi Inari."
+    },
+    {
+      "id": "dani_kiyomizu",
+      "name": "Kiyomizu-dera",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 34.9949,
+      "lng": 135.785,
+      "notes": "Complejo de templos célebre de Kioto, con pagoda y manantial Otowa-no-taki."
+    },
+    {
+      "id": "dani_sannenzaka",
+      "name": "Sannenzaka y Ninenzaka",
+      "category": "zona",
+      "region": "Dani · Kioto",
+      "lat": 34.9972,
+      "lng": 135.7816,
+      "notes": "Calles tradicionales con tiendas, dulces y souvenirs, camino a Kodai-ji."
+    },
+    {
+      "id": "dani_kodaiji",
+      "name": "Templo Kodai-ji",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0006,
+      "lng": 135.7812,
+      "notes": "Templo de 1605, destacado en la ruta del sur de Higashiyama."
+    },
+    {
+      "id": "dani_chionin",
+      "name": "Chion-in",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0053,
+      "lng": 135.7821,
+      "notes": "Templo en la ruta de sur a norte: Kiyomizu-dera – Kodai-ji – Chion-in – Shoren-in."
+    },
+    {
+      "id": "dani_shorenin",
+      "name": "Shoren-in",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0064,
+      "lng": 135.7829,
+      "notes": "Templo tranquilo y menos concurrido; sugerido para tomar té."
+    },
+    {
+      "id": "dani_gion",
+      "name": "Gion",
+      "category": "zona",
+      "region": "Dani · Kioto",
+      "lat": 35.0038,
+      "lng": 135.775,
+      "notes": "Barrio turístico y tradicional de geishas, recomendable de día y de noche."
+    },
+    {
+      "id": "dani_yasaka",
+      "name": "Santuario Yasaka",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0037,
+      "lng": 135.7786,
+      "notes": "Santuario imprescindible junto a Gion."
+    },
+    {
+      "id": "dani_pontocho",
+      "name": "Pontocho",
+      "category": "zona",
+      "region": "Dani · Kioto",
+      "lat": 35.0063,
+      "lng": 135.7714,
+      "notes": "Distrito tradicional de vida nocturna, farolillos y restaurantes."
+    },
+    {
+      "id": "dani_kanjiro",
+      "name": "Casa de Kanjiro Kawai",
+      "category": "otro",
+      "region": "Dani · Kioto",
+      "lat": 34.994,
+      "lng": 135.7747,
+      "notes": "Museo/casa en el barrio de la cerámica."
+    },
+    {
+      "id": "dani_nijo",
+      "name": "Castillo de Nijo",
+      "category": "otro",
+      "region": "Dani · Kioto",
+      "lat": 35.0142,
+      "lng": 135.748,
+      "notes": "Castillo del siglo XVII, palacio Ninomaru, jardín Ninomaru y puerta Kara-mon."
+    },
+    {
+      "id": "dani_kinkakuji",
+      "name": "Pabellón Dorado / Kinkaku-ji",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0394,
+      "lng": 135.7292,
+      "notes": "Templo dorado reflejado sobre el lago, reconstruido tras el incendio de 1950."
+    },
+    {
+      "id": "dani_ryoanji",
+      "name": "Ryoan-ji",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0345,
+      "lng": 135.7183,
+      "notes": "Templo zen famoso por su jardín de 15 piedras."
+    },
+    {
+      "id": "dani_myoshinji",
+      "name": "Myoshin-ji / Taizo-in",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0217,
+      "lng": 135.7209,
+      "notes": "Zona de templos y barrio de geishas más antiguo que Gion; se sugiere té matcha en Taizo-in."
+    },
+    {
+      "id": "dani_arashiyama_station",
+      "name": "Estación de Arashiyama y Bosque de Kimonos",
+      "category": "otro",
+      "region": "Dani · Kioto",
+      "lat": 35.0152,
+      "lng": 135.6778,
+      "notes": "Bosque de Kimonos en la estación de Arashiyama."
+    },
+    {
+      "id": "dani_togetsukyo",
+      "name": "Puente Togetsukyo",
+      "category": "otro",
+      "region": "Dani · Kioto",
+      "lat": 35.0128,
+      "lng": 135.6761,
+      "notes": "Puente principal de Arashiyama."
+    },
+    {
+      "id": "dani_bamboo",
+      "name": "Bosque de Bambú de Arashiyama",
+      "category": "naturaleza",
+      "region": "Dani · Kioto",
+      "lat": 35.017,
+      "lng": 135.6712,
+      "notes": "Bosque de bambú; combinar con templos y Togetsukyo."
+    },
+    {
+      "id": "dani_tenryuji",
+      "name": "Templo Tenryu-ji",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0163,
+      "lng": 135.6747,
+      "notes": "Templo de Arashiyama."
+    },
+    {
+      "id": "dani_otagi",
+      "name": "Otagi Nenbutsu-ji",
+      "category": "templo",
+      "region": "Dani · Kioto",
+      "lat": 35.0311,
+      "lng": 135.6627,
+      "notes": "Templo bonito recomendado llegando en taxi o bus y bajando hacia Arashiyama."
+    },
+    {
+      "id": "dani_saga_torimoto",
+      "name": "Saga-Torimoto",
+      "category": "zona",
+      "region": "Dani · Kioto",
+      "lat": 35.0286,
+      "lng": 135.6683,
+      "notes": "Calles preservadas de pueblo tradicional entre Otagi y Arashiyama."
+    },
+    {
+      "id": "dani_car_rental_kyoto",
+      "name": "Alquiler coche Kyoto Shinkansen RR",
+      "category": "otro",
+      "region": "Dani · Kioto",
+      "lat": 34.9858,
+      "lng": 135.7591,
+      "notes": "Recogida de coche en Kioto el 13 junio 18:00; devolución Ikebukuro East el 16 junio 14:00."
+    },
+    {
+      "id": "dani_rikka_takayama",
+      "name": "Takayama Rikka Baba Ichi",
+      "category": "alojamiento",
+      "region": "Dani · Takayama",
+      "lat": 36.1434,
+      "lng": 137.2563,
+      "notes": "Noche en Takayama 13-14 junio. Casa de 2 dormitorios. Pagado.",
+      "checkIn": "2025-06-13",
+      "checkOut": "2025-06-14",
+      "bookingRef": "Pagado"
+    },
+    {
+      "id": "dani_hida_kokubunji",
+      "name": "Hida Kokubun-ji",
+      "category": "templo",
+      "region": "Dani · Takayama",
+      "lat": 36.1439,
+      "lng": 137.2528,
+      "notes": "Templo budista con pagoda de tres plantas del siglo XVI y ginkgo de 1200 años."
+    },
+    {
+      "id": "dani_kaji_bridge",
+      "name": "Puente de Kaji",
+      "category": "otro",
+      "region": "Dani · Takayama",
+      "lat": 36.1444,
+      "lng": 137.2574,
+      "notes": "Puente sobre el río Miya-gawa con figuras de bronce."
+    },
+    {
+      "id": "dani_miyagawa_market",
+      "name": "Mercado matutino de Miyagawa",
+      "category": "comida",
+      "region": "Dani · Takayama",
+      "lat": 36.145,
+      "lng": 137.2582,
+      "notes": "Mercado matutino a orillas del río."
+    },
+    {
+      "id": "dani_sanmachi",
+      "name": "Casco antiguo de Takayama / Sanmachi",
+      "category": "zona",
+      "region": "Dani · Takayama",
+      "lat": 36.1428,
+      "lng": 137.259,
+      "notes": "Paisajes urbanos del periodo Edo, casas de madera, tiendas de kimonos y sake."
+    },
+    {
+      "id": "dani_nakabashi",
+      "name": "Puente Nakabashi",
+      "category": "otro",
+      "region": "Dani · Takayama",
+      "lat": 36.1397,
+      "lng": 137.2594,
+      "notes": "Puente rojo muy pintoresco."
+    },
+    {
+      "id": "dani_shiroyama",
+      "name": "Parque Shiroyama y Takayama Joato",
+      "category": "naturaleza",
+      "region": "Dani · Takayama",
+      "lat": 36.1375,
+      "lng": 137.2603,
+      "notes": "Final sugerido de la ruta histórica por Takayama."
+    },
+    {
+      "id": "dani_shirakawago",
+      "name": "Shirakawa-go",
+      "category": "excursion",
+      "region": "Dani · Alpes",
+      "lat": 36.2579,
+      "lng": 136.9064,
+      "notes": "Pueblo de casas gassho-zukuri, Patrimonio de la Humanidad junto a Gokayama."
+    },
+    {
+      "id": "dani_myozenji",
+      "name": "Templo Myozen-ji",
+      "category": "templo",
+      "region": "Dani · Alpes",
+      "lat": 36.2571,
+      "lng": 136.9066,
+      "notes": "Templo de Shirakawa-go."
+    },
+    {
+      "id": "dani_shirakawa_hachimangu",
+      "name": "Santuario Shirakawa Hachimangu",
+      "category": "templo",
+      "region": "Dani · Alpes",
+      "lat": 36.2553,
+      "lng": 136.9076,
+      "notes": "Santuario en Shirakawa-go."
+    },
+    {
+      "id": "dani_ogimachi_bridge",
+      "name": "Puente colgante de Ogimachi",
+      "category": "otro",
+      "region": "Dani · Alpes",
+      "lat": 36.2558,
+      "lng": 136.902,
+      "notes": "Puente colgante en Shirakawa-go."
+    },
+    {
+      "id": "dani_kazaguruma",
+      "name": "Nakao Kogen Hotel Kazaguruma",
+      "category": "alojamiento",
+      "region": "Dani · Alpes",
+      "lat": 36.2396,
+      "lng": 137.5693,
+      "notes": "Noche 14-15 junio. Hotel con desayuno, vistas a la montaña y baño privado.",
+      "checkIn": "2025-06-14",
+      "checkOut": "2025-06-15",
+      "bookingRef": "393,14 €, se paga en hotel"
+    },
+    {
+      "id": "dani_hirayu",
+      "name": "Hirayu Onsen",
+      "category": "otro",
+      "region": "Dani · Alpes",
+      "lat": 36.1905,
+      "lng": 137.5523,
+      "notes": "Punto de autobús hacia Kamikochi."
+    },
+    {
+      "id": "dani_kamikochi",
+      "name": "Kamikochi / Kappabashi",
+      "category": "naturaleza",
+      "region": "Dani · Alpes",
+      "lat": 36.247,
+      "lng": 137.637,
+      "notes": "Valle del río Azusa, vistas de montaña y puente Kappabashi."
+    },
+    {
+      "id": "dani_myojin",
+      "name": "Estanque Myojin",
+      "category": "naturaleza",
+      "region": "Dani · Alpes",
+      "lat": 36.2648,
+      "lng": 137.668,
+      "notes": "Paseo desde Kappabashi hacia Myojin y santuario Hotaka."
+    },
+    {
+      "id": "dani_hotaka",
+      "name": "Santuario Hotaka",
+      "category": "templo",
+      "region": "Dani · Alpes",
+      "lat": 36.2652,
+      "lng": 137.6684,
+      "notes": "Santuario junto al estanque Myojin."
+    },
+    {
+      "id": "dani_taisho",
+      "name": "Estanque Taisho",
+      "category": "naturaleza",
+      "region": "Dani · Alpes",
+      "lat": 36.2274,
+      "lng": 137.6332,
+      "notes": "Estanque Taisho en Kamikochi."
+    },
+    {
+      "id": "dani_shoji_hotel",
+      "name": "Shoji Lake Hotel",
+      "category": "alojamiento",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.4897,
+      "lng": 138.6098,
+      "notes": "Noche 15-16 junio. Tiene sauna y baño termal.",
+      "checkIn": "2025-06-15",
+      "checkOut": "2025-06-16",
+      "bookingRef": "301,84 €, habitación familiar + doble"
+    },
+    {
+      "id": "dani_kawaguchi",
+      "name": "Lago Kawaguchi",
+      "category": "naturaleza",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.5171,
+      "lng": 138.7517,
+      "notes": "Ruta en bicicleta alrededor del lago Kawaguchi."
+    },
+    {
+      "id": "dani_fujisanbike",
+      "name": "Fujisanbike Studio / NBC",
+      "category": "otro",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.4989,
+      "lng": 138.7683,
+      "notes": "Reserva de bicicleta 10-18h. Número 303VNAYWC, pagado."
+    },
+    {
+      "id": "dani_chureito",
+      "name": "Pagoda Chureito",
+      "category": "templo",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.5013,
+      "lng": 138.801,
+      "notes": "Vista icónica del Fuji. Gratis, suele estar muy llena."
+    },
+    {
+      "id": "dani_honcho",
+      "name": "Honcho Street Shimoyoshida",
+      "category": "otro",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.4975,
+      "lng": 138.8069,
+      "notes": "Perspectiva urbana con el Monte Fuji al fondo si está despejado."
+    },
+    {
+      "id": "dani_fuji_5th",
+      "name": "Quinta estación del Monte Fuji",
+      "category": "naturaleza",
+      "region": "Dani · Monte Fuji",
+      "lat": 35.3949,
+      "lng": 138.7327,
+      "notes": "Última estación accesible por carretera, punto cercano a la cima."
+    },
+    {
+      "id": "dani_tokyo_airbnb",
+      "name": "Airbnb Tokio",
+      "category": "alojamiento",
+      "region": "Dani · Tokio",
+      "lat": 35.7295,
+      "lng": 139.7109,
+      "notes": "Apartamento entero de dos habitaciones. Noche 16-22 junio. Pagado.",
+      "checkIn": "2025-06-16",
+      "checkOut": "2025-06-22",
+      "bookingRef": "1117,42 €, pagado"
+    },
+    {
+      "id": "dani_ikebukuro_return",
+      "name": "Devolución coche Ikebukuro East",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.7295,
+      "lng": 139.718,
+      "notes": "Devolución del coche el 16 junio a las 14:00."
+    },
+    {
+      "id": "dani_miyabi_asakusa",
+      "name": "Kimono Miyabi Asakusa",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.7148,
+      "lng": 139.7967,
+      "notes": "Actividad: vestirse de geisha/kimono a las 9:30."
+    },
+    {
+      "id": "dani_sensoji",
+      "name": "Templo Sensō-ji",
+      "category": "templo",
+      "region": "Dani · Tokio",
+      "lat": 35.7148,
+      "lng": 139.7967,
+      "notes": "Templo más antiguo de Tokio, puerta Kaminarimon y farolillo gigante."
+    },
+    {
+      "id": "dani_kagetsudo",
+      "name": "Kagetsudo",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.7145,
+      "lng": 139.796,
+      "notes": "Panadería recomendada para probar melon pan."
+    },
+    {
+      "id": "dani_nakamise",
+      "name": "Nakamise-dori",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.7118,
+      "lng": 139.7965,
+      "notes": "Calle de compras tradicionales entre Kaminarimon y Sensō-ji; ningyo-yaki."
+    },
+    {
+      "id": "dani_sumida_park",
+      "name": "Parque Sumida",
+      "category": "naturaleza",
+      "region": "Dani · Tokio",
+      "lat": 35.7125,
+      "lng": 139.803,
+      "notes": "Parque junto al río, ideal en primavera por los cerezos."
+    },
+    {
+      "id": "dani_azuma_bridge",
+      "name": "Puente Azuma y Asahi Beer Hall",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.7107,
+      "lng": 139.8007,
+      "notes": "Cruzar el río Sumida y ver el edificio Asahi Super Dry."
+    },
+    {
+      "id": "dani_ueno_park",
+      "name": "Parque Ueno",
+      "category": "naturaleza",
+      "region": "Dani · Tokio",
+      "lat": 35.7156,
+      "lng": 139.773,
+      "notes": "Parque Ueno."
+    },
+    {
+      "id": "dani_ameyoko",
+      "name": "Ameyoko",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.7101,
+      "lng": 139.7745,
+      "notes": "Mercado/calle comercial Yokocho-Ameyoko."
+    },
+    {
+      "id": "dani_kameido",
+      "name": "Kameido Tenjinsha",
+      "category": "templo",
+      "region": "Dani · Tokio",
+      "lat": 35.7008,
+      "lng": 139.8232,
+      "notes": "Barrio tradicional de flores, tortugas, bares, izakaya y santuario Kameido Tenjinsha."
+    },
+    {
+      "id": "dani_kameido_gyoza",
+      "name": "Kameido Gyoza",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.6979,
+      "lng": 139.826,
+      "notes": "Restaurante famoso de gyozas en Kameido."
+    },
+    {
+      "id": "dani_skytree",
+      "name": "Tokio Skytree",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.7101,
+      "lng": 139.8107,
+      "notes": "Torre más alta de Japón; miradores a 350 y 450 m. Pagado, 18h para atardecer."
+    },
+    {
+      "id": "dani_kamakura_buddha",
+      "name": "Gran Buda de Kamakura",
+      "category": "templo",
+      "region": "Dani · Kamakura",
+      "lat": 35.3167,
+      "lng": 139.5358,
+      "notes": "Gran Buda de Kotoku-in, estatua de bronce de 13,35 m."
+    },
+    {
+      "id": "dani_hasedera",
+      "name": "Templo Hase-dera",
+      "category": "templo",
+      "region": "Dani · Kamakura",
+      "lat": 35.3126,
+      "lng": 139.5331,
+      "notes": "Templo con estatuas de jizo y ofrendas."
+    },
+    {
+      "id": "dani_wakamiyaoji",
+      "name": "Wakamiyaoji / Dankazura",
+      "category": "zona",
+      "region": "Dani · Kamakura",
+      "lat": 35.3216,
+      "lng": 139.553,
+      "notes": "Camino sagrado con tramo Dankazura."
+    },
+    {
+      "id": "dani_komachi",
+      "name": "Calle Komachi",
+      "category": "compras",
+      "region": "Dani · Kamakura",
+      "lat": 35.3217,
+      "lng": 139.5505,
+      "notes": "Calle comercial con cafeterías, recuerdos, artesanía y restaurantes."
+    },
+    {
+      "id": "dani_tsurugaoka",
+      "name": "Santuario Tsurugaoka Hachiman-gu",
+      "category": "templo",
+      "region": "Dani · Kamakura",
+      "lat": 35.326,
+      "lng": 139.5564,
+      "notes": "Santuario dedicado al dios patrón de Minamoto y samuráis."
+    },
+    {
+      "id": "dani_minato_mirai",
+      "name": "Minato Mirai 21",
+      "category": "otro",
+      "region": "Dani · Yokohama",
+      "lat": 35.4578,
+      "lng": 139.6329,
+      "notes": "Zona moderna de Yokohama, Landmark Tower, Cosmo World y Yokohama Air Cabin."
+    },
+    {
+      "id": "dani_yokohama_chinatown",
+      "name": "Barrio Chino de Yokohama",
+      "category": "comida",
+      "region": "Dani · Yokohama",
+      "lat": 35.4437,
+      "lng": 139.6456,
+      "notes": "Mayor barrio chino de Japón; baos, ramen y comida china."
+    },
+    {
+      "id": "dani_tobu_nikko",
+      "name": "Tobu-Nikko Station",
+      "category": "otro",
+      "region": "Dani · Nikko",
+      "lat": 36.7471,
+      "lng": 139.619,
+      "notes": "Llegada desde Asakusa con Tobu Railway / Nikko World Heritage Area Pass."
+    },
+    {
+      "id": "dani_shinkyo",
+      "name": "Puente Shinkyo",
+      "category": "otro",
+      "region": "Dani · Nikko",
+      "lat": 36.7542,
+      "lng": 139.6049,
+      "notes": "Puente sagrado, uno de los más bonitos de Japón."
+    },
+    {
+      "id": "dani_toshogu",
+      "name": "Santuario Toshogu",
+      "category": "templo",
+      "region": "Dani · Nikko",
+      "lat": 36.7581,
+      "lng": 139.5989,
+      "notes": "Santuario con mausoleo de Tokugawa Ieyasu, pagoda, tres monos y gato dormido."
+    },
+    {
+      "id": "dani_takinoo",
+      "name": "Santuario Takino-o",
+      "category": "templo",
+      "region": "Dani · Nikko",
+      "lat": 36.7652,
+      "lng": 139.6023,
+      "notes": "Santuario dedicado a deidad femenina; ritual de lanzar piedra sobre torii."
+    },
+    {
+      "id": "dani_futarasan",
+      "name": "Santuario Futarasan",
+      "category": "templo",
+      "region": "Dani · Nikko",
+      "lat": 36.7589,
+      "lng": 139.5953,
+      "notes": "Santuario antiguo fundado en 782."
+    },
+    {
+      "id": "dani_taiyuinbyo",
+      "name": "Mausoleo Taiyuinbyo",
+      "category": "templo",
+      "region": "Dani · Nikko",
+      "lat": 36.7602,
+      "lng": 139.5925,
+      "notes": "Mausoleo de Tokugawa Iemitsu, más pequeño que Toshogu."
+    },
+    {
+      "id": "dani_rinnoji",
+      "name": "Templo Rinnoji",
+      "category": "templo",
+      "region": "Dani · Nikko",
+      "lat": 36.7554,
+      "lng": 139.6004,
+      "notes": "Templo conocido por estatuas de madera lacada en oro."
+    },
+    {
+      "id": "dani_kanmangafuchi",
+      "name": "Abismo de Kanmangafuchi",
+      "category": "naturaleza",
+      "region": "Dani · Nikko",
+      "lat": 36.7527,
+      "lng": 139.5894,
+      "notes": "Narabi Jizo junto al río; protectores de viajeros, embarazadas y niños."
+    },
+    {
+      "id": "dani_tokyo_station",
+      "name": "Estación de Tokio",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6812,
+      "lng": 139.7671,
+      "notes": "Fachada emblemática y entramado subterráneo de tiendas y restaurantes."
+    },
+    {
+      "id": "dani_imperial_palace",
+      "name": "Palacio Imperial de Tokio",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6852,
+      "lng": 139.7528,
+      "notes": "Residencia imperial sobre el antiguo Castillo de Edo; posible tour guiado."
+    },
+    {
+      "id": "dani_jimbocho",
+      "name": "Jimbocho",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.6959,
+      "lng": 139.7576,
+      "notes": "Barrio de los libros."
+    },
+    {
+      "id": "dani_akihabara",
+      "name": "Akihabara",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.6984,
+      "lng": 139.773,
+      "notes": "Electrónica, manga, anime, Super Potato, arcades, purikura y maid cafés."
+    },
+    {
+      "id": "dani_kabukiza",
+      "name": "Kabuki-za",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6694,
+      "lng": 139.767,
+      "notes": "Teatro de Kabuki en Ginza."
+    },
+    {
+      "id": "dani_hamarikyu",
+      "name": "Jardines de Hamarikyu",
+      "category": "naturaleza",
+      "region": "Dani · Tokio",
+      "lat": 35.6596,
+      "lng": 139.7635,
+      "notes": "Jardines tradicionales cerca de Tsukiji, con estanque de agua salada de la bahía."
+    },
+    {
+      "id": "dani_ginza",
+      "name": "Ginza",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.6717,
+      "lng": 139.765,
+      "notes": "Compras, showrooms de Nikon/Sony/Canon y calles peatonales en domingo."
+    },
+    {
+      "id": "dani_nihonbashi",
+      "name": "Nihonbashi",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.684,
+      "lng": 139.7744,
+      "notes": "Compras en Nihonbashi."
+    },
+    {
+      "id": "dani_shibuya",
+      "name": "Shibuya",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.6595,
+      "lng": 139.7004,
+      "notes": "Paso de cebra, Hachiko, moda, ocio y Shibuya Sky."
+    },
+    {
+      "id": "dani_hachiko",
+      "name": "Estatua de Hachiko",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6591,
+      "lng": 139.7005,
+      "notes": "Punto clásico de Shibuya."
+    },
+    {
+      "id": "dani_shibuya_sky",
+      "name": "Shibuya Sky",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6584,
+      "lng": 139.7021,
+      "notes": "Mirador al aire libre de Shibuya Scramble Square, 360º a 230 m."
+    },
+    {
+      "id": "dani_shibuya109",
+      "name": "Shibuya 109",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.6595,
+      "lng": 139.6987,
+      "notes": "Centro comercial asociado a moda gyaru."
+    },
+    {
+      "id": "dani_daikanyama",
+      "name": "Daikanyama",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.648,
+      "lng": 139.7032,
+      "notes": "Tokio hipster, tiendas trendy, casual y algunos edificios tradicionales."
+    },
+    {
+      "id": "dani_hiroo",
+      "name": "Hiroo",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.6515,
+      "lng": 139.722,
+      "notes": "Barrio exclusivo y familiar para comer."
+    },
+    {
+      "id": "dani_harajuku",
+      "name": "Harajuku",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.6702,
+      "lng": 139.7027,
+      "notes": "Centro de moda callejera."
+    },
+    {
+      "id": "dani_takeshita",
+      "name": "Takeshita Street",
+      "category": "compras",
+      "region": "Dani · Tokio",
+      "lat": 35.6716,
+      "lng": 139.705,
+      "notes": "Moda, idol shops, gachapon y crepes."
+    },
+    {
+      "id": "dani_gyoza_lou",
+      "name": "Gyoza Lou",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.6679,
+      "lng": 139.7063,
+      "notes": "Restaurante emblemático de gyozas en Harajuku."
+    },
+    {
+      "id": "dani_meiji",
+      "name": "Santuario Meiji Jingu",
+      "category": "templo",
+      "region": "Dani · Tokio",
+      "lat": 35.6764,
+      "lng": 139.6993,
+      "notes": "Santuario dedicado al emperador Meiji y su esposa, rodeado de bosque."
+    },
+    {
+      "id": "dani_yoyogi",
+      "name": "Parque Yoyogi",
+      "category": "naturaleza",
+      "region": "Dani · Tokio",
+      "lat": 35.6717,
+      "lng": 139.6949,
+      "notes": "Parque de descanso junto a Harajuku y Meiji."
+    },
+    {
+      "id": "dani_shinjuku",
+      "name": "Shinjuku",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.6938,
+      "lng": 139.7034,
+      "notes": "Neones, Golden Gai, Omoide Yokocho, Kabukicho, Shin-Okubo y Shinjuku Nichome."
+    },
+    {
+      "id": "dani_tochomae",
+      "name": "Tochomae Station salida A5",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6896,
+      "lng": 139.6921,
+      "notes": "Punto de encuentro del free tour Shinjuku 18:30."
+    },
+    {
+      "id": "dani_metropolitan_gov",
+      "name": "Gobierno Metropolitano de Tokio",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6896,
+      "lng": 139.6921,
+      "notes": "Miradores gratuitos 360º."
+    },
+    {
+      "id": "dani_love",
+      "name": "Escultura LOVE Shinjuku",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.6933,
+      "lng": 139.6947,
+      "notes": "Foto entre las letras LOVE."
+    },
+    {
+      "id": "dani_golden_gai",
+      "name": "Golden Gai",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.6938,
+      "lng": 139.7046,
+      "notes": "Callejones pequeños con bares en Shinjuku."
+    },
+    {
+      "id": "dani_omoide",
+      "name": "Omoide Yokocho",
+      "category": "comida",
+      "region": "Dani · Tokio",
+      "lat": 35.6933,
+      "lng": 139.7002,
+      "notes": "Callejón de yakitori."
+    },
+    {
+      "id": "dani_kabukicho",
+      "name": "Kabukicho",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.695,
+      "lng": 139.7037,
+      "notes": "Barrio rojo, love hotels y hotel con Godzilla."
+    },
+    {
+      "id": "dani_shin_okubo",
+      "name": "Shin-Okubo",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.7013,
+      "lng": 139.7003,
+      "notes": "Barrio coreano de Tokio."
+    },
+    {
+      "id": "dani_nichome",
+      "name": "Shinjuku Nichome",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.6909,
+      "lng": 139.7066,
+      "notes": "Barrio gay de Tokio."
+    },
+    {
+      "id": "dani_roppongi",
+      "name": "Roppongi",
+      "category": "zona",
+      "region": "Dani · Tokio",
+      "lat": 35.6628,
+      "lng": 139.731,
+      "notes": "Zona de ocio nocturno, rascacielos y miradores."
+    },
+    {
+      "id": "dani_narita_return",
+      "name": "Aeropuerto de Narita",
+      "category": "otro",
+      "region": "Dani · Tokio",
+      "lat": 35.772,
+      "lng": 140.3929,
+      "notes": "Tren hacia el aeropuerto 40 min - 1h. Fin de la ruta japonesa del documento Dani, sin incluir vuelo internacional."
+    }
+  ]
+}
