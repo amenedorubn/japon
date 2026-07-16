@@ -2730,9 +2730,20 @@ function hotelPlaceholderBase(p){
 }
 /* Hoteles reales: reservas propias + los reservados del catálogo (APA) */
 /* ¿Es una reserva de hotel real? Predicado histórico único, compartido por
-   bookedHotels, la procedencia y el estado Confirmado. */
+   bookedHotels, la procedencia y el estado Confirmado.
+   El id dani_* NUNCA es una reserva nuestra: el PDF de Dani documenta SU
+   viaje de junio de 2025, ya realizado (referencia, no reservas). Sin esta
+   guarda, adoptar uno de sus 6 alojamientos (adoptPlace pone dani=false y
+   source='user') lo colaba en bookedHotels() y en la pestaña Confirmado con
+   pastilla "✓ Reservado" y las fechas de 2025. Se filtra por el ID, no por
+   daniAdopted: openPlaceForm marca daniAdopted en CUALQUIER sitio editado
+   con origen "user", así que esa vía des-confirmaría nuestro APA real. El id
+   es inmutable y es la misma señal que provenanceOf mira primero.
+   Sellar a mano un lugar de Dani (sealPlace) sigue siendo posible: esa vía es
+   deliberada y vive en el flag `confirmed`, no aquí. */
 function isBookedHotel(p){
   return !!(p && p.category === 'alojamiento' && p.lat != null && !p.dani &&
+    !/^dani_/.test(String(p.id || '')) &&
     sourceValueForPlace(p) === 'user' && !hotelPlaceholderBase(p));
 }
 function bookedHotels(){
