@@ -2812,23 +2812,142 @@ function provTag(prov){
   const t = {ours: 'Nuestro', dani: 'Dani', instagram: 'Instagram', maria: 'María', ai: 'IA'}[prov];
   return t ? `<span class="prov-tag prov-${prov}">${t}</span>` : '';
 }
+/* ================================================================
+   GEMELOS (Fase 1.5) · el mismo sitio real descrito por dos fuentes
+   (Dani y el catálogo IA). REGISTRO EXPLÍCITO, confirmado a mano por
+   coordenadas+nombre — NO matching por string en runtime. Cada grupo:
+   `anchor` = el miembro IA (gana id/nombre/coords/web/horario/precio: es
+   la ficha más rica) y `members` = ids adicionales cuya procedencia se
+   UNE solo para filtros/render. Esto es una CAPA DE AGRUPACIÓN: no toca
+   la procedencia individual de cada entrada (provenanceOf/ensureProvenance
+   siguen devolviendo UNA sola procedencia por id, Fase 1 intacta). */
+const TWIN_GROUPS = [
+  {anchor:'dotonbori', members:['dani_dotonbori']},
+  {anchor:'kuromon', members:['dani_kuromon']},
+  {anchor:'shitennoji', members:['dani_shitennoji']},
+  {anchor:'atomic_dome', members:['dani_atomic_dome']},
+  {anchor:'todaiji', members:['dani_todaiji']},
+  {anchor:'kasuga', members:['dani_kasuga']},
+  {anchor:'kofukuji', members:['dani_kofukuji']},
+  {anchor:'naramachi', members:['dani_naramachi']},
+  {anchor:'fushimi', members:['dani_fushimi_inari']},
+  {anchor:'vermillion', members:['dani_vermillion']},
+  {anchor:'kiyomizu', members:['dani_kiyomizu']},
+  {anchor:'kodaiji', members:['dani_kodaiji']},
+  {anchor:'ryoanji', members:['dani_ryoanji']},
+  {anchor:'tenryuji', members:['dani_tenryuji']},
+  {anchor:'kawaguchi', members:['dani_kawaguchi']},
+  {anchor:'miyabi', members:['dani_miyabi_asakusa']},
+  {anchor:'nakamise', members:['dani_nakamise']},
+  {anchor:'kameido_gyoza', members:['dani_kameido_gyoza']},
+  {anchor:'kamakura_buddha', members:['dani_kamakura_buddha']},
+  {anchor:'hasedera', members:['dani_hasedera']},
+  {anchor:'chinatown_y', members:['dani_yokohama_chinatown']},
+  {anchor:'shinkyo', members:['dani_shinkyo']},
+  {anchor:'toshogu', members:['dani_toshogu']},
+  {anchor:'kanmangafuchi', members:['dani_kanmangafuchi']},
+  {anchor:'nihonbashi', members:['dani_nihonbashi']},
+  {anchor:'shibuya_sky', members:['dani_shibuya_sky']},
+  {anchor:'daikanyama', members:['dani_daikanyama']},
+  {anchor:'golden_gai', members:['dani_golden_gai']},
+  {anchor:'omoide', members:['dani_omoide']},
+  {anchor:'chureito', members:['dani_chureito']},
+  {anchor:'itsukushima', members:['dani_itsukushima']},
+  {anchor:'daishoin', members:['dani_daishoin']},
+  {anchor:'kakiya', members:['dani_kakiya']},
+  {anchor:'nakatanidou', members:['dani_nakatanido']},
+  {anchor:'togetsukyo', members:['dani_togetsukyo']},
+  {anchor:'kagetsudo', members:['dani_kagetsudo']},
+  {anchor:'sumida_park', members:['dani_sumida_park']},
+  {anchor:'ameyoko', members:['dani_ameyoko']},
+  {anchor:'komachi', members:['dani_komachi']},
+  {anchor:'minato_mirai', members:['dani_minato_mirai']},
+  {anchor:'tokyo_st', members:['dani_tokyo_station']},
+  {anchor:'jimbocho', members:['dani_jimbocho']},
+  {anchor:'kabukiza', members:['dani_kabukiza']},
+  {anchor:'shibuya109', members:['dani_shibuya109']},
+  {anchor:'hiroo', members:['dani_hiroo']},
+  {anchor:'gyoza_lou', members:['dani_gyoza_lou']},
+  {anchor:'kabukicho', members:['dani_kabukicho']},
+  {anchor:'nrt', members:['dani_narita_return']},
+  {anchor:'honcho', members:['dani_honcho']},
+  {anchor:'tobu_nikko', members:['dani_tobu_nikko']},
+  {anchor:'hamarikyu', members:['dani_hamarikyu']},
+  {anchor:'doguyasuji', members:['dani_doguyasuji']},
+  {anchor:'shinsekai', members:['dani_shinsekai']},
+  {anchor:'skytree', members:['dani_skytree']},
+  {anchor:'imperial', members:['dani_imperial_palace']},
+  {anchor:'peace_museum', members:['dani_peace_park']},
+  {anchor:'rinnoji', members:['dani_rinnoji']},
+  {anchor:'kameido', members:['dani_kameido']},
+  {anchor:'tsurugaoka', members:['dani_tsurugaoka']},
+  // Confirmado con matiz: la parada de Dani mezcla estación + bosque de
+  // kimonos; se conserva su nota completa aunque el ancla sea solo el bosque.
+  {anchor:'kimono_forest', members:['dani_arashiyama_station']},
+];
+const TWIN_GROUP_BY_ID = new Map();
+TWIN_GROUPS.forEach(g => { TWIN_GROUP_BY_ID.set(g.anchor, g); g.members.forEach(m => TWIN_GROUP_BY_ID.set(m, g)); });
+function twinGroupOf(id){ return TWIN_GROUP_BY_ID.get(id) || null; }
+/* Un gemelo NO-ancla nunca pinta su propio pin/tarjeta: se pliega en el
+   ancla. El ancla en sí no cuenta como "miembro" a ocultar. */
+function isTwinMember(id){ const g = twinGroupOf(id); return !!g && g.anchor !== id; }
+/* placeById() devuelve la VISTA (placeView), no la entrada cruda — aquí
+   necesitamos el campo real `notes` y la `provenance` sin transformar, así
+   que estas 3 funciones leen state.places directamente (mismo patrón que
+   isBookedHotel/hotelForNight). */
+function rawPlaceById(id){ return state.places.find(x => x && x.id === id) || null; }
+function twinGroupProvenances(g){
+  if(!g) return [];
+  const ids = [g.anchor].concat(g.members);
+  const out = [];
+  ids.forEach(id => {
+    const p = rawPlaceById(id);
+    if(!p) return;
+    const prov = p.provenance || provenanceOf(p);
+    if(out.indexOf(prov) < 0) out.push(prov);
+  });
+  return out;
+}
+/* Procedencias de un id para UI: si es el ANCLA de un grupo, la unión de
+   todo el grupo; si no (incluye un gemelo abierto directo, p.ej. desde
+   Ruta Dani), solo la suya propia. NUNCA cambia p.provenance (Fase 1). */
+function placeProvenances(id){
+  const g = twinGroupOf(id);
+  if(g && g.anchor === id) return twinGroupProvenances(g);
+  const p = rawPlaceById(id);
+  return p ? [p.provenance || provenanceOf(p)] : [];
+}
+/* Notas de Dani conservadas en la fusión (ajuste del usuario, Fase 1.5): la
+   ficha ancla nunca pisa lo que Dani escribió; se muestra aparte. */
+function twinDaniNotes(g){
+  if(!g) return [];
+  return g.members.map(rawPlaceById).filter(Boolean)
+    .filter(p => (p.provenance || provenanceOf(p)) === 'dani' && p.notes)
+    .map(p => p.notes);
+}
 /* Filtro por origen (portado de la app original: renderPlaces/renderHotels) */
 /* Filtro de Ideas por PROCEDENCIA (curador), no por source: cada cubo es
    exclusivo y no se mezclan. Las claves del filtro SON valores de procedencia
    (ours|dani|instagram|maria|ai). El catálogo semilla es 'ai' (andamiaje de
    exploración), NO "Nuestros": así "Nuestros" son sólo lugares que añadimos
    nosotros. Adoptar NO cambia la procedencia (§12.13): un lugar de Dani sigue
-   bajo "Dani" tras adoptarlo; lo que cambia es que pasa a ser plantable. */
+   bajo "Dani" tras adoptarlo; lo que cambia es que pasa a ser plantable.
+   Fase 1.5: si `p` es el ancla de un grupo gemelo, el filtro coincide si
+   CUALQUIER miembro del grupo tiene esa procedencia (unión, no solo la suya). */
 function sourceMatchesFilter(p, filter){
   if(filter === 'all' || !filter) return true;
+  const g = twinGroupOf(p.id);
+  if(g && g.anchor === p.id) return twinGroupProvenances(g).indexOf(filter) >= 0;
   return (p.provenance || provenanceOf(p)) === filter;
 }
 /* Lugares del catálogo único que van a la lista de Sitios: fuera capas base
-   de ciudad, aeropuertos, transporte y hoteles (tienen su propia pestaña). */
+   de ciudad, aeropuertos, transporte y hoteles (tienen su propia pestaña).
+   Fase 1.5: un gemelo NO-ancla no se lista aparte (vive plegado en su ancla). */
 function listablePlaces(){
   return state.places.filter(p => p && p.lat != null &&
     !p.baseLayer && !p.cityBase && !p.airport &&
-    p.category !== 'alojamiento' && p.category !== 'transporte');
+    p.category !== 'alojamiento' && p.category !== 'transporte' &&
+    !isTwinMember(p.id));
 }
 const SRC_FILTER_OPTS = [['all','Todos'],['ours','Nuestros'],['dani','Dani'],['maria','María'],['instagram','Instagram'],['ai','IA']];
 function srcChipsHTML(active){
@@ -3927,6 +4046,13 @@ function openPlace(pid){
   const p = placeById(pid);
   if(!p) return;
   const c = catOf(p);
+  // Fase 1.5: si `pid` es el ancla de un grupo gemelo, susurro = unión de
+  // procedencias (ej. "Nuestro · De Dani"); si no, la suya propia (sin cambios).
+  const provWhisper = placeProvenances(pid).map(provenanceLabel).filter(Boolean).join(' · ');
+  // Ajuste del usuario (Fase 1.5): fusionar NO borra lo que Dani escribió.
+  // Solo el ancla muestra la nota conservada de su gemelo Dani, aparte.
+  const twinGroup = twinGroupOf(pid);
+  const daniTwinNotes = (twinGroup && twinGroup.anchor === pid) ? twinDaniNotes(twinGroup) : [];
   const dayOpts = state.days.map((d, i) => d.flight ? '' : `<option value="${i}">${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('');
   openModal(`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">
@@ -3934,8 +4060,9 @@ function openPlace(pid){
       <div><h3 style="margin:0">${esc(p.name)}</h3>
       <div style="display:flex;gap:5px;margin-top:3px"><span class="pill">${esc(p.region)}</span><span class="pill" style="color:${c.color}">${esc(c.label)}</span></div></div>
     </div>
-    ${provenanceLabel(p.provenance) ? `<div class="prov-whisper">${provenanceLabel(p.provenance)}</div>` : ''}
+    ${provWhisper ? `<div class="prov-whisper">${provWhisper}</div>` : ''}
     ${p.desc ? `<p style="font-size:14px;margin-top:10px">${esc(p.desc)}</p>` : ''}
+    ${daniTwinNotes.map(n => `<p style="font-size:13px;margin-top:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px">🧭 <b>Nota de Dani:</b> ${esc(n)}</p>`).join('')}
     ${p.tip ? `<p style="font-size:13px;margin-top:8px;background:var(--accent-soft);border-radius:12px;padding:10px 12px">💡 <b>Consejo:</b> ${esc(p.tip)}</p>` : ''}
     <div class="info-rows">
       ${p.price ? `<div class="info-row"><span class="k">💴 Precio</span><span class="v">${esc(p.price)}</span></div>` : p.yen === 0 ? '<div class="info-row"><span class="k">💴 Precio</span><span class="v">Gratis</span></div>' : ''}
@@ -4596,16 +4723,26 @@ async function renderMapDay(){
     {key: 'a', prov: 'ai', ring: '#8a8577', badge: ' <span style="color:#8a8577;font-weight:800">IA</span>'},
   ];
   const pois = [];
-  LAYER_DEFS.forEach(def => {
-    if(!srcState[def.key]) return;
+  // Fase 1.5: un gemelo (dani_x <-> ancla IA) pinta UN pin bajo cualquier
+  // capa que encienda a CUALQUIERA de sus procedencias (unión), con los
+  // badges de todas las capas activas que coincidan. El gemelo NO-ancla
+  // nunca pinta el suyo propio (isTwinMember lo excluye).
+  const activeLayerDefs = LAYER_DEFS.filter(def => srcState[def.key]);
+  if(activeLayerDefs.length){
     state.places.forEach(sp => {
       if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
-      if((sp.provenance || provenanceOf(sp)) !== def.prov) return;
+      if(isTwinMember(sp.id)) return;
+      const provs = placeProvenances(sp.id);
+      const matched = activeLayerDefs.filter(def => provs.indexOf(def.prov) >= 0);
+      if(!matched.length) return;
       const v = placeView(sp);
-      pois.push({pid: sp.id, p: v, ring: def.ring,
-        badge: def.badge || (v.userPlace ? ' <span style="color:var(--indigo)">★</span>' : '')});
+      const ownProv = sp.provenance || provenanceOf(sp);
+      const ring = (matched.find(def => def.prov === ownProv) || matched[0]).ring;
+      let badge = matched.map(def => def.badge).filter(Boolean).join('');
+      if(!badge && v.userPlace) badge = ' <span style="color:var(--indigo)">★</span>';
+      pois.push({pid: sp.id, p: v, ring, badge});
     });
-  });
+  }
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
@@ -4741,7 +4878,7 @@ function renderSitios(){
         ${x.p.yen ? `<span class="pill">💴 ${esc(x.p.price || fmtYen(x.p.yen))}</span>` : x.p.yen === 0 ? '<span class="pill green">Gratis</span>' : ''}
         ${x.p.insta ? '<span class="pill red">📸 reel</span>' : ''}
         ${x.p.web ? '<span class="pill blue">🌐 web</span>' : ''}
-        ${provTag(x.p.provenance)}
+        ${placeProvenances(x.pid).map(provTag).join('')}
       </div>
     </div>`;
   };

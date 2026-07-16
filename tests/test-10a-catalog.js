@@ -162,19 +162,22 @@ check('sitios[ours]: non-docx seed separated out (nakamise NOT here)',
   !idsFor('ours', byId('nakamise').region).includes('nakamise'));
 check('sitios[ai]: docx place separated out (catalog_sensoji NOT here)',
   !idsFor('ai', byId('catalog_sensoji').region).includes('catalog_sensoji'));
-g = idsFor('dani', byId('dani_fushimi_inari').region);
-check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_fushimi_inari') && !g.includes('dani_rise_osaka'));
+// dani_shirakawago (no gemelo IA, Fase 1.5) para no acoplar esta prueba al
+// plegado de gemelos, que tiene su propia suite en test-12-twins.js.
+g = idsFor('dani', byId('dani_shirakawago').region);
+check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_shirakawago') && !g.includes('dani_rise_osaka'));
 (function(){ const m = api.state.places.find(p => /^maria_/.test(p.id));
   check('sitios[maria]: María curation listed under her bucket', !!(m && idsFor('maria', m.region).includes(m.id))); })();
 
 // ---- 8) adoption: provenance is immutable (§12.13) ----
 (function(){
-  const dp = byId('dani_kagetsudo');
+  // dani_roppongi (no gemelo IA, Fase 1.5): mismo motivo que arriba.
+  const dp = byId('dani_roppongi');
   const rgn = dp.region;
   dp.source = 'user'; dp.dani = false; dp.daniAdopted = true; dp.catalogItem = false;
   // Adoptar cambia el estado (pasa a plantable), NO la procedencia: sigue bajo "Dani".
-  check('adopt: stays under dani (provenance immutable)', idsFor('dani', rgn).includes('dani_kagetsudo'));
-  check('adopt: not relabeled into ours', !idsFor('ours', rgn).includes('dani_kagetsudo'));
+  check('adopt: stays under dani (provenance immutable)', idsFor('dani', rgn).includes('dani_roppongi'));
+  check('adopt: not relabeled into ours', !idsFor('ours', rgn).includes('dani_roppongi'));
 })();
 
 // ---- 9) Hoteles: APA now a real booked card; bases stay placeholders ----
@@ -192,8 +195,8 @@ check('hoteles[dani]: 6 Dani lodgings with D pill',
 // ---- 10) Add-stop search: single catalog, right exclusions ----
 api.openAddStop(2);
 const addHtml = els['#addList'].innerHTML;
-check('add-stop: merged catalog addable (catalog_harajuku, catalog_sensoji, kagetsudo adopted-dani ok)',
-  addHtml.includes('data-pid="catalog_harajuku"') && addHtml.includes('data-pid="catalog_sensoji"') && addHtml.includes('data-pid="dani_kagetsudo"'));
+check('add-stop: merged catalog addable (catalog_harajuku, catalog_sensoji, roppongi adopted-dani ok)',
+  addHtml.includes('data-pid="catalog_harajuku"') && addHtml.includes('data-pid="catalog_sensoji"') && addHtml.includes('data-pid="dani_roppongi"'));
 check('add-stop: no airports, no city bases, no unadopted dani (first page)',
   !addHtml.includes('data-pid="airport_narita_llegada"') && !addHtml.includes('data-pid="catalog_tokio"') && !addHtml.includes('data-pid="dani_fushimi_inari"'));
 
