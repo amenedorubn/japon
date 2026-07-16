@@ -2336,6 +2336,18 @@ const MARIA_PLACES = [
   {name: "Dotonbori", city: "Osaka", lat: 34.6686471, lng: 135.5030983, cat: "otro"},
   {name: "地獄谷野猿公苑", city: "Nagano", lat: 36.7326856, lng: 138.4621364, cat: "otro"},
 ];
+/* Formato de cada entrada: {name, city, lat, lng, cat, notes?}. Se rellena
+   desde import/insta-places.json vía tools/insta-import.js --bake. Sin datos
+   es un array vacío y no se inventa ningún sitio. */
+// @@INSTA_PLACES_START
+const INSTA_PLACES = [];
+// @@INSTA_PLACES_END
+/* Formato de cada entrada: {name, city, lat, lng, cat, notes?}. Se rellena
+   desde import/ai-places.json vía tools/ai-import.js --bake. Sin datos es un
+   array vacío y no se inventa ningún sitio. */
+// @@AI_PLACES_START
+const AI_PLACES = [];
+// @@AI_PLACES_END
 function mariaSlug(s){
   return 'maria_' + String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 44);
@@ -2358,6 +2370,54 @@ function ensureMariaPlaces(){
   });
   return changed;
 }
+function instaSlug(s){
+  return 'insta_' + String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 44);
+}
+/* Siembra idempotente de los sitios de Instagram (provenance 'instagram').
+   Fase 2: calcada de ensureMariaPlaces, mismo patrón import→bake→seed. */
+function ensureInstaPlaces(){
+  if(!state || !Array.isArray(state.places) || !INSTA_PLACES.length) return false;
+  let changed = false;
+  INSTA_PLACES.forEach(m => {
+    if(!m || !m.name) return;
+    const id = m.id || instaSlug(m.name + '_' + (m.city || ''));
+    if(state.places.some(p => p && p.id === id)) return; // idempotente: no duplica
+    state.places.push({
+      id, name: m.name, category: CATS[m.cat] ? m.cat : 'otro',
+      region: m.city || 'Ideas', lat: m.lat, lng: m.lng, notes: m.notes || '',
+      source: 'insta', provenance: 'instagram', catalog: true, catalogItem: true,
+      dayId: null, time: ''
+    });
+    changed = true;
+  });
+  return changed;
+}
+function aiSlug(s){
+  return 'ai_' + String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 44);
+}
+/* Siembra idempotente de los sitios importados de IA (provenance 'ai'). Fase 2:
+   calcada de ensureMariaPlaces. Coexiste a propósito con el fallback de
+   provenanceOf (Fase 1): "ai importado" (esto) y "ai sin atribuir" (el
+   fallback) son ambos IA por diseño — ver guardas de test-12-provenance.js. */
+function ensureAiPlaces(){
+  if(!state || !Array.isArray(state.places) || !AI_PLACES.length) return false;
+  let changed = false;
+  AI_PLACES.forEach(m => {
+    if(!m || !m.name) return;
+    const id = m.id || aiSlug(m.name + '_' + (m.city || ''));
+    if(state.places.some(p => p && p.id === id)) return; // idempotente: no duplica
+    state.places.push({
+      id, name: m.name, category: CATS[m.cat] ? m.cat : 'otro',
+      region: m.city || 'Ideas', lat: m.lat, lng: m.lng, notes: m.notes || '',
+      source: 'user', provenance: 'ai', catalog: true, catalogItem: true,
+      dayId: null, time: ''
+    });
+    changed = true;
+  });
+  return changed;
+}
 
 let state;
 try{ state = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); }catch(e){ state = null; }
@@ -2372,6 +2432,8 @@ if(applyCatalogUpdate()) persistLocal();
 if(ensureProvenance(state.places)) persistLocal(); // Fase 12: fija procedencia (una vez) y persiste
 if(ensureHotelFixes()) persistLocal(); // Fase 12 §9.4: fusión APA + alta Louis House (idempotente)
 if(ensureMariaPlaces()) persistLocal(); // Fase 12: siembra de la exploración de María (no-op si vacía)
+if(ensureInstaPlaces()) persistLocal(); // Fase 2: siembra de Instagram (no-op si vacía)
+if(ensureAiPlaces()) persistLocal(); // Fase 2: siembra de IA importada (no-op si vacía)
 // Corrección 12.49: la propuesta sembrada sale del plan editable (una vez).
 // En un linaje real (updatedAt>0) la retirada es una edición del plan y debe
 // ganar a la nube; en una semilla fresca (updatedAt=0) la nube sigue mandando.
@@ -2498,6 +2560,8 @@ function adoptRemote(payload){
   // Higiene de hoteles sobre los datos adoptados (repunta paradas + propaga)
   if(ensureHotelFixes()){ res.changed = true; pushPlaces(); }
   if(ensureMariaPlaces()){ res.changed = true; pushPlaces(); }
+  if(ensureInstaPlaces()){ res.changed = true; pushPlaces(); }
+  if(ensureAiPlaces()){ res.changed = true; pushPlaces(); }
   persistLocal();
   return res;
 }
@@ -5017,6 +5081,8 @@ $('#importFile').addEventListener('change', async e => {
     if(ensureProvenance(state.places)) placesChanged = true; // Fase 12: procedencia a copias sin ella
     if(ensureHotelFixes()) placesChanged = true; // Fase 12 §9.4: fusión APA + alta Louis House
     if(ensureMariaPlaces()) placesChanged = true; // Fase 12: siembra de la exploración de María
+    if(ensureInstaPlaces()) placesChanged = true; // Fase 2: siembra de Instagram
+    if(ensureAiPlaces()) placesChanged = true; // Fase 2: siembra de IA importada
     // Consolidación 10b: si la copia trae el modelo original sin migrar,
     // sus transfers y días asignados se incorporan al plan v2 (una vez).
     maybeMigrateOriginal(s.transfers);
