@@ -1,0 +1,142 @@
+[
+  {
+    "docx": "Shibuya",
+    "id": "catalog_shibuya"
+  },
+  {
+    "docx": "Templo Senso-Ji",
+    "id": "catalog_sensoji"
+  },
+  {
+    "docx": "Parque Ueno",
+    "id": "catalog_ueno"
+  },
+  {
+    "docx": "Barrio de Ginza",
+    "id": "catalog_ginza"
+  },
+  {
+    "docx": "Isla artificial de Odaiba",
+    "id": "catalog_odaiba"
+  },
+  {
+    "docx": "Harajuki",
+    "id": "catalog_harajuku"
+  },
+  {
+    "docx": "Parque Yoyogi",
+    "id": "catalog_yoyogi"
+  },
+  {
+    "docx": "Santuario Meiji",
+    "id": "catalog_meiji"
+  },
+  {
+    "docx": "Calle Takeshita: moda",
+    "id": "catalog_takeshita"
+  },
+  {
+    "docx": "Akihabara: tiendas frikis",
+    "id": "catalog_akihabara"
+  },
+  {
+    "docx": "Shinjuku: neones",
+    "id": "catalog_shinjuku"
+  },
+  {
+    "docx": "Centro metropolitano",
+    "id": "catalog_tokyo_metropolitan"
+  },
+  {
+    "docx": "Torre Mori",
+    "id": "catalog_mori_tower"
+  },
+  {
+    "docx": "Excursión a Kamakura",
+    "id": "catalog_kamakura_excursion"
+  },
+  {
+    "docx": "Excursión a Takayama/Kamikochi en los alpes japoneses y dormir en ryokan típico",
+    "id": "catalog_takayama_kamikochi_excursion"
+  },
+  {
+    "docx": "Excursión a Nikko",
+    "id": "catalog_nikko_excursion"
+  },
+  {
+    "docx": "Excursión a Hakone y Mt Fuji",
+    "id": "catalog_hakone_fuji_excursion"
+  },
+  {
+    "docx": "Bosque de bambús de Arashiyama",
+    "id": "catalog_arashiyama"
+  },
+  {
+    "docx": "Centro Pontocho",
+    "id": "catalog_pontocho"
+  },
+  {
+    "docx": "Shijo-kawaramachi",
+    "id": "catalog_shijo_kawaramachi"
+  },
+  {
+    "docx": "Castillo de Nijo",
+    "id": "catalog_nijo_castle"
+  },
+  {
+    "docx": "Templo de oro",
+    "id": "catalog_kinkakuji"
+  },
+  {
+    "docx": "Higashiyama",
+    "id": "catalog_higashiyama"
+  },
+  {
+    "docx": "Calle Sannenzaka",
+    "id": "catalog_sannenzaka"
+  },
+  {
+    "docx": "Santuario Yasaka",
+    "id": "catalog_yasaka"
+  },
+  {
+    "docx": "Barrio de las geishas de Guion",
+    "id": "catalog_gion"
+  },
+  {
+    "docx": "Denden town (barrio otaku)",
+    "id": "catalog_denden_town"
+  },
+  {
+    "docx": "Barrio de Namba: neones y luces",
+    "id": "catalog_namba"
+  },
+  {
+    "docx": "Excursión a Nara e Inari (templos y ciervos)",
+    "id": "catalog_nara"
+  },
+  {
+    "docx": "Excursión a Nara e Inari (templos y ciervos)",
+    "id": "catalog_nara_inari_excursion"
+  },
+  {
+    "docx": "Excursión a Hiroshima y Miyajima",
+    "id": "catalog_hiroshima_miyajima_excursion"
+  },
+  {
+    "docx": "Excursión a Uji",
+    "id": "catalog_uji_excursion"
+  },
+  {
+    "docx": "Kanazawa",
+    "id": "catalog_kanazawa"
+  },
+  {
+    "docx": "Fukuoka",
+    "id": "catalog_fukuoka"
+  },
+  {
+    "docx": "Narai Juku: pueblo auténtico",
+    "id": "catalog_narai_juku"
+  }
+]

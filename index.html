@@ -2182,29 +2182,57 @@ function ensureSharedShape(s){
 /* NUESTROS = Itinerario.docx (corrección de producto, Fase 12.48). La fuente
    de verdad de la procedencia 'ours' es nuestro documento curado: todo lugar
    que aparece en Itinerario.docx es nuestro. NO se define por "añadido a
-   mano". Ids canónicos derivados 1:1 del documento (listas por región +
-   excursiones + destinos sueltos). Declarado ANTES del boot, que llama a
-   ensureProvenance (misma lección TDZ que MARIA_PLACES). */
-const DOCX_OURS = new Set([
-  // Tokio
-  'catalog_shibuya', 'catalog_sensoji', 'catalog_ueno', 'catalog_ginza',
-  'catalog_odaiba', 'catalog_harajuku', 'catalog_yoyogi', 'catalog_meiji',
-  'catalog_takeshita', 'catalog_akihabara', 'catalog_shinjuku',
-  'catalog_tokyo_metropolitan', 'catalog_mori_tower',
-  // Excursiones desde Tokio
-  'catalog_kamakura_excursion', 'catalog_takayama_kamikochi_excursion',
-  'catalog_nikko_excursion', 'catalog_hakone_fuji_excursion',
-  // Kioto
-  'catalog_arashiyama', 'catalog_pontocho', 'catalog_shijo_kawaramachi',
-  'catalog_nijo_castle', 'catalog_kinkakuji', 'catalog_higashiyama',
-  'catalog_sannenzaka', 'catalog_yasaka', 'catalog_gion',
-  // Osaka + excursiones
-  'catalog_denden_town', 'catalog_namba', 'catalog_nara',
-  'catalog_nara_inari_excursion', 'catalog_hiroshima_miyajima_excursion',
-  'catalog_uji_excursion',
-  // Destinos sueltos del documento
-  'catalog_kanazawa', 'catalog_fukuoka', 'catalog_narai_juku',
-]);
+   mano". Declarado ANTES del boot, que llama a ensureProvenance (misma
+   lección TDZ que MARIA_PLACES).
+   Fase 3B: esta lista ya no se escribe a mano. NUESTRA no crea lugares —
+   marca como 'ours' entradas que YA existen en el catálogo —, así que lo
+   importado son ids, no sitios. tools/docx-import.js lee Itinerario.docx
+   (ZIP + XML), mapea cada línea del documento a su id mediante el puente
+   curado DOCX_TO_CATALOG, escribe import/ours-places.json y hornea el bloque
+   de abajo (cada id lleva en comentario la línea que lo justifica).
+   Los rótulos de sección del documento (Tokio/Kioto/Osaka) NO entran: sus
+   bases de ciudad son andamiaje de exploración con procedencia 'ai'.
+   Regenerar:  node tools/docx-import.js --bake */
+// @@OURS_IDS_START
+const DOCX_OURS_IDS = [
+  "catalog_shibuya", // Shibuya
+  "catalog_sensoji", // Templo Senso-Ji
+  "catalog_ueno", // Parque Ueno
+  "catalog_ginza", // Barrio de Ginza
+  "catalog_odaiba", // Isla artificial de Odaiba
+  "catalog_harajuku", // Harajuki
+  "catalog_yoyogi", // Parque Yoyogi
+  "catalog_meiji", // Santuario Meiji
+  "catalog_takeshita", // Calle Takeshita: moda
+  "catalog_akihabara", // Akihabara: tiendas frikis
+  "catalog_shinjuku", // Shinjuku: neones
+  "catalog_tokyo_metropolitan", // Centro metropolitano
+  "catalog_mori_tower", // Torre Mori
+  "catalog_kamakura_excursion", // Excursión a Kamakura
+  "catalog_takayama_kamikochi_excursion", // Excursión a Takayama/Kamikochi en los alpes japoneses y dormir en ryokan típico
+  "catalog_nikko_excursion", // Excursión a Nikko
+  "catalog_hakone_fuji_excursion", // Excursión a Hakone y Mt Fuji
+  "catalog_arashiyama", // Bosque de bambús de Arashiyama
+  "catalog_pontocho", // Centro Pontocho
+  "catalog_shijo_kawaramachi", // Shijo-kawaramachi
+  "catalog_nijo_castle", // Castillo de Nijo
+  "catalog_kinkakuji", // Templo de oro
+  "catalog_higashiyama", // Higashiyama
+  "catalog_sannenzaka", // Calle Sannenzaka
+  "catalog_yasaka", // Santuario Yasaka
+  "catalog_gion", // Barrio de las geishas de Guion
+  "catalog_denden_town", // Denden town (barrio otaku)
+  "catalog_namba", // Barrio de Namba: neones y luces
+  "catalog_nara", // Excursión a Nara e Inari (templos y ciervos)
+  "catalog_nara_inari_excursion", // Excursión a Nara e Inari (templos y ciervos)
+  "catalog_hiroshima_miyajima_excursion", // Excursión a Hiroshima y Miyajima
+  "catalog_uji_excursion", // Excursión a Uji
+  "catalog_kanazawa", // Kanazawa
+  "catalog_fukuoka", // Fukuoka
+  "catalog_narai_juku", // Narai Juku: pueblo auténtico
+];
+// @@OURS_IDS_END
+const DOCX_OURS = new Set(DOCX_OURS_IDS);
 const MARIA_MAPS = [
   {url: 'https://maps.app.goo.gl/3kJQast3HFWRjzB78', listId: 'gmTab8I4Q-OusWMU_6XHeQ'},
   {url: 'https://maps.app.goo.gl/rLjD7Kwpp72TvgDQ8', listId: null},
