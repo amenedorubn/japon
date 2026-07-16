@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, provenanceOf, ensureProvenance, placeView, provenanceLabel, provTag };`);
+  ;return { state, provenanceOf, ensureProvenance, placeView, provenanceLabel, provTag, DOCX_OURS, isBookedHotel };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -133,6 +133,62 @@ check('ensureProvenance never overwrites an explicit maria', (() => { const p = 
 check('provenanceLabel: maria -> De María', api.provenanceLabel('maria') === 'De María');
 check('provTag: maria labelled María with class', api.provTag('maria').includes('María') && api.provTag('maria').includes('prov-maria'));
 check('provTag: five provenances now distinct', new Set(['ours', 'dani', 'instagram', 'maria', 'ai'].map(p => api.provTag(p))).size === 5);
+
+// ---- 11) GUARDAS Fase 12.53: el fallback 'ai' nunca debe "robar" una
+// procedencia explícita. Estas guardas fijan la precedencia de provenanceOf
+// y verifican, sobre la semilla REAL completa, que ningún lugar con marca
+// explícita (source dani/insta/maria, id dani_*/maria_*, DOCX_OURS, o reserva
+// de hotel) cae en 'ai'. Solo lo verdaderamente sin atribuir debe caer ahí. ----
+
+// 11a) Cada señal explícita, aislada, resuelve a su procedencia (no a 'ai')
+check('guard: source dani -> dani (no ai)', api.provenanceOf({ id: 'z1', source: 'dani' }) === 'dani');
+check('guard: dani flag -> dani (no ai)', api.provenanceOf({ id: 'z2', dani: true }) === 'dani');
+check('guard: id dani_* sin más marca -> dani (no ai)', api.provenanceOf({ id: 'dani_z3' }) === 'dani');
+check('guard: source insta -> instagram (no ai)', api.provenanceOf({ id: 'z4', source: 'insta' }) === 'instagram');
+check('guard: source maria -> maria (no ai)', api.provenanceOf({ id: 'z5', source: 'maria' }) === 'maria');
+check('guard: maria flag -> maria (no ai)', api.provenanceOf({ id: 'z6', maria: true }) === 'maria');
+check('guard: id maria_* sin más marca -> maria (no ai)', api.provenanceOf({ id: 'maria_z7' }) === 'maria');
+check('guard: id en DOCX_OURS -> ours (no ai)',
+  api.DOCX_OURS.size > 0 && api.provenanceOf({ id: Array.from(api.DOCX_OURS)[0] }) === 'ours');
+check('guard: reserva de hotel real -> ours (no ai)',
+  api.provenanceOf({ id: 'z8', category: 'alojamiento', lat: 1, lng: 1, source: 'user',
+    checkIn: '2027-04-01', checkOut: '2027-04-02' }) === 'ours');
+
+// 11b) Precedencia documentada: el id canónico dani_* manda incluso si además
+// trae source 'insta' o 'maria' (señal contradictoria/corrupta) — dani_* es
+// la marca más fiable porque es inmutable (§12.13).
+check('guard: id dani_* manda sobre source insta contradictorio',
+  api.provenanceOf({ id: 'dani_z9', source: 'insta' }) === 'dani');
+check('guard: id dani_* manda sobre source maria contradictorio',
+  api.provenanceOf({ id: 'dani_z10', source: 'maria' }) === 'dani');
+
+// 11c) Sin NINGUNA marca -> ai (el único caso legítimo de fallback)
+check('guard: sin marca alguna -> ai', api.provenanceOf({ id: 'z11', category: 'otro' }) === 'ai');
+check('guard: place vacío/null -> ai', api.provenanceOf(null) === 'ai' && api.provenanceOf({}) === 'ai');
+
+// 11d) Sobre la semilla REAL completa: ningún lugar con marca explícita cae
+// en 'ai' (el fallback nunca "roba" atribución a las otras 4 fuentes).
+// Reconstruye la clasificación esperada con la MISMA regla de precedencia
+// que provenanceOf documenta, y la compara contra p.provenance ya fijado.
+function expectedProvenance(p){
+  const id = String(p.id || '');
+  if(/^dani_/.test(id) || p.dani || p.daniAdopted || p.source === 'dani') return 'dani';
+  if(p.source === 'insta') return 'instagram';
+  if(p.source === 'maria' || p.maria || /^maria_/.test(id)) return 'maria';
+  if(api.DOCX_OURS.has(id) || api.isBookedHotel(p)) return 'ours';
+  return 'ai';
+}
+const misattributed = api.state.places.filter(Boolean).filter(p => p.provenance !== expectedProvenance(p));
+check('guard: ningún lugar de la semilla real tiene procedencia distinta de la esperada (0 discrepancias)',
+  misattributed.length === 0);
+if(misattributed.length){
+  console.log('  Discrepancias:', misattributed.map(p => `${p.id} (stored=${p.provenance}, expected=${expectedProvenance(p)})`).join(', '));
+}
+// Guarda específica pedida: ningún lugar con marca explícita de dani/insta/
+// maria/DOCX_OURS/hotel reservado quedó etiquetado como 'ai'.
+const explicitlyMarked = api.state.places.filter(Boolean).filter(p => expectedProvenance(p) !== 'ai');
+const stolenByAi = explicitlyMarked.filter(p => p.provenance === 'ai');
+check('guard: el fallback ai no robó ninguna procedencia explícita (0 casos)', stolenByAi.length === 0);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
