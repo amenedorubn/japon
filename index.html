@@ -379,6 +379,7 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 
 /* ---------- Map ---------- */
 #map{height:calc(100dvh - 300px);min-height:420px;border-radius:var(--radius);border:1px solid var(--line);z-index:1;}
+#ideasMap{height:min(48dvh,420px);min-height:320px;margin-bottom:14px;border-radius:var(--radius);border:1px solid var(--line);z-index:1;}
 .map-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted);font-weight:600;}
 .map-legend .li{display:flex;align-items:center;gap:5px;}
 .map-legend .sw{width:22px;height:0;border-top:3px solid;border-radius:2px;}
@@ -407,12 +408,16 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 /* ---------- Sitios ---------- */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .filter-bar input[type=search]{flex:1;min-width:180px;}
-/* Filas de filtros (curador/región/categoría): una sola fila con scroll
-   horizontal en vez de envolver a 4 líneas — menos ruido, más calma. */
-#srcChips, #zoneChips, #catChips{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;
+/* Filas de filtros (curador/categoría): una sola fila con scroll horizontal
+   en vez de envolver a varias líneas — menos ruido, más calma. */
+#srcChips, #catChips{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-#srcChips::-webkit-scrollbar, #zoneChips::-webkit-scrollbar, #catChips::-webkit-scrollbar{display:none;}
-#srcChips .fchip, #zoneChips .fchip, #catChips .fchip{flex:0 0 auto;}
+#srcChips::-webkit-scrollbar, #catChips::-webkit-scrollbar{display:none;}
+#srcChips .fchip, #catChips .fchip{flex:0 0 auto;}
+/* El filtro de ZONA es el eje geográfico: se muestran TODAS las zonas a la vez,
+   envolviendo a varias líneas (sin scroll oculto que en escritorio esconde el
+   final de la lista). En móvil ocupa algo más de alto; a cambio, nada se pierde. */
+#zoneChips{flex-wrap:wrap;margin-bottom:8px;}
 .fchip{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--card);
   border:1px solid var(--line);color:var(--muted);}
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
@@ -782,10 +787,10 @@ table.phr tr:last-child td{border-bottom:none;}
     <button class="btn ghost small" id="cordBack">← Viaje</button>
     <div class="day-chips" id="dayChips"></div>
     <div id="dayPanel"></div>
-  </section>
-
-  <!-- ============ MAPA ============ -->
-  <section class="view" id="view-mapa">
+    <!-- El plan sobre el mapa: la geografía del plan REAL, filtrable por DÍAS
+         (nunca por zona — eso vive en el mapa de Ideas). Mapa embebido aquí
+         desde 12.54: se retiró la pestaña "Mapa" suelta. -->
+    <h3 class="section" style="margin:24px 0 10px">🗺️ El plan sobre el mapa</h3>
     <div class="day-chips" id="mapDayChips"></div>
     <div class="map-toggles">
       <button class="fchip src-chip" id="srcNos" title="Nuestro itinerario (Itinerario.docx) y reservas"><b>N</b> Nuestros</button>
@@ -794,10 +799,10 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
       <button class="fchip src-chip src-ai" id="srcAI" title="Ideas del catálogo generado durante el desarrollo"><b>IA</b></button>
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
+      <button class="fchip src-chip src-dani" id="daniLinesToggle" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo con la capa Dani encendida)">〰️ Líneas Dani</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
     <div class="map-toggles" id="mapCatChips" aria-label="Filtrar el mapa por categoría"></div>
-    <div class="map-toggles" id="mapZoneChips" aria-label="Filtrar el mapa por zona"></div>
     <div id="map"></div>
     <div class="map-legend" id="mapLegend"></div>
     <div class="map-note">Las rutas siguen calles y carreteras reales (OSRM/OpenStreetMap). En tramos de metro y tren el trazado sobre el plano es orientativo: consulta la conexión exacta en la tarjeta del trayecto o con el botón de Google Maps.</div>
@@ -812,6 +817,10 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="filter-bar" id="srcChips"></div>
     <div class="filter-bar" id="zoneChips"></div>
     <div class="filter-bar" id="catChips"></div>
+    <!-- Mapa de Ideas (12.54): la geografía de los lugares-idea, filtrable por
+         ZONA (nunca por días). Refleja los mismos filtros que la lista; los
+         "Sin zona" se marcan en naranja para poder recolocarlos desde su ficha. -->
+    <div id="ideasMap"></div>
     <div class="places-grid" id="placesGrid"></div>
   </section>
 
@@ -1597,7 +1606,10 @@ const ZONES = [
   {id:'kioto',     label:'Kioto',      polygon:KYOTO_CITY_POLYGON,
     anchors:[[35.0116,135.7681]], r:20},
   {id:'osaka',     label:'Osaka',      polygon:OSAKA_CITY_POLYGON,
-    anchors:[[34.6937,135.5023]], r:25},
+    // El aeropuerto de Kansai (KIX) es la puerta de Osaka pero cae a ~37 km del
+    // centro: su propia ancla lo trae a la zona Osaka. Solo cambia la ZONA
+    // (derivada), no la fuente ni las coordenadas del sitio.
+    anchors:[[34.6937,135.5023],[34.4347,135.2441]], r:25},
   {id:'nara',      label:'Nara',       anchors:[[34.6851,135.8048],[34.6851,135.8430]], r:15},
   {id:'hiroshima', label:'Hiroshima',  anchors:[[34.3853,132.4553]], r:20},
   {id:'miyajima',  label:'Miyajima',   anchors:[[34.2960,132.3197]], r:8},
@@ -2865,6 +2877,7 @@ function setTheme(theme){
   if(metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#131217' : '#f6f4ee');
   if(map) applyMapTheme(map);
   if(miniMap) applyMapTheme(miniMap);
+  if(ideasMap) applyMapTheme(ideasMap);
 }
 $('#btnTheme').addEventListener('click', () => {
   setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
@@ -3292,7 +3305,7 @@ function adoptPlace(pid){
   p.source = 'user'; p.dani = false; p.daniAdopted = true; p.catalogItem = false;
   if(!p.notes) p.notes = 'Importado desde ' + from + '.';
   pushPlaces();
-  closeModal(); renderSitios(); renderHoteles(); if(curTab === 'mapa') renderMapDay();
+  closeModal(); renderSitios(); renderHoteles(); if(curTab === 'itinerario') renderMapDay();
   if(curTab === 'itinerario') renderItinerary(); // vista Dani: ★ Pasar → ✓ nuestro
   toast('Añadido a nuestros sitios ★');
 }
@@ -3446,7 +3459,7 @@ function savePlaceForm(placeId){
   }
   pushPlaces();
   closeModal(); renderSitios(); renderHoteles(); renderInicio();
-  if(curTab === 'mapa') renderMapDay();
+  if(curTab === 'itinerario') renderMapDay();
   toast(placeId ? 'Sitio actualizado' : 'Sitio añadido ✓');
 }
 function deleteUserPlace(placeId){
@@ -3467,7 +3480,7 @@ function deleteUserPlace(placeId){
   });
   pushPlaces(); commit();
   closeModal(); renderSitios(); renderHoteles(); renderInicio(); renderItinerary();
-  if(curTab === 'mapa') renderMapDay();
+  if(curTab === 'itinerario') renderMapDay();
   toast('Sitio eliminado');
 }
 $('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
@@ -3631,8 +3644,10 @@ function cachedRoute(a, b, profile){
 /* ================================================================
    NAVEGACIÓN
 ================================================================ */
-// Orden = eje de certeza (Ideas ← Plan → Confirmado); Mapa/Hoteles/Guía tras "Más".
-const TABS = [['sitios','🧭','Ideas'],['itinerario','🗓️','Itinerarios'],['inicio','✈️','Confirmado'],['mapa','🗺️','Mapa'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
+// Orden = eje de certeza (Ideas ← Plan → Confirmado); Hoteles/Guía tras "Más".
+// 12.54: la pestaña "Mapa" suelta se retiró. El mapa vive ahora dentro de dos
+// pestañas: por ZONA en Ideas, por DÍAS en Itinerarios.
+const TABS = [['sitios','🧭','Ideas'],['itinerario','🗓️','Itinerarios'],['inicio','✈️','Confirmado'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
 let curTab = 'inicio';
 /* ================================================================
    AXIS (Fase 12 · Stage 6) · navegación por CERTEZA: Ideas ← Plan →
@@ -3703,7 +3718,9 @@ function showTab(id){
   updateCommandDot();
   history.replaceState(null, '', '#/' + id);
   window.scrollTo({top: 0});
-  if(id === 'mapa') initMapView();
+  // 12.54: los mapas embebidos necesitan invalidateSize al hacerse visibles.
+  if(id === 'itinerario') initMapView();
+  if(id === 'sitios') initIdeasMap();
 }
 /* Deslizamiento horizontal = eje de certeza (izq→der = más real). Cede el
    paso a contenedores con scroll horizontal y controles. */
@@ -4748,7 +4765,9 @@ const MAP_TILES = {
   light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 };
-let mapTileLayer = null, miniTileLayer = null;
+/* Teselas por instancia de mapa (plan, ideas, mini): cada mapa recuerda su
+   capa actual para intercambiarla al cambiar de tema sin apilar teselas. */
+const _tileLayers = new Map();
 function currentThemeName(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
 function applyMapTheme(targetMap){
   if(!targetMap) return;
@@ -4756,10 +4775,10 @@ function applyMapTheme(targetMap){
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
   });
-  if(targetMap === map && mapTileLayer) targetMap.removeLayer(mapTileLayer);
-  if(targetMap === miniMap && miniTileLayer) targetMap.removeLayer(miniTileLayer);
+  const prev = _tileLayers.get(targetMap);
+  if(prev) targetMap.removeLayer(prev);
   layer.addTo(targetMap);
-  if(targetMap === map) mapTileLayer = layer; else miniTileLayer = layer;
+  _tileLayers.set(targetMap, layer);
 }
 function initMapView(){
   if(mapDay == null) mapDay = curDay;
@@ -4777,9 +4796,43 @@ function initMapView(){
     map.on('zoomend', () => { clearTimeout(zoomT); zoomT = setTimeout(renderZones, 120); });
   }
   renderMapCatChips();
-  renderMapZoneChips();
   syncFlightsChip();
+  syncDaniLinesChip();
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
+}
+/* --- 12.54 · Mapa de IDEAS: mapa base propio para la pestaña Ideas. Muestra
+   los lugares-idea ya filtrados por la lista (zona/categoría/curador/búsqueda),
+   nunca por días. Los "Sin zona" salen marcados para poder recolocarlos desde
+   su ficha. Reutiliza el componente base (L.map + applyMapTheme + catOf). --- */
+let ideasMap = null, ideasLayers = [];
+function initIdeasMap(){
+  if(!ideasMap){
+    ideasMap = L.map('ideasMap', {zoomControl: true, attributionControl: true}).setView([36.2, 138.2], 5);
+    applyMapTheme(ideasMap);
+  }
+  setTimeout(() => { if(ideasMap){ ideasMap.invalidateSize(); renderSitios(); } }, 60);
+}
+function renderIdeasMap(items){
+  if(!ideasMap) return;
+  ideasLayers.forEach(l => ideasMap.removeLayer(l));
+  ideasLayers = [];
+  const pts = [];
+  items.forEach(x => {
+    const p = x.p;
+    if(p.lat == null || p.lng == null) return;
+    const c = catOf(p);
+    const unzoned = !p.zone;
+    const circle = L.circleMarker([p.lat, p.lng], {radius: 5,
+      color: unzoned ? '#C1440E' : '#fff', weight: unzoned ? 2.5 : 1.5,
+      fillColor: c.color, fillOpacity: unzoned ? .95 : .82});
+    circle.bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.region)}<br>` +
+      (unzoned ? '⚠️ Sin zona · muévelo a su sitio en la ficha para asignarla<br>' : '') +
+      `<a href="javascript:openPlace('${x.pid}')">Ver ficha →</a>`);
+    circle.addTo(ideasMap);
+    ideasLayers.push(circle);
+    pts.push([p.lat, p.lng]);
+  });
+  if(pts.length) ideasMap.fitBounds(L.latLngBounds(pts).pad(0.12));
 }
 /* --- Capas por PROCEDENCIA: Nuestros(docx) / Dani / María / Insta / IA
    (persistidas). El mismo modelo de curadores que en Ideas. --- */
@@ -4810,6 +4863,24 @@ $('#flightsToggle').addEventListener('click', () => {
   syncFlightsChip(); renderMapDay();
 });
 
+/* --- 12.54 · Líneas de la ruta Dani (las polilíneas que conectan sus días).
+   APAGADAS por defecto: la capa Dani enseña solo sus puntos; las líneas son
+   ruido salvo que se quieran ver. Persistido; solo tienen efecto con la capa
+   Dani encendida. --- */
+let daniLinesVisible = false;
+try{ daniLinesVisible = localStorage.getItem('jp27_dani_lines') === '1'; }catch(e){}
+function syncDaniLinesChip(){
+  const el = $('#daniLinesToggle'); if(el) el.classList.toggle('active', daniLinesVisible);
+}
+(function(){
+  const el = $('#daniLinesToggle'); if(!el) return;
+  el.addEventListener('click', () => {
+    daniLinesVisible = !daniLinesVisible;
+    try{ localStorage.setItem('jp27_dani_lines', daniLinesVisible ? '1' : '0'); }catch(e){}
+    syncDaniLinesChip(); renderMapDay();
+  });
+})();
+
 /* --- M5 · Filtro del mapa por categoría (no persistido, como el original) --- */
 const activeMapCategories = new Set(Object.keys(CATS));
 function renderMapCatChips(){
@@ -4823,26 +4894,9 @@ function renderMapCatChips(){
   }));
 }
 
-/* --- 12.53 · Filtro del mapa por ZONA. Antes el mapa no tenía ningún filtro
-   geográfico: o todo Japón, o el día. Selección única (no multi-toggle como
-   las categorías): con una zona se quiere mirar UN sitio, no una combinación.
-   Solo se ofrecen las zonas que de verdad tienen algo que enseñar. --- */
-let mapZone = '';
-function zonesWithPlaces(){
-  const seen = new Set();
-  state.places.forEach(p => { const z = zoneOf(p); if(z) seen.add(z); });
-  return ZONES.filter(z => seen.has(z.id));
-}
-function renderMapZoneChips(){
-  const host = $('#mapZoneChips'); if(!host) return;
-  host.innerHTML = `<button class="fchip ${!mapZone ? 'active' : ''}" data-z="">🗾 Todas</button>` +
-    zonesWithPlaces().map(z =>
-      `<button class="fchip ${mapZone === z.id ? 'active' : ''}" data-z="${z.id}">${esc(z.label)}</button>`).join('');
-  $$('#mapZoneChips .fchip').forEach(b => b.addEventListener('click', () => {
-    mapZone = b.dataset.z;
-    renderMapZoneChips(); renderMapDay();
-  }));
-}
+/* 12.54 · El mapa del PLAN se filtra solo por DÍAS (nunca por zona: la zona es
+   el eje del mapa de Ideas). El filtro geográfico por zona vive ahora en el
+   mapa de Ideas, que reutiliza el filtro de zona de la lista (placeZone). */
 
 /* --- Zonas y límites de barrios (portado de la app original) ---
    Polígonos fijos del catálogo + límites reales de Nominatim con caché
@@ -4918,7 +4972,7 @@ async function runBoundaryQueue(){
         p.geojsons[item.query] = g;
         if(getBoundaryQueries(p).length === 1) p.geojson = g;
         storeBoundary(item.query, g);
-        if(curTab === 'mapa') renderZones();
+        if(curTab === 'itinerario') renderZones();
       } else if(!Object.keys(p.geojsons).length){
         p.boundaryStatus = 'no_encontrado';
       }
@@ -4982,8 +5036,8 @@ function renderZones(){
     const base = isBaseCityZone(p);
     // 12.53: la zona es un eje INDEPENDIENTE. Antes las zonas de barrio solo
     // existían si la capa "Nosotros" estaba encendida, que es una fuente: la
-    // geografía no depende de quién propuso el sitio.
-    if(mapZone && zoneOf(p) !== mapZone) return;           // filtro de zona (eje propio)
+    // geografía no depende de quién propuso el sitio. 12.54: el mapa del plan ya
+    // no filtra por zona (eso es del mapa de Ideas), así que aquí se pintan todas.
     if(!base && !activeMapCategories.has(CATS[p.category] ? p.category : 'otro')) return; // M5
     if(!base && zoom < zonePolygonZoomThreshold(p)){ drawZonePin(p); return; } // M6: pin, no desaparecer
     if(!base && !p.fixedPolygon && !hasAllBoundaries(p)) requestBoundary(p);
@@ -5129,7 +5183,6 @@ async function renderMapDay(){
   }
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
-    if(mapZone && p.zone !== mapZone) return; // 12.53: filtro de zona (eje propio)
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
     if(day && day.stops.some(s => s.pid === pid)) return;
     poiPts.push([p.lat, p.lng]);
@@ -5139,7 +5192,8 @@ async function renderMapDay(){
     circle.bindPopup(`<b>${esc(p.name)}</b>${badge}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
     circle.addTo(map); mapLayers.push(circle);
   });
-  if(srcState.d) drawDaniRoutes();
+  // 12.54: las líneas de la ruta Dani solo si su capa Y su toggle están on.
+  if(srcState.d && daniLinesVisible) drawDaniRoutes();
 
   stops.forEach((x, i) => {
     const mk = L.marker([x.p.lat, x.p.lng], {
@@ -5262,6 +5316,8 @@ function renderSitios(){
     .filter(x => !placeZone || (placeZone === ZONE_NONE ? !x.p.zone : x.p.zone === placeZone))
     .filter(x => !placeCat || x.p.cat === placeCat)
     .filter(x => !placeQ || (x.p.name + ' ' + x.p.desc + ' ' + x.p.region).toLowerCase().includes(placeQ));
+  // El mapa de Ideas refleja exactamente los mismos filtros que la lista.
+  renderIdeasMap(items);
   const cardHTML = x => {
     const c = catOf(x.p);
     const inPlan = state.days.some(d => d.stops.some(s => s.pid === x.pid));
@@ -5464,7 +5520,7 @@ $('#btnReset').addEventListener('click', () => {
 ================================================================ */
 function renderAll(){
   renderInicio(); renderItinerary(); renderSitios(); renderHoteles(); renderGuia();
-  if(curTab === 'mapa') renderMapDay();
+  if(curTab === 'itinerario') renderMapDay();
 }
 // Fase 10b: consolidar el modelo original guardado en este dispositivo y
 // retirar el espejo local state.transfers (la nube conserva su archivo).

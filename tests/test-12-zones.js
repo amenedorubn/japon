@@ -46,8 +46,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
             TOKYO_CITY_POLYGON, provenanceOf, placeProvenances, bookedHotels, isConfirmed,
             TWIN_GROUPS, isTwinMember, renderSitios, renderZones, srcState, activeMapCategories,
             setPlaceZone: v => { placeZone = v; },
-            setMapZone: v => { mapZone = v; },
-            getMapZone: () => mapZone };`);
+            getPlaceZone: () => placeZone };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -208,12 +207,24 @@ api.renderZones(); // con la capa "Nosotros" apagada, las zonas siguen pintándo
 check('renderZones: ya no consulta srcState.n (la geografía no depende de la fuente)',
   !/!srcState\.n/.test(appJs) && !/srcState\.n\s*\)\s*return/.test(appJs));
 api.srcState.n = true;
-check('renderZones: sigue respetando el filtro de categoría (M5) y el de zona',
-  /activeMapCategories\.has/.test(appJs) && /mapZone && zoneOf\(p\) !== mapZone/.test(appJs));
-check('filtro mapa: existe y arranca en "todas"', api.getMapZone() === '');
-api.setMapZone('kioto');
-check('filtro mapa: se puede fijar una zona', api.getMapZone() === 'kioto');
-api.setMapZone('');
+check('renderZones: sigue respetando el filtro de categoría (M5)',
+  /activeMapCategories\.has/.test(appJs));
+
+// ================= 7b) 12.54 · DOS MAPAS: ZONA EN IDEAS, DÍAS EN EL PLAN ======
+// El mapa del PLAN (Itinerarios) se filtra SOLO por días: el filtro geográfico
+// por zona se retiró de él (ya no existe mapZone en el código).
+check('mapa del plan: ya no filtra por zona (mapZone retirado del código)',
+  !/\bmapZone\b/.test(appJs));
+// El filtro geográfico por zona vive ahora en el mapa de IDEAS, que reutiliza
+// el MISMO filtro de zona que la lista (placeZone), "Sin zona" incluido.
+check('mapa de Ideas: existe y se alimenta de los items ya filtrados de la lista',
+  /function renderIdeasMap/.test(appJs) && /renderIdeasMap\(items\)/.test(appJs));
+check('mapa de Ideas: el eje geográfico es placeZone e incluye "Sin zona"',
+  /placeZone === ZONE_NONE \? !x\.p\.zone : x\.p\.zone === placeZone/.test(appJs));
+check('filtro de zona de Ideas: arranca en "todas"', api.getPlaceZone() === '');
+api.setPlaceZone('kioto');
+check('filtro de zona de Ideas: se puede fijar una zona', api.getPlaceZone() === 'kioto');
+api.setPlaceZone('');
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

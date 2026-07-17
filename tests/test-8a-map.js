@@ -71,6 +71,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     getMap: () => map, getMapLayers: () => mapLayers, getZonesLayer: () => zonesLayer,
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay,
     setFlights: v => { flightsVisible = v; },
+    setDaniLines: v => { daniLinesVisible = v; },
     srcState, activeMapCategories, CATS, FLIGHTS,
     _reseedDays: () => { // fixture: días con paradas (el plan real nace vacío, 12.49)
       const fresh = buildSeedState();
@@ -90,10 +91,11 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
   check('boot: merged seed state built (283 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 283);
 
-  // Open the map tab (initMapView is deferred by 60ms), then let the
-  // day-mode OSRM queue drain fully (1 job / 250ms) before measuring.
+  // Open the itinerary tab (12.54: el mapa del plan vive embebido en
+  // Itinerarios; ya no hay pestaña "Mapa" suelta). initMapView se difiere 60ms;
+  // luego se deja drenar la cola OSRM del modo día (1 job / 250ms) antes de medir.
   api._reseedDays(); // el mapa por día necesita días con paradas (fixture)
-  api.showTab('mapa');
+  api.showTab('itinerario');
   await sleep(1500);
   check('R1: initial tiles are light (voyager)', tileUrls.length === 1 && tileUrls[0].includes('voyager'));
   check('P6: default is a day (not all-days)', api.getMapDay() >= 0);
@@ -158,13 +160,21 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   check(`M5: filtering cats reduces POIs (${allPois} -> ${filteredPois})`, filteredPois < allPois && filteredPois > 0);
   ['templo', 'comida', 'compras'].forEach(c => api.activeMapCategories.add(c));
 
-  // source filter: Dani layer adds markers + 14 route polylines
+  // source filter: Dani layer adds markers + 14 route polylines.
+  // 12.54: las líneas Dani están APAGADAS por defecto; con el toggle encendido
+  // vuelven a dibujarse (14 polilíneas, una por día de su ruta).
   api.renderMapDay();
   const pn = Lstats.polyline, cn = layersOfType('circleMarker').length;
+  api.setDaniLines(true);
   api.srcState.d = true;
   api.renderMapDay();
   check('src: Dani layer adds circle markers', layersOfType('circleMarker').length > cn);
-  check('M3/src: Dani layer adds 14 route polylines', Lstats.polyline - pn === 14);
+  check('M3/src: Dani layer (con toggle de líneas ON) añade 14 polilíneas de ruta', Lstats.polyline - pn === 14);
+  // toggle OFF: los puntos de Dani siguen, pero sin las líneas de días
+  const pOff = Lstats.polyline;
+  api.setDaniLines(false);
+  api.renderMapDay();
+  check('12.54: con el toggle de líneas Dani OFF no se dibuja ninguna (0 nuevas)', Lstats.polyline - pOff === 0);
   api.srcState.d = false;
 
   // M6: zone pins below threshold, polygons above
