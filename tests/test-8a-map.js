@@ -72,7 +72,9 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay,
     setFlights: v => { flightsVisible = v; },
     setDaniLines: v => { daniLinesVisible = v; },
-    srcState, activeMapCategories, CATS, FLIGHTS,
+    setItinMode, getItinMode: () => itinMode,
+    itineraryPlaceIds, itineraryDays, provenanceOf, canonicalPid,
+    activeMapCategories, CATS, FLIGHTS,
     _reseedDays: () => { // fixture: días con paradas (el plan real nace vacío, 12.49)
       const fresh = buildSeedState();
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
@@ -91,16 +93,36 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
   check('boot: merged seed state built (283 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 283);
 
-  // Open the itinerary tab (12.54: el mapa del plan vive embebido en
-  // Itinerarios; ya no hay pestaña "Mapa" suelta). initMapView se difiere 60ms;
-  // luego se deja drenar la cola OSRM del modo día (1 job / 250ms) antes de medir.
-  api._reseedDays(); // el mapa por día necesita días con paradas (fixture)
+  // Open the itinerary tab (12.54: el mapa vive embebido en Itinerarios; ya no
+  // hay pestaña "Mapa" suelta). 12.56: el mapa muestra SOLO el itinerario activo
+  // y arranca en "Todos" (mapDay -1). initMapView se difiere 60ms.
+  api._reseedDays(); // Realidad necesita días con paradas (fixture)
   api.showTab('itinerario');
   await sleep(1500);
   check('R1: initial tiles are light (voyager)', tileUrls.length === 1 && tileUrls[0].includes('voyager'));
-  check('P6: default is a day (not all-days)', api.getMapDay() >= 0);
-  const dayMarkers = layersOfType('marker').length;
-  check('day mode: numbered stop markers drawn', dayMarkers >= 4);
+  check('12.56: por defecto el itinerario activo es Realidad (ours)', api.getItinMode() === 'ours');
+  check('12.56: el mapa arranca en "Todos" (todo el itinerario, no un día)', api.getMapDay() === -1);
+
+  // Realidad + Todos: solo marcadores (POIs de Realidad), sin rutas ni OSRM.
+  const polyBefore = Lstats.polyline;
+  const fetchBefore = fetchCount;
+  api.renderMapDay();
+  await sleep(400); // deja disparar callbacks async rezagados (el token debe bloquearlos)
+  check('Realidad/Todos: cero polilíneas de ruta', Lstats.polyline === polyBefore);
+  check('Realidad/Todos: cero fetches OSRM/rail', fetchCount === fetchBefore);
+  const oursPois = layersOfType('circleMarker').length;
+  check('Realidad/Todos: dibuja los POIs de Realidad (procedencia ours)', oursPois > 10);
+  check('P6: day chips include Todos', els['#mapDayChips'].innerHTML.includes('Todos'));
+
+  // Realidad + un día con paradas → marcadores numerados + rutas calculadas.
+  const dayIdx = api.state.days.findIndex(d => d.stops && d.stops.length >= 4);
+  api.setMapDay(dayIdx);
+  api.renderMapDay();
+  await sleep(400);
+  check('Realidad/día: dibuja los marcadores numerados de las paradas (>=4)',
+    layersOfType('marker').length >= 4);
+  api.setMapDay(-1);
+  api.renderMapDay();
 
   // R1: theme switch swaps the tile layer without stacking
   api.setTheme('dark');
@@ -109,73 +131,91 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   api.setTheme('light');
   check('R1: back to light, still one tile layer', tileUrls[2].includes('voyager') && layersOfType('tileLayer').length === 1);
 
-  // P6: all-days = markers only, no route polylines, no OSRM status
-  api.setMapDay(-1);
-  const polyBefore = Lstats.polyline;
-  const fetchBefore = fetchCount;
-  api.renderMapDay();
-  await sleep(400); // let any stale async route callbacks fire (token guard must block them)
-  check('P6: all-days draws zero route polylines', Lstats.polyline === polyBefore);
-  check('P6: all-days triggers no new OSRM/rail fetches', fetchCount === fetchBefore);
-  // Capas por procedencia (12.48): N = Itinerario.docx (pequeña y honesta);
-  // N + IA equivale al antiguo "todo el catálogo".
-  const nOnly = layersOfType('circleMarker').length;
-  check('P6: all-days draws the docx POI markers (N layer)', nOnly > 10);
-  api.srcState.a = true; api.renderMapDay();
-  await sleep(150);
-  check('P6: N+IA draws the full catalog', layersOfType('circleMarker').length > 80);
-  api.srcState.a = false; api.renderMapDay();
-  await sleep(150);
-  check('P6: routeStatus hidden', els['#routeStatus'].style.display === 'none');
-  check('P6: day chips include Todos active', els['#mapDayChips'].innerHTML.includes('Todos'));
-
   // no leaks: re-render keeps the map layer count stable
   const before = api.getMap()._layers.size;
   api.renderMapDay(); api.renderMapDay();
   check('leak: repeated renders keep layer count stable', api.getMap()._layers.size === before);
 
-  // M4: flights in all-days mode = 4 arcs; map-attached markers = 4 planes + 3 airports
-  // (Lstats.marker also counts zone pins inside zonesLayer, so count map markers)
+  // M4: vuelos en Realidad/Todos = 4 arcos; markers en el mapa = 4 aviones + 3 aeropuertos
   const p0 = Lstats.polyline;
   api.setFlights(true);
   api.renderMapDay();
-  check('M4: 4 great-circle arcs', Lstats.polyline - p0 === 4);
-  check('M4: 4 planes + 3 airports on map', layersOfType('marker').length === 7);
+  check('M4: 4 arcos de círculo máximo (Realidad, Todos)', Lstats.polyline - p0 === 4);
+  check('M4: 4 aviones + 3 aeropuertos en el mapa', layersOfType('marker').length === 7);
 
-  // M4: flight day (day 0, legs 1+2, no stops) = 2 arcs + 2 planes + 3 airports
+  // M4: día de vuelo (día 0, legs 1+2, sin paradas) = 2 arcos + 2 aviones + 3 aeropuertos
   api.setMapDay(0);
   const p1 = Lstats.polyline;
   api.renderMapDay();
-  check('M4: flight day draws its 2 legs', Lstats.polyline - p1 === 2);
-  check('M4: flight day draws 2 planes + 3 airports', layersOfType('marker').length === 5);
+  check('M4: el día de vuelo dibuja sus 2 tramos', Lstats.polyline - p1 === 2);
+  check('M4: el día de vuelo dibuja 2 aviones + 3 aeropuertos', layersOfType('marker').length === 5);
   api.setFlights(false);
-
-  // M5: category filter reduces POIs (and integrates with sources)
   api.setMapDay(-1);
+
+  // ============ 12.56 · SCOPING DEL MAPA POR ITINERARIO ============
+  // El mapa muestra SOLO los elementos del itinerario activo. Membership, no
+  // procedencia: la Propuesta (IA) incluye lugares 'ai'; las ideas sueltas
+  // (insta / ai fuera de un itinerario) no aparecen en ningún mapa.
+  const oursIds = api.itineraryPlaceIds('ours');
+  const seedIds = api.itineraryPlaceIds('seed');
+  const daniIds = api.itineraryPlaceIds('dani');
+  const mariaIds = api.itineraryPlaceIds('maria');
+  const hasCanon = (set, p) => set.has(api.canonicalPid(p.id)) || set.has(p.id);
+  // (a) La Propuesta (seed) SÍ incluye lugares de procedencia 'ai' (es la IA).
+  const seedAiPlaces = api.state.places.filter(p => p && hasCanon(seedIds, p) && api.provenanceOf(p) === 'ai');
+  check('scoping: la Propuesta incluye lugares de procedencia ai (es el itinerario de la IA)',
+    seedAiPlaces.length > 0);
+  // (b) Las ideas sueltas 'insta'/'ai' que NO están en la Propuesta no entran en
+  //     NINGÚN itinerario (ni Realidad, ni Dani, ni María, ni la propia seed).
+  const looseIdeas = api.state.places.filter(p => p && !p.airport && !p.baseLayer && !p.cityBase &&
+    (api.provenanceOf(p) === 'instagram' || api.provenanceOf(p) === 'ai') && !hasCanon(seedIds, p));
+  const anyLooseInItin = looseIdeas.some(p =>
+    hasCanon(oursIds, p) || hasCanon(daniIds, p) || hasCanon(mariaIds, p));
+  check('scoping: ninguna idea suelta (insta / ai fuera de la Propuesta) pertenece a otro itinerario',
+    looseIdeas.length > 0 && !anyLooseInItin);
+  // (c) Instagram nunca pertenece a un itinerario.
+  const instaPlaces = api.state.places.filter(p => p && api.provenanceOf(p) === 'instagram');
+  check('scoping: los sitios de Instagram no están en ningún itinerario',
+    instaPlaces.every(p => !hasCanon(oursIds, p) && !hasCanon(seedIds, p) &&
+      !hasCanon(daniIds, p) && !hasCanon(mariaIds, p)));
+
+  // Dani: al seleccionar su itinerario, el mapa pinta sus puntos; con el toggle
+  // de líneas ON dibuja 14 polilíneas de ruta (una por jornada) y 0 con OFF.
+  api.setItinMode('dani');
+  api.setDaniLines(false);
+  api.renderMapDay();
+  const daniPois = layersOfType('circleMarker').length;
+  check('Dani: el mapa pinta los puntos de la ruta de Dani', daniPois > 30);
+  const pn = Lstats.polyline;
+  api.setDaniLines(true);
+  api.renderMapDay();
+  check('Dani: con el toggle de líneas ON añade 14 polilíneas de ruta', Lstats.polyline - pn === 14);
+  const pOff = Lstats.polyline;
+  api.setDaniLines(false);
+  api.renderMapDay();
+  check('Dani: con el toggle OFF no dibuja ninguna línea (0 nuevas)', Lstats.polyline - pOff === 0);
+
+  // María: su mapa pinta sus sitios (procedencia maria), no los de otros.
+  api.setItinMode('maria');
+  api.renderMapDay();
+  const mariaPois = layersOfType('circleMarker').length;
+  check('María: el mapa pinta los sitios de María', mariaPois > 100);
+
+  // Propuesta: su mapa pinta sus lugares (y ninguno es un aeropuerto/base).
+  api.setItinMode('seed');
+  api.renderMapDay();
+  check('Propuesta: el mapa pinta los lugares de la Propuesta', layersOfType('circleMarker').length > 10);
+
+  // M5: el filtro de categoría reduce POIs (en María, con muchos sitios diversos)
+  api.setItinMode('maria');
   api.renderMapDay();
   const allPois = layersOfType('circleMarker').length;
   ['templo', 'comida', 'compras'].forEach(c => api.activeMapCategories.delete(c));
   api.renderMapDay();
   const filteredPois = layersOfType('circleMarker').length;
-  check(`M5: filtering cats reduces POIs (${allPois} -> ${filteredPois})`, filteredPois < allPois && filteredPois > 0);
+  check(`M5: filtrar categorías reduce POIs (${allPois} -> ${filteredPois})`, filteredPois < allPois && filteredPois > 0);
   ['templo', 'comida', 'compras'].forEach(c => api.activeMapCategories.add(c));
-
-  // source filter: Dani layer adds markers + 14 route polylines.
-  // 12.54: las líneas Dani están APAGADAS por defecto; con el toggle encendido
-  // vuelven a dibujarse (14 polilíneas, una por día de su ruta).
-  api.renderMapDay();
-  const pn = Lstats.polyline, cn = layersOfType('circleMarker').length;
-  api.setDaniLines(true);
-  api.srcState.d = true;
-  api.renderMapDay();
-  check('src: Dani layer adds circle markers', layersOfType('circleMarker').length > cn);
-  check('M3/src: Dani layer (con toggle de líneas ON) añade 14 polilíneas de ruta', Lstats.polyline - pn === 14);
-  // toggle OFF: los puntos de Dani siguen, pero sin las líneas de días
-  const pOff = Lstats.polyline;
-  api.setDaniLines(false);
-  api.renderMapDay();
-  check('12.54: con el toggle de líneas Dani OFF no se dibuja ninguna (0 nuevas)', Lstats.polyline - pOff === 0);
-  api.srcState.d = false;
+  api.setItinMode('ours');
 
   // M6: zone pins below threshold, polygons above
   api.getMap().zoom = 5;

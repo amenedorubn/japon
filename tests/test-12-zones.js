@@ -44,7 +44,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   '"use strict";' + appJs + `
   ;return { state, ZONES, ZONE_NONE, zoneOf, zoneLabel, pointInPolygon, placeView, listablePlaces,
             TOKYO_CITY_POLYGON, provenanceOf, placeProvenances, bookedHotels, isConfirmed,
-            TWIN_GROUPS, isTwinMember, renderSitios, renderZones, srcState, activeMapCategories,
+            TWIN_GROUPS, isTwinMember, renderSitios, renderZones, activeMapCategories,
             setPlaceZone: v => { placeZone = v; },
             getPlaceZone: () => placeZone };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
@@ -222,12 +222,12 @@ check('reachability: los aeropuertos no se pierden (nunca estuvieron en Ideas)',
   places.filter(p => p.airport).length > 0 && !listable.some(p => p.airport));
 
 // ================= 7) ZONA ES EJE INDEPENDIENTE DE LA FUENTE =================
-// Antes las zonas de barrio solo se pintaban con la capa "Nosotros" encendida.
-api.srcState.n = false;
-api.renderZones(); // con la capa "Nosotros" apagada, las zonas siguen pintándose
-check('renderZones: ya no consulta srcState.n (la geografía no depende de la fuente)',
-  !/!srcState\.n/.test(appJs) && !/srcState\.n\s*\)\s*return/.test(appJs));
-api.srcState.n = true;
+// Las zonas de barrio se pintan siempre (la geografía no depende de quién
+// propuso el sitio ni del itinerario activo). En 12.56 se retiraron del mapa
+// las capas por fuente (srcState): ya no existen en el código.
+api.renderZones(); // se pinta sin depender de ninguna fuente
+check('renderZones: ya no depende de la fuente (srcState retirado del mapa)',
+  !/srcState/.test(appJs));
 check('renderZones: sigue respetando el filtro de categoría (M5)',
   /activeMapCategories\.has/.test(appJs));
 

@@ -422,14 +422,9 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
   border:1px solid var(--line);color:var(--muted);}
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
 .fchip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
-/* Modos del itinerario: "Nuestro plan" es EL plan (primario); Dani y Original
-   son referencias/archivo, demotadas tras un rótulo (no itinerarios peer). */
+/* 12.56 · Los 4 itinerarios (Realidad · Propuesta · Dani · María) al mismo
+   nivel: chips iguales, sin rótulo "referencias". */
 .itin-mode-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-.itin-ref-sep{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;
-  color:var(--muted);opacity:.7;margin-left:6px;}
-.fchip.ref{font-size:12px;padding:5px 10px;}
-.fchip.ref:not(.active){background:transparent;border-color:transparent;}
-@media(hover:hover){.fchip.ref:not(.active):hover{background:var(--card);border-color:var(--line);}}
 /* Vista "Propuesta" (12.49): la propuesta de desarrollo como referencia Washi */
 .seed-day{padding:12px 14px;margin-bottom:10px;}
 .seed-day .sd-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
@@ -771,41 +766,38 @@ table.phr tr:last-child td{border-bottom:none;}
 
   <!-- ============ ITINERARIO ============ -->
   <section class="view" id="view-itinerario" data-alt="trip">
+    <!-- 12.56: 4 itinerarios al mismo nivel (sin rótulo "referencias"). El mapa
+         va arriba y muestra SOLO el itinerario activo. -->
     <div class="filter-bar" style="justify-content:space-between">
       <div class="itin-mode-group">
-        <button class="fchip active" id="itinModeOurs" title="Lo que el viaje ya afirma: vuelos y noches reservadas">🗓️ Realidad</button>
-        <span class="itin-ref-sep">referencias</span>
-        <button class="fchip ref" id="itinModeSeed" title="Propuesta generada durante el desarrollo · referencia, no es el viaje">✨ Propuesta</button>
-        <button class="fchip ref" id="itinModeDani" title="Ruta que sugirió Dani · exploración, no es el plan">🧭 Dani</button>
-        <button class="fchip ref" id="itinModeMaria" title="El viaje que hizo María en 2024 · referencia, no es el plan">📋 María</button>
+        <button class="fchip active" id="itinModeOurs" title="Lo que el viaje ya afirma: vuelos y noches reservadas · en progreso">🗓️ Realidad</button>
+        <button class="fchip" id="itinModeSeed" title="Propuesta generada por la IA">✨ Propuesta</button>
+        <button class="fchip" id="itinModeDani" title="Ruta que sugirió Dani">🧭 Dani</button>
+        <button class="fchip" id="itinModeMaria" title="El viaje que hizo María en 2024">📋 María</button>
       </div>
       <div style="display:flex;gap:6px">
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
       </div>
     </div>
-    <div id="cord"></div>
-    <button class="btn ghost small" id="cordBack">← Viaje</button>
-    <div class="day-chips" id="dayChips"></div>
-    <div id="dayPanel"></div>
-    <!-- El plan sobre el mapa: la geografía del plan REAL, filtrable por DÍAS
-         (nunca por zona — eso vive en el mapa de Ideas). Mapa embebido aquí
-         desde 12.54: se retiró la pestaña "Mapa" suelta. -->
-    <h3 class="section" style="margin:24px 0 10px">🗺️ El plan sobre el mapa</h3>
+    <!-- 12.56 · El itinerario ACTIVO sobre el mapa: cada itinerario, su mapa y
+         sus cosas. Solo pinta los elementos que pertenecen al itinerario
+         seleccionado (Realidad / Propuesta IA / Dani / María); las ideas sueltas
+         (insta/ai) no son itinerarios y no salen. Filtrable por DÍAS; la zona es
+         el eje del mapa de Ideas, no de este. -->
     <div class="day-chips" id="mapDayChips"></div>
     <div class="map-toggles">
-      <button class="fchip src-chip" id="srcNos" title="Nuestro itinerario (Itinerario.docx) y reservas"><b>N</b> Nuestros</button>
-      <button class="fchip src-chip src-dani" id="srcDani" title="Sitios de la ruta Dani"><b>D</b> Dani</button>
-      <button class="fchip src-chip src-maria" id="srcMaria" title="Listas de Google Maps que curó María"><b>M</b> María</button>
-      <button class="fchip src-chip src-insta" id="srcInsta" title="Sitios guardados de Instagram"><b>I</b> Insta</button>
-      <button class="fchip src-chip src-ai" id="srcAI" title="Ideas del catálogo generado durante el desarrollo"><b>IA</b></button>
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
-      <button class="fchip src-chip src-dani" id="daniLinesToggle" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo con la capa Dani encendida)">〰️ Líneas Dani</button>
+      <button class="fchip src-chip src-dani" id="daniLinesToggle" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo en el itinerario de Dani)">〰️ Líneas Dani</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
     <div class="map-toggles" id="mapCatChips" aria-label="Filtrar el mapa por categoría"></div>
     <div id="map"></div>
     <div class="map-legend" id="mapLegend"></div>
     <div class="map-note">Las rutas siguen calles y carreteras reales (OSRM/OpenStreetMap). En tramos de metro y tren el trazado sobre el plano es orientativo: consulta la conexión exacta en la tarjeta del trayecto o con el botón de Google Maps.</div>
+    <div id="cord"></div>
+    <button class="btn ghost small" id="cordBack">← Viaje</button>
+    <div class="day-chips" id="dayChips"></div>
+    <div id="dayPanel"></div>
   </section>
 
   <!-- ============ SITIOS ============ -->
@@ -4023,7 +4015,11 @@ function setItinMode(mode){
   const mariaChip = $('#itinModeMaria'); if(mariaChip) mariaChip.classList.toggle('active', mode === 'maria');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
   setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
+  // 12.56: el mapa sigue al itinerario activo. Al cambiar, arranca en "Todos"
+  // (todo el itinerario) y se redibuja con los elementos de ESE itinerario.
+  mapDay = -1;
   renderItinerary();
+  if(curTab === 'itinerario' && map) renderMapDay();
 }
 /* 12.52 · La vista "📄 Original" se retiró: era un archivo de solo lectura
    que ya no aporta (sus paradas viven consolidadas en el plan desde la fase
@@ -4801,7 +4797,8 @@ function applyMapTheme(targetMap){
   _tileLayers.set(targetMap, layer);
 }
 function initMapView(){
-  if(mapDay == null) mapDay = curDay;
+  // 12.56: el mapa arranca en "Todos" (todo el itinerario activo), no en un día.
+  if(mapDay == null) mapDay = -1;
   if(!map){
     map = L.map('map', {zoomControl: true, attributionControl: true}).setView([35.68, 139.76], 11);
     // PRIORIDAD DE CLIC (corrección 12.50): los polígonos de zona viven en un
@@ -4854,26 +4851,80 @@ function renderIdeasMap(items){
   });
   if(pts.length) ideasMap.fitBounds(L.latLngBounds(pts).pad(0.12));
 }
-/* --- Capas por PROCEDENCIA: Nuestros(docx) / Dani / María / Insta / IA
-   (persistidas). El mismo modelo de curadores que en Ideas. --- */
-let srcState = {n: true, d: false, i: false, m: false, a: false}; // "Nuestros" activo por defecto
-try{ srcState = Object.assign(srcState, JSON.parse(localStorage.getItem('jp27_map_sources') || '{}')); }catch(e){}
-function syncSrcChips(){
-  $('#srcNos').classList.toggle('active', srcState.n);
-  $('#srcDani').classList.toggle('active', srcState.d);
-  $('#srcInsta').classList.toggle('active', srcState.i);
-  const sm = $('#srcMaria'); if(sm) sm.classList.toggle('active', srcState.m);
-  const sa = $('#srcAI'); if(sa) sa.classList.toggle('active', srcState.a);
+/* --- 12.56 · El mapa de Itinerarios se ESCOPA al itinerario ACTIVO (itinMode).
+   Antes había capas por procedencia (Nuestros/Dani/María/Insta/IA) que se
+   encendían a mano; ahora el itinerario seleccionado decide qué se ve: cada
+   itinerario, su mapa y sus cosas.
+
+   El scoping es por PERTENENCIA al itinerario, no por procedencia. Es la
+   distinción clave: la "Propuesta" (seed) es el itinerario de la IA y puede
+   contener lugares de procedencia 'ai', pero son SUYOS y sí van al mapa; en
+   cambio las ideas sueltas de fuente 'insta'/'ai' no pertenecen a ningún
+   itinerario y nunca aparecen aquí. --- */
+const ITIN_RING = {ours: '#fff', seed: '#a97b12', dani: '#223A5E', maria: '#7a4fa3'};
+// Los grupos de Dani vuelven a su base a diario: un mismo id sale pegado varias
+// veces. Se colapsan las repeticiones consecutivas al convertirlos en "día".
+function daniGroupAsDay(r){
+  const ids = [];
+  (r.placeIds || []).forEach(id => { if(ids[ids.length - 1] !== id) ids.push(id); });
+  return {label: r.label, color: r.color, flight: null, trans: {},
+    stops: ids.map(id => ({pid: id, time: '', dur: 0}))};
 }
-[['#srcNos','n'], ['#srcDani','d'], ['#srcInsta','i'], ['#srcMaria','m'], ['#srcAI','a']].forEach(([sel, key]) => {
-  const el = $(sel); if(!el) return;
-  el.addEventListener('click', () => {
-    srcState[key] = !srcState[key];
-    try{ localStorage.setItem('jp27_map_sources', JSON.stringify(srcState)); }catch(e){}
-    syncSrcChips(); renderMapDay();
-  });
-});
-syncSrcChips();
+// Los "días" del itinerario activo (filtro por días + paradas numeradas).
+// María es por ciudad, sin paradas geográficas por día: no tiene días de mapa.
+function itineraryDays(mode){
+  if(mode === 'seed') return SEED_DAYS;
+  if(mode === 'dani') return DANI_ROUTE_GROUPS.map(daniGroupAsDay);
+  if(mode === 'maria') return [];
+  return state.days; // ours = Realidad
+}
+// Los ids (canónicos) de lugar que PERTENECEN al itinerario activo.
+function itineraryPlaceIds(mode){
+  const ids = new Set();
+  if(mode === 'maria'){
+    state.places.forEach(p => { if(p && provenanceOf(p) === 'maria') ids.add(canonicalPid(p.id)); });
+    return ids;
+  }
+  itineraryDays(mode).forEach(d => (d.stops || []).forEach(s => ids.add(canonicalPid(s.pid))));
+  if(mode === 'ours'){
+    // Realidad = el plan (state.days) + lo confirmado/curado que aún no está en
+    // un día: Itinerario.docx + reservas (procedencia 'ours').
+    state.places.forEach(p => { if(p && provenanceOf(p) === 'ours') ids.add(canonicalPid(p.id)); });
+  }
+  return ids;
+}
+// Todos los ids canónicos del grupo de gemelos de un sitio (o él solo si no es
+// gemelo). El ancla representa a los dos: así un lugar de Dani que es miembro-
+// gemelo de un ancla IA cuenta como perteneciente al itinerario de Dani.
+function groupIdsOf(id){
+  const g = twinGroupOf(id);
+  return (g ? [g.anchor].concat(g.members) : [id]).map(canonicalPid);
+}
+function inItinerary(sp, ids){ return groupIdsOf(sp.id).some(id => ids.has(id)); }
+// Chips de día del itinerario ACTIVO (no siempre state.days). "Todos" (-1) =
+// todo el itinerario. María no tiene días → solo "Todos".
+function renderMapDayChips(days){
+  const host = $('#mapDayChips'); if(!host) return;
+  const chips = [`<button class="day-chip ${mapDay === -1 ? 'active' : ''}" data-i="-1">🗾 Todos</button>`]
+    .concat((days || []).map((d, i) => {
+      let label;
+      if(d.date){
+        const dt = new Date(d.date + 'T12:00');
+        const glyph = d.flight ? '✈️' : '';
+        // Realidad rotula con la ciudad donde se duerme (nightCityFor); la
+        // Propuesta trae su propia ciudad declarada.
+        const city = itinMode === 'ours' ? nightCityFor(d.date) : (d.city || '');
+        label = `${city ? `<span class="cdot" style="background:${CITY_COLORS[city] || '#888'}"></span>` : ''}` +
+          `${glyph} ${dt.getDate()} ${dt.toLocaleDateString('es-ES', {month: 'short'}).replace('.', '')}` +
+          `${city ? `<small>${esc(city)}</small>` : ''}`;
+      } else {
+        label = 'D' + (i + 1); // Dani: día i de su ruta
+      }
+      return `<button class="day-chip ${i === mapDay ? 'active' : ''}" data-i="${i}">${label}</button>`;
+    }));
+  host.innerHTML = chips.join('');
+  $$('#mapDayChips .day-chip').forEach(b => b.addEventListener('click', () => { mapDay = +b.dataset.i; renderMapDay(); }));
+}
 
 /* --- M4 · Capa de vuelos (no persistida, como en la app original) --- */
 let flightsVisible = false;
@@ -5161,59 +5212,44 @@ let mapRenderToken = 0;
 async function renderMapDay(){
   if(!map) return;
   const token = ++mapRenderToken;
-  renderDayChips('#mapDayChips', mapDay, i => { mapDay = i; renderMapDay(); }, true);
+  // 12.56: el mapa muestra SOLO el itinerario activo (itinMode).
+  const itin = itinMode;
+  const days = itineraryDays(itin);
+  const ids = itineraryPlaceIds(itin);
+  renderMapDayChips(days);
   mapLayers.forEach(l => map.removeLayer(l));
   mapLayers = [];
-  // P6 · mapDay -1 = "Todos": solo marcadores, sin rutas del día (ni OSRM)
-  const day = mapDay >= 0 ? state.days[mapDay] : null;
-  const stops = day ? day.stops.map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat) : [];
+  // "Todos" (mapDay -1) o índice fuera de rango = todo el itinerario, sin rutas.
+  const day = (mapDay >= 0 && days[mapDay]) ? days[mapDay] : null;
+  const stops = day ? (day.stops || []).map(s => ({s, p: placeById(s.pid)})).filter(x => x.p && x.p.lat) : [];
   const usedModes = new Set();
   const poiPts = [];
 
   renderZones();
-  // Capas por PROCEDENCIA (mismo modelo que Ideas): N (Itinerario.docx +
-  // reservas), D (Dani), M (María), I (Instagram), IA (catálogo de desarrollo).
-  const LAYER_DEFS = [
-    {key: 'n', prov: 'ours', ring: '#fff', badge: ''},
-    {key: 'd', prov: 'dani', ring: '#223A5E', badge: ' <span style="color:#223A5E;font-weight:800">D</span>'},
-    {key: 'm', prov: 'maria', ring: '#7a4fa3', badge: ' <span style="color:#7a4fa3;font-weight:800">M</span>'},
-    {key: 'i', prov: 'instagram', ring: '#C13584', badge: ' <span style="color:#C13584;font-weight:800">I</span>'},
-    {key: 'a', prov: 'ai', ring: '#8a8577', badge: ' <span style="color:#8a8577;font-weight:800">IA</span>'},
-  ];
-  const pois = [];
-  // Fase 1.5: un gemelo (dani_x <-> ancla IA) pinta UN pin bajo cualquier
-  // capa que encienda a CUALQUIERA de sus procedencias (unión), con los
-  // badges de todas las capas activas que coincidan. El gemelo NO-ancla
-  // nunca pinta el suyo propio (isTwinMember lo excluye).
-  const activeLayerDefs = LAYER_DEFS.filter(def => srcState[def.key]);
-  if(activeLayerDefs.length){
-    state.places.forEach(sp => {
-      if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
-      if(isTwinMember(sp.id)) return;
-      const provs = placeProvenances(sp.id);
-      const matched = activeLayerDefs.filter(def => provs.indexOf(def.prov) >= 0);
-      if(!matched.length) return;
-      const v = placeView(sp);
-      const ownProv = sp.provenance || provenanceOf(sp);
-      const ring = (matched.find(def => def.prov === ownProv) || matched[0]).ring;
-      let badge = matched.map(def => def.badge).filter(Boolean).join('');
-      if(!badge && v.userPlace) badge = ' <span style="color:var(--indigo)">★</span>';
-      pois.push({pid: sp.id, p: v, ring, badge});
-    });
-  }
-  pois.forEach(({pid, p, ring, badge}) => {
-    if(!p.lat || p.region === 'Ideas') return;
+  // POIs = los lugares que PERTENECEN al itinerario activo (membership), con el
+  // anillo del color del itinerario. Se excluyen aeropuertos, bases de ciudad y
+  // el gemelo no-ancla; las ideas sueltas (insta/ai) no están en ids → no salen.
+  // Las paradas del día seleccionado se pintan numeradas más abajo, no aquí.
+  const ring = ITIN_RING[itin] || '#fff';
+  const dayGroupPids = new Set();
+  if(day) (day.stops || []).forEach(s => groupIdsOf(s.pid).forEach(id => dayGroupPids.add(id)));
+  state.places.forEach(sp => {
+    if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
+    if(isTwinMember(sp.id)) return;
+    if(!inItinerary(sp, ids)) return;
+    if(day && groupIdsOf(sp.id).some(id => dayGroupPids.has(id))) return; // va numerada
+    const p = placeView(sp);
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
-    if(day && day.stops.some(s => s.pid === pid)) return;
     poiPts.push([p.lat, p.lng]);
     const c = catOf(p);
     const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: ring,
       weight: ring === '#fff' ? 1.5 : 2, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
-    circle.bindPopup(`<b>${esc(p.name)}</b>${badge}<br>${esc(p.region)}<br><a href="javascript:openPlace('${pid}')">Ver ficha →</a>`);
+    circle.bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.region)}<br><a href="javascript:openPlace('${sp.id}')">Ver ficha →</a>`);
     circle.addTo(map); mapLayers.push(circle);
   });
-  // 12.54: las líneas de la ruta Dani solo si su capa Y su toggle están on.
-  if(srcState.d && daniLinesVisible) drawDaniRoutes();
+  // 12.56: las líneas de la ruta Dani solo en el itinerario de Dani y con su
+  // toggle encendido (antes dependían de la capa de fuente 'd').
+  if(itin === 'dani' && daniLinesVisible) drawDaniRoutes();
 
   stops.forEach((x, i) => {
     const mk = L.marker([x.p.lat, x.p.lng], {
@@ -5223,7 +5259,10 @@ async function renderMapDay(){
     mk.bindPopup(`<b>${i + 1}. ${esc(x.p.name)}</b><br>${x.s.time ? '🕐 ' + x.s.time + ' · ' : ''}${fmtMin(x.s.dur)}<br><a href="javascript:openPlace('${x.s.pid}')">Ver ficha →</a>`);
     mk.addTo(map); mapLayers.push(mk);
   });
-  const flightPts = flightsVisible ? drawFlights(day) : [];
+  // Vuelos: solo tienen sentido en los itinerarios del viaje real (Realidad y
+  // Propuesta); Dani y María no llevan vuelos.
+  const showFlights = (itin === 'ours' || itin === 'seed') && flightsVisible;
+  const flightPts = showFlights ? drawFlights(day) : [];
   // Encuadre: día = sus paradas (+aeropuertos si hay vuelos);
   // "Todos" = todos los marcadores dibujados (+vuelos si están activos)
   const fitPts = stops.map(x => [x.p.lat, x.p.lng]).concat(flightPts).concat(day ? [] : poiPts);
@@ -5233,7 +5272,11 @@ async function renderMapDay(){
 
   const statusEl = $('#routeStatus');
   let pending = 0;
-  for(let i = 0; i < stops.length - 1; i++){
+  // Rutas calculadas (OSRM/tren) solo en itinerarios con datos de transporte
+  // (Realidad y Propuesta). Dani se conecta con sus líneas discontinuas y María
+  // no tiene paradas geográficas por día.
+  const doRouting = (itin === 'ours' || itin === 'seed') && !!(day && day.trans);
+  if(doRouting) for(let i = 0; i < stops.length - 1; i++){
     const a = stops[i].p, b = stops[i + 1].p;
     const t = day.trans[day.stops.indexOf(stops[i].s)];
     const opt = t && t.opts[t.sel] ? t.opts[t.sel] : {m: 'walk'};
