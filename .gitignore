@@ -7,3 +7,9 @@ node_modules/
 live.json
 *-live.json
 .claude/settings.local.json
+
+# Planning de María (viaje 2024). NUNCA se versiona: el repo es PÚBLICO (GitHub
+# Pages) y el xlsx lleva enlaces de reserva de terceros, un id de reserva y
+# datos de su anfitriona. tools/maria-xlsx-import.js lo lee en local y hornea
+# SOLO lo publicable (fechas, ciudades, traslados, actividades, hoteles+mapa).
+planningjapon.xlsx

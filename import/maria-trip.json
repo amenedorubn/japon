@@ -1,0 +1,264 @@
+{
+  "source": "planningjapon.xlsx (viaje de María, 2024) · sin datos privados",
+  "from": "2024-02-29",
+  "to": "2024-03-14",
+  "days": [
+    {
+      "n": 1,
+      "date": "2024-02-29",
+      "weekday": "THURSDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [
+        "Arrival 12:30"
+      ],
+      "activities": [],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 2,
+      "date": "2024-03-01",
+      "weekday": "FRIDAY",
+      "cities": [
+        "OSAKA"
+      ],
+      "move": [
+        "TOKYO→OSAKA"
+      ],
+      "activities": [],
+      "stay": {
+        "kind": "hotel",
+        "n": 1
+      }
+    },
+    {
+      "n": 3,
+      "date": "2024-03-02",
+      "weekday": "SATURDAY",
+      "cities": [
+        "OSAKA"
+      ],
+      "move": [],
+      "activities": [
+        "Japanese Sweets Making Experience"
+      ],
+      "stay": {
+        "kind": "hotel",
+        "n": 2
+      }
+    },
+    {
+      "n": 4,
+      "date": "2024-03-03",
+      "weekday": "SUNDAY",
+      "cities": [
+        "KYOTO"
+      ],
+      "move": [
+        "OSAKA→KYOTO"
+      ],
+      "activities": [],
+      "stay": {
+        "kind": "hotel",
+        "n": 3
+      }
+    },
+    {
+      "n": 5,
+      "date": "2024-03-04",
+      "weekday": "MONDAY",
+      "cities": [
+        "NARA",
+        "KYOTO"
+      ],
+      "move": [],
+      "activities": [],
+      "stay": {
+        "kind": "hotel",
+        "n": 3
+      }
+    },
+    {
+      "n": 6,
+      "date": "2024-03-05",
+      "weekday": "TUESDAY",
+      "cities": [
+        "KYOTO"
+      ],
+      "move": [],
+      "activities": [],
+      "stay": {
+        "kind": "hotel",
+        "n": 3
+      }
+    },
+    {
+      "n": 7,
+      "date": "2024-03-06",
+      "weekday": "WEDNESDAY",
+      "cities": [
+        "KYOTO",
+        "NAGOYA"
+      ],
+      "move": [
+        "KYOTO→NAGOYA"
+      ],
+      "activities": [],
+      "stay": {
+        "kind": "hotel",
+        "n": 4
+      }
+    },
+    {
+      "n": 8,
+      "date": "2024-03-07",
+      "weekday": "THURSDAY",
+      "cities": [
+        "NAGOYA",
+        "NAGANO"
+      ],
+      "move": [
+        "NAGOYA→NAGANO"
+      ],
+      "activities": [
+        "9 Onsen hopping"
+      ],
+      "stay": {
+        "kind": "hotel",
+        "n": 5
+      }
+    },
+    {
+      "n": 9,
+      "date": "2024-03-08",
+      "weekday": "FRIDAY",
+      "cities": [
+        "NAGANO",
+        "TOKYO"
+      ],
+      "move": [
+        "NAGANO→TOKYO"
+      ],
+      "activities": [
+        "Snow Monkey Park",
+        "Onsen Shrine"
+      ],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 10,
+      "date": "2024-03-09",
+      "weekday": "SATURDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [],
+      "activities": [],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 11,
+      "date": "2024-03-10",
+      "weekday": "SUNDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [],
+      "activities": [],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 12,
+      "date": "2024-03-11",
+      "weekday": "MONDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [],
+      "activities": [
+        "Disney Sea"
+      ],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 13,
+      "date": "2024-03-12",
+      "weekday": "TUESDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [],
+      "activities": [],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 14,
+      "date": "2024-03-13",
+      "weekday": "WEDNESDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [],
+      "activities": [
+        "TEAM LAB"
+      ],
+      "stay": {
+        "kind": "private"
+      }
+    },
+    {
+      "n": 15,
+      "date": "2024-03-14",
+      "weekday": "THURSDAY",
+      "cities": [
+        "TOKYO"
+      ],
+      "move": [
+        "back home :(",
+        "Departure 14:00"
+      ],
+      "activities": [],
+      "stay": null
+    }
+  ],
+  "hotels": [
+    {
+      "n": 1,
+      "name": "Sekai Hotel Fuse",
+      "map": "https://maps.app.goo.gl/kACax4t6BeE91duWA?g_st=ic"
+    },
+    {
+      "n": 2,
+      "name": "Hanmadang",
+      "map": "https://maps.app.goo.gl/MHiMTuka1ZhTgjhU9?g_st=ic"
+    },
+    {
+      "n": 3,
+      "name": "Hotel Doria Kyoto Karasuma Gojo",
+      "map": "https://maps.app.goo.gl/Fw6SFUgzVGixmEhs8?g_st=ic"
+    },
+    {
+      "n": 4,
+      "name": "Kokoro No Yado Newly Renovated",
+      "map": "https://maps.app.goo.gl/tQfMtAdMJZgSaVzd7?g_st=ic"
+    },
+    {
+      "n": 5,
+      "name": "Shibu Onsen Kaneki Hotel",
+      "map": "https://maps.app.goo.gl/MfKZz6Cs8eTwqj2X8?g_st=ic"
+    }
+  ]
+}

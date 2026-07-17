@@ -430,6 +430,13 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .seed-day .sd-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
 .seed-day .sd-head small{color:var(--muted);font-size:11.5px;flex:none;}
 .seed-day .sd-flight{font-size:12.5px;color:var(--muted);}
+/* Ficha de María (12.52): referencia de solo lectura, sin acciones. */
+.mr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.mr-stay{font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+.mr-stay a{text-decoration:none;margin-left:4px;}
+.mr-priv{font-style:italic;}
+.mr-maps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.mr-lbl{font-size:11.5px;color:var(--muted);}
 .seed-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;
   border-top:1px solid var(--hairline);}
 .seed-row:first-of-type{border-top:none;}
@@ -765,6 +772,7 @@ table.phr tr:last-child td{border-bottom:none;}
         <span class="itin-ref-sep">referencias</span>
         <button class="fchip ref" id="itinModeSeed" title="Propuesta generada durante el desarrollo · referencia, no es el viaje">✨ Propuesta</button>
         <button class="fchip ref" id="itinModeDani" title="Ruta que sugirió Dani · exploración, no es el plan">🧭 Dani</button>
+        <button class="fchip ref" id="itinModeMaria" title="El viaje que hizo María en 2024 · referencia, no es el plan">📋 María</button>
       </div>
       <div style="display:flex;gap:6px">
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
@@ -2252,13 +2260,65 @@ const DOCX_OURS_IDS = [
 ];
 // @@OURS_IDS_END
 const DOCX_OURS = new Set(DOCX_OURS_IDS);
+/* Las 5 listas de Google Maps que compartió María. `city` es el TÍTULO de cada
+   lista, y es también la etiqueta que maria-import.js copia en cada sitio
+   (extractList lo saca del título): por eso city es la clave que une una lista
+   con sus sitios y con los días de su viaje. Estaba implícita en el orden de
+   scrapeo; anotarla la hace explícita y verificable (test-12-maria). */
 const MARIA_MAPS = [
-  {url: 'https://maps.app.goo.gl/3kJQast3HFWRjzB78', listId: 'gmTab8I4Q-OusWMU_6XHeQ'},
-  {url: 'https://maps.app.goo.gl/rLjD7Kwpp72TvgDQ8', listId: null},
-  {url: 'https://maps.app.goo.gl/Svc4DQacFGSJDnz88', listId: null},
-  {url: 'https://maps.app.goo.gl/sUmorv6f43A4ckV96', listId: null},
-  {url: 'https://maps.app.goo.gl/9YQqKURFpCWD9LM59', listId: null, note: 'mayormente monos'},
+  {url: 'https://maps.app.goo.gl/3kJQast3HFWRjzB78', listId: 'gmTab8I4Q-OusWMU_6XHeQ', city: 'Tokio'},
+  {url: 'https://maps.app.goo.gl/rLjD7Kwpp72TvgDQ8', listId: null, city: 'Nagoya'},
+  {url: 'https://maps.app.goo.gl/Svc4DQacFGSJDnz88', listId: null, city: 'Kioto y Nara'},
+  {url: 'https://maps.app.goo.gl/sUmorv6f43A4ckV96', listId: null, city: 'Osaka'},
+  {url: 'https://maps.app.goo.gl/9YQqKURFpCWD9LM59', listId: null, city: 'Nagano', note: 'mayormente monos'},
 ];
+/* Puente ciudad-del-día (como la escribió en el xlsx, en inglés y en mayúscula)
+   → lista de María. Kioto y Nara comparten lista: un día "NARA/KYOTO" enlaza una
+   sola vez. Es el ÚNICO enlace de mapa real por día: ella no hizo un mapa por
+   día, hizo uno por ciudad. */
+const MARIA_CITY_LIST = {TOKYO: 'Tokio', OSAKA: 'Osaka', KYOTO: 'Kioto y Nara',
+  NARA: 'Kioto y Nara', NAGOYA: 'Nagoya', NAGANO: 'Nagano'};
+function mariaMapsForCities(cities){
+  const seen = new Set(), out = [];
+  (cities || []).forEach(c => {
+    const label = MARIA_CITY_LIST[String(c).toUpperCase()];
+    const list = label && MARIA_MAPS.find(m => m.city === label);
+    if(list && !seen.has(label)){ seen.add(label); out.push(list); }
+  });
+  return out;
+}
+/* Ficha de referencia del viaje de María (febrero–marzo de 2024). La hornea
+   tools/maria-xlsx-import.js --bake desde su planningjapon.xlsx, que NO se
+   versiona (repo público): aquí solo vive lo publicable — fechas, ciudades,
+   traslados, actividades y los hoteles con su pin de mapa. Ni enlaces de
+   reserva, ni el alojamiento particular de su anfitriona (stay.kind
+   'private', sin nombre). */
+// @@MARIA_TRIP_START
+const MARIA_TRIP_2024 = [
+  {n:1, date:'2024-02-29', weekday:"THURSDAY", cities:["TOKYO"], move:["Arrival 12:30"], activities:[], stay:{kind:'private'}},
+  {n:2, date:'2024-03-01', weekday:"FRIDAY", cities:["OSAKA"], move:["TOKYO→OSAKA"], activities:[], stay:{kind:'hotel', n:1}},
+  {n:3, date:'2024-03-02', weekday:"SATURDAY", cities:["OSAKA"], move:[], activities:["Japanese Sweets Making Experience"], stay:{kind:'hotel', n:2}},
+  {n:4, date:'2024-03-03', weekday:"SUNDAY", cities:["KYOTO"], move:["OSAKA→KYOTO"], activities:[], stay:{kind:'hotel', n:3}},
+  {n:5, date:'2024-03-04', weekday:"MONDAY", cities:["NARA", "KYOTO"], move:[], activities:[], stay:{kind:'hotel', n:3}},
+  {n:6, date:'2024-03-05', weekday:"TUESDAY", cities:["KYOTO"], move:[], activities:[], stay:{kind:'hotel', n:3}},
+  {n:7, date:'2024-03-06', weekday:"WEDNESDAY", cities:["KYOTO", "NAGOYA"], move:["KYOTO→NAGOYA"], activities:[], stay:{kind:'hotel', n:4}},
+  {n:8, date:'2024-03-07', weekday:"THURSDAY", cities:["NAGOYA", "NAGANO"], move:["NAGOYA→NAGANO"], activities:["9 Onsen hopping"], stay:{kind:'hotel', n:5}},
+  {n:9, date:'2024-03-08', weekday:"FRIDAY", cities:["NAGANO", "TOKYO"], move:["NAGANO→TOKYO"], activities:["Snow Monkey Park", "Onsen Shrine"], stay:{kind:'private'}},
+  {n:10, date:'2024-03-09', weekday:"SATURDAY", cities:["TOKYO"], move:[], activities:[], stay:{kind:'private'}},
+  {n:11, date:'2024-03-10', weekday:"SUNDAY", cities:["TOKYO"], move:[], activities:[], stay:{kind:'private'}},
+  {n:12, date:'2024-03-11', weekday:"MONDAY", cities:["TOKYO"], move:[], activities:["Disney Sea"], stay:{kind:'private'}},
+  {n:13, date:'2024-03-12', weekday:"TUESDAY", cities:["TOKYO"], move:[], activities:[], stay:{kind:'private'}},
+  {n:14, date:'2024-03-13', weekday:"WEDNESDAY", cities:["TOKYO"], move:[], activities:["TEAM LAB"], stay:{kind:'private'}},
+  {n:15, date:'2024-03-14', weekday:"THURSDAY", cities:["TOKYO"], move:["back home :(", "Departure 14:00"], activities:[], stay:null},
+];
+const MARIA_HOTELS_2024 = [
+  {n:1, name:"Sekai Hotel Fuse", map:"https://maps.app.goo.gl/kACax4t6BeE91duWA?g_st=ic"},
+  {n:2, name:"Hanmadang", map:"https://maps.app.goo.gl/MHiMTuka1ZhTgjhU9?g_st=ic"},
+  {n:3, name:"Hotel Doria Kyoto Karasuma Gojo", map:"https://maps.app.goo.gl/Fw6SFUgzVGixmEhs8?g_st=ic"},
+  {n:4, name:"Kokoro No Yado Newly Renovated", map:"https://maps.app.goo.gl/tQfMtAdMJZgSaVzd7?g_st=ic"},
+  {n:5, name:"Shibu Onsen Kaneki Hotel", map:"https://maps.app.goo.gl/MfKZz6Cs8eTwqj2X8?g_st=ic"},
+];
+// @@MARIA_TRIP_END
 /* Formato de cada entrada: {name, city, lat?, lng?, cat?, notes?}. Se
    rellena desde import/maria-places.json (KML/GeoJSON export de cada lista)
    o a mano; ensureMariaPlaces los siembra idempotentemente. Sin datos es un
@@ -3828,6 +3888,7 @@ function setItinMode(mode){
   $('#itinModeOurs').classList.toggle('active', mode === 'ours');
   const seedChip = $('#itinModeSeed'); if(seedChip) seedChip.classList.toggle('active', mode === 'seed');
   $('#itinModeDani').classList.toggle('active', mode === 'dani');
+  const mariaChip = $('#itinModeMaria'); if(mariaChip) mariaChip.classList.toggle('active', mode === 'maria');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
   setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
   renderItinerary();
@@ -3927,6 +3988,57 @@ function plantFromProposal(pid, dayIdx){
   renderSeedItinerary(); // el botón pasa a "✓ en el plan" sin salir de la referencia
   toast('Plantado en ' + fmtDateShort(day.date) + ' ✓');
 }
+/* --- Vista "María" (12.52) · el viaje que ella HIZO en 2024, como referencia
+   de solo lectura (Washi). No es el nuestro y no se planta nada: es para mirar
+   qué hizo y abrir SUS mapas. El enlace de cada día es el de la lista de esa
+   CIUDAD (mariaMapsForCities): María no hizo un mapa por día, hizo 5 por
+   ciudad, y el rótulo lo dice tal cual. Sus 139 sitios NO se repiten aquí: ya
+   viven en Exploración con procedencia 'maria'. --- */
+/* Su viaje cruza de febrero a marzo, así que aquí el mes es obligatorio:
+   fmtDateShort lo omite a propósito (el nuestro es todo abril y el mes se dice
+   una vez), y sin él un "vie 1" no se sabe de cuándo es. */
+const mariaDate = iso => new Date(iso + 'T12:00:00')
+  .toLocaleDateString('es-ES', {weekday: 'short', day: 'numeric', month: 'short'}).replace('.', '');
+function mariaDayHTML(d){
+  const hotels = new Map(MARIA_HOTELS_2024.map(h => [h.n, h]));
+  const maps = mariaMapsForCities(d.cities).map(m =>
+    `<a class="btn small ghost" href="${esc(m.url)}" target="_blank" rel="noopener"
+        title="Lista de Google Maps de María para ${esc(m.city)}">🗺️ ${esc(m.city)}</a>`).join('');
+  const stay = !d.stay ? ''
+    : d.stay.kind === 'hotel'
+      ? (() => {
+          const h = hotels.get(d.stay.n);
+          if(!h) return '';
+          return `<div class="mr-stay">🛏 ${esc(h.name)}
+            ${h.map ? `<a href="${esc(h.map)}" target="_blank" rel="noopener" title="Ver el hotel en Google Maps">🗺️</a>` : ''}</div>`;
+        })()
+      // Su anfitriona no se publica (repo público): se dice que durmió en casa
+      // de alguien, sin nombre ni enlace.
+      : `<div class="mr-stay">🛏 <span class="mr-priv">Alojamiento particular</span></div>`;
+  const chips = [].concat(
+    d.move.map(m => `<span class="pill">${esc(m)}</span>`),
+    d.activities.map(a => `<span class="pill green">★ ${esc(a)}</span>`)
+  ).join('');
+  return `<div class="m-washi seed-day">
+    <div class="sd-head">
+      <b>Día ${d.n} · ${esc(d.cities.join(' / '))}</b>
+      <small>${mariaDate(d.date)} 2024</small>
+    </div>
+    ${chips ? `<div class="mr-chips">${chips}</div>` : ''}
+    ${stay}
+    ${maps ? `<div class="mr-maps"><span class="mr-lbl">Su mapa de la ciudad:</span>${maps}</div>` : ''}
+  </div>`;
+}
+function renderMariaItinerary(){
+  const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
+  const t = MARIA_TRIP_2024;
+  $('#dayPanel').innerHTML =
+    `<div class="card" style="padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px">
+      📋 <b>El viaje de María</b> · ${mariaDate(t[0].date)} → ${mariaDate(t[t.length - 1].date)} de 2024,
+      ${t.length} días. Es lo que ella hizo, no una propuesta para el nuestro: sirve para ver
+      su ruta y abrir sus mapas. Sus ${MARIA_PLACES.length} sitios están en <b>Ideas</b>, con la <b>M</b> de María.
+    </div>` + t.map(mariaDayHTML).join('');
+}
 /* ================================================================
    CORD (Fase 12 · Stage 3) · Altitud de Viaje del Plan: los 21 días
    como un solo objeto. Cada fila es un DayNode; el Hilo de hoteles
@@ -4015,6 +4127,7 @@ function renderItinerary(){
   const cord = $('#cord');
   if(itinMode === 'seed'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderSeedItinerary(); return; }
   if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderDaniItinerary(); return; }
+  if(itinMode === 'maria'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderMariaItinerary(); return; }
   renderCord();
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
@@ -5220,6 +5333,7 @@ buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
+onClick('#itinModeMaria', () => setItinMode('maria'));
 onClick('#cordBack', () => zoomOut());
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();
