@@ -1570,6 +1570,21 @@ const NARA_PARK_POLYGON = [
   [34.6958,135.8238],[34.6947,135.8466],[34.6829,135.8560],[34.6728,135.8456],
   [34.6719,135.8268],[34.6803,135.8169],[34.6899,135.8162]
 ];
+/* La isla de Kyūshū (12.55). La zona antes era solo "Fukuoka" (un radio en el
+   norte); ahora cubre toda la isla, así que Fukuoka, la garganta de Takachiho
+   (Miyazaki) y el punto "Kyūshū (isla)" caen los tres en una sola zona. El
+   contorno se corta al norte en el estrecho de Kanmon (< 33,9° lat) para NO
+   colarse a Honshu: Shimonoseki (33,957°) y Yamaguchi quedan fuera. */
+const KYUSHU_ISLAND_POLYGON = [
+  [33.75,129.95], // NO · costa de Genkai (Karatsu)
+  [33.90,130.35], // N  · bahía de Fukuoka
+  [33.88,130.95], // NE · Kitakyushu, al SUR del estrecho de Kanmon
+  [33.30,131.70], // E  · Ōita / Beppu
+  [31.55,131.50], // SE · Miyazaki
+  [31.00,130.70], // S  · Ōsumi / Kagoshima
+  [31.15,130.10], // SO · península de Satsuma
+  [32.75,129.60]  // O  · Nagasaki / Amakusa
+];
 
 /* ================================================================
    EJE DE ZONA (12.53) · DÓNDE está un sitio, en la geografía real.
@@ -1584,7 +1599,8 @@ const NARA_PARK_POLYGON = [
    geografía y salían como dos sitios distintos.
 
    La zona se DERIVA de las coordenadas y no se escribe nunca a mano:
-     1) las 3 grandes, por point-in-polygon (sus polígonos ya existían);
+     1) las que tienen polígono (Tokio, Kioto, Osaka y la isla de Kyūshū),
+        por point-in-polygon;
      2) el resto, por el anclaje más cercano dentro de su radio (haversine).
    Una zona puede tener VARIOS anclajes: los Alpes no tienen un centro
    (Takayama, Kamikochi y Shirakawa-gō están a ~40 km entre sí), y el Fuji se
@@ -1623,7 +1639,11 @@ const ZONES = [
   {id:'nagoya',    label:'Nagoya',     anchors:[[35.1815,136.9066]], r:25},
   // Nagano ciudad y Jigokudani (los monos), a ~30 km.
   {id:'nagano',    label:'Nagano',     anchors:[[36.6513,138.1810],[36.7327,138.4623]], r:30},
-  {id:'fukuoka',   label:'Fukuoka',    anchors:[[33.5904,130.4017]], r:30},
+  // Kyūshū (12.55): antes "Fukuoka" (solo el norte). El polígono de la isla
+  // manda; el ancla/radio quedan de reserva. Solo cambia la ZONA (derivada),
+  // nunca la fuente ni las coordenadas de los lugares.
+  {id:'kyushu',    label:'Kyūshū',     polygon:KYUSHU_ISLAND_POLYGON,
+    anchors:[[33.5904,130.4017]], r:30},
 ];
 const ZONE_BY_ID = new Map(ZONES.map(z => [z.id, z]));
 const zoneLabel = id => (ZONE_BY_ID.get(id) || {}).label || '';

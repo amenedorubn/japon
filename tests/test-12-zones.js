@@ -114,15 +114,36 @@ check('zona: un sitio de la lista "Tokio" que está en el Fuji cae en Monte Fuji
   byName('Lake Kawaguchi').region === 'Tokio' && zoneOf(byName('Lake Kawaguchi')) === 'fuji');
 
 // ================= 4) LAS ZONAS SON LAS PEDIDAS =================
+// 12.55: "Fukuoka" pasó a ser "Kyūshū" (cubre toda la isla).
 const LABELS = ['Tokio', 'Kioto', 'Osaka', 'Nara', 'Hiroshima', 'Miyajima', 'Nikko', 'Kamakura',
-  'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Nagano', 'Fukuoka'];
+  'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Nagano', 'Kyūshū'];
 check('zonas: son exactamente las 14 pedidas',
   JSON.stringify(api.ZONES.map(z => z.label)) === JSON.stringify(LABELS));
 check('zonas: Ideas/Excursiones/Aeropuerto NO son zonas',
   !api.ZONES.some(z => /ideas|excursion|aeropuerto/i.test(z.label)));
-check('zonas: las 3 grandes tienen polígono; el resto, anclajes y radio',
-  api.ZONES.filter(z => z.polygon).map(z => z.id).join() === 'tokio,kioto,osaka' &&
+// 12.55: además de las 3 ciudades, Kyūshū tiene polígono (la isla entera).
+check('zonas: 3 ciudades + isla de Kyūshū tienen polígono; todas tienen anclaje y radio',
+  api.ZONES.filter(z => z.polygon).map(z => z.id).join() === 'tokio,kioto,osaka,kyushu' &&
   api.ZONES.every(z => z.anchors.length >= 1 && z.r > 0));
+
+// ================= 4b) 12.55 · KYŪSHŪ CUBRE LA ISLA, NO HONSHU =================
+// Rename + ampliación: "Fukuoka" → "Kyūshū", su polígono es la isla. Los tres
+// lugares del sur caen en la MISMA zona; el estrecho de Kanmon corta al norte
+// para no colarse a Honshu (Shimonoseki/Yamaguchi). Solo cambia la ZONA
+// (derivada): ni la fuente ni las coordenadas de los lugares se tocan.
+check('kyushu: el id se renombró (ya no hay zona "fukuoka")',
+  !api.ZONES.some(z => z.id === 'fukuoka') && api.zoneLabel('kyushu') === 'Kyūshū');
+check('kyushu: Fukuoka, Takachiho y "Kyūshū (isla)" caen los tres en kyushu',
+  zoneOf(byName('Fukuoka')) === 'kyushu' &&
+  zoneOf(byName('Garganta de Takachiho')) === 'kyushu' &&
+  zoneOf(byName('Kyūshū (isla)')) === 'kyushu');
+const KYU_POLY = api.ZONES.find(z => z.id === 'kyushu').polygon;
+check('kyushu: no se cuela a Honshu (Shimonoseki y Yamaguchi fuera)',
+  zoneOf({lat: 33.9576, lng: 130.9412}) !== 'kyushu' &&
+  zoneOf({lat: 34.1785, lng: 131.4737}) !== 'kyushu' &&
+  !api.pointInPolygon({lat: 33.9576, lng: 130.9412}, KYU_POLY));
+check('kyushu: la ampliación no reasigna otros lugares (exactamente esos 3 en la zona)',
+  places.filter(p => zoneOf(p) === 'kyushu').length === 3);
 
 // ================= 5) NO ROMPE LOS OTROS EJES =================
 // Fuente: los 139 de María siguen siendo de María, etc.
