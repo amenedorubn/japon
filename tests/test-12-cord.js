@@ -71,15 +71,28 @@ check('cord: hotel thread uses --stay-* ramp', /--stay:var\(--stay-[1-4]\)/.test
 // ---- 5) fill indicator present ----
 check('cord: fill indicator rendered', html.includes('cord-fill'));
 
-// ---- 6) cordStays: unbroken across same city, breaks at city change & flights ----
+// ---- 6) cordStays: the thread follows the REAL booking (12.52) ----
+// It used to group by day.city — the proposal speaking for the trip. Now the
+// thread only exists where a confirmed booking covers the night; an unbooked
+// night has nothing to thread (tone 0). Fixture = two real bookings.
+api.state.places.push(
+  { id: 'test_stay_a', name: 'Reserva A', category: 'alojamiento', source: 'user', provenance: 'ours',
+    region: 'Tokio', lat: 35.7, lng: 139.7, checkIn: '2030-01-01', checkOut: '2030-01-03' },
+  { id: 'test_stay_b', name: 'Reserva B', category: 'alojamiento', source: 'user', provenance: 'ours',
+    region: 'Kioto', lat: 35.0, lng: 135.7, checkIn: '2030-01-04', checkOut: '2030-01-06' },
+);
 const stays = api.cordStays([
-  { city: 'Tokio' }, { city: 'Tokio' }, { flight: [1] }, { city: 'Kioto' }, { city: 'Kioto' }, { city: 'Tokio' },
+  { date: '2030-01-01' }, { date: '2030-01-02' },   // reserva A, dos noches
+  { date: '2030-01-03', flight: [1] },              // vuelo: rompe el hilo
+  { date: '2030-01-04' }, { date: '2030-01-05' },   // reserva B, dos noches
+  { date: '2030-01-09' },                           // noche sin reserva
 ]);
 const tones = stays.map(s => s.tone);
-check('cordStays: consecutive same-city nights share one tone (unbroken thread)', tones[0] === 1 && tones[1] === 1);
+check('cordStays: consecutive nights on ONE booking share a tone (unbroken thread)', tones[0] === 1 && tones[1] === 1);
 check('cordStays: flight day breaks the thread (tone 0)', tones[2] === 0 && stays[2].flight === true);
-check('cordStays: city change starts a new tone', tones[3] === 2 && tones[4] === 2);
-check('cordStays: returning to a city after a break is a new stay (new tone)', tones[5] === 3);
+check('cordStays: a different booking starts a new tone', tones[3] === 2 && tones[4] === 2);
+check('cordStays: an unbooked night has no thread (tone 0 — asserts nothing)', tones[5] === 0);
+api.state.places = api.state.places.filter(p => !/^test_stay_/.test(p.id));
 
 // ---- 7) cordFill: 0..3 filled dots ----
 check('cordFill: 0 stops -> no filled dots', api.cordFill(0) === '<i class=""></i><i class=""></i><i class=""></i>');

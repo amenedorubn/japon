@@ -603,9 +603,11 @@ table.phr tr:last-child td{border-bottom:none;}
 .cord-idx{font-weight:600;font-size:19px;line-height:1;font-variant-numeric:tabular-nums;min-width:22px;text-align:center;}
 .cord-day.is-today .cord-idx{color:var(--accent);}
 .cord-day.is-done .cord-idx{color:var(--green);}
-.cord-glyph{font-size:20px;line-height:1;flex:none;}
 .cord-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
 .cord-city{font-weight:600;font-size:15px;line-height:1.2;}
+/* La ciudad de la noche cuelga de la fecha: es un dato de la reserva, no el
+   nombre del día (12.52). */
+.cord-night{font-weight:500;color:var(--muted);}
 .cord-stops{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cord-fill{display:flex;gap:3px;flex:none;}
 .cord-fill i{width:5px;height:5px;border-radius:50%;background:var(--line);}
@@ -759,11 +761,10 @@ table.phr tr:last-child td{border-bottom:none;}
   <section class="view" id="view-itinerario" data-alt="trip">
     <div class="filter-bar" style="justify-content:space-between">
       <div class="itin-mode-group">
-        <button class="fchip active" id="itinModeOurs">🗓️ Nuestro viaje</button>
+        <button class="fchip active" id="itinModeOurs" title="Lo que el viaje ya afirma: vuelos y noches reservadas">🗓️ Realidad</button>
         <span class="itin-ref-sep">referencias</span>
         <button class="fchip ref" id="itinModeSeed" title="Propuesta generada durante el desarrollo · referencia, no es el viaje">✨ Propuesta</button>
         <button class="fchip ref" id="itinModeDani" title="Ruta que sugirió Dani · exploración, no es el plan">🧭 Dani</button>
-        <button class="fchip ref" id="itinModeOrig" title="Itinerario de la app original · archivo de solo lectura">📄 Original</button>
       </div>
       <div style="display:flex;gap:6px">
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
@@ -2111,8 +2112,11 @@ function buildSeedState(){
   const places = buildSeedPlaces();
   const placeMap = new Map(places.map(p => [p.id, p]));
   const resolve = pid => placeMap.get(canonicalPid(pid)) || null;
+  // Sin city/title/icon (12.52): un día de REALIDAD solo afirma su FECHA. La
+  // ciudad de cada día era la propuesta hablando en nombre del viaje; vive en
+  // SEED_DAYS (la referencia "Propuesta"), no en el plan.
   const days = SEED_DAYS.map(sd => {
-    const day = {date: sd.date, title: sd.title, city: sd.city, icon: sd.icon, flight: sd.flight || null,
+    const day = {date: sd.date, flight: sd.flight || null,
       stops: sd.stops.map(s => ({id: uid(), pid: canonicalPid(s.pid), time: s.time, dur: s.dur, note: s.note, done: false})),
       trans: [], pre: sd.pre ? normTransfer(sd.pre, null) : null, post: sd.post ? normTransfer(sd.post, null) : null};
     for(let i = 0; i < Math.max(0, day.stops.length - 1); i++){
@@ -2168,6 +2172,21 @@ function ensureSharedShape(s){
   if(!s.tripTitle) s.tripTitle = "Japón '27";
   if(!('catalogVersion' in s)) s.catalogVersion = null;
   return s;
+}
+/* 12.52 · Retirada del esqueleto especulativo. Los linajes anteriores (nube,
+   copias, este dispositivo) traen city/title/icon en cada día: eran la
+   propuesta afirmando un plan de ciudades que nadie decidió. Se limpian al
+   cargarlos. Higiene LOCAL: no toca updatedAt ni re-sube (los campos son
+   inertes, ya no los lee nadie), así que no puede pisar la nube ni entrar en
+   bucle de sincronización. Idempotente. */
+const DAY_SKELETON_FIELDS = ['city', 'title', 'icon'];
+function stripDaySkeleton(days){
+  let changed = false;
+  normArr(days).forEach(d => {
+    if(!d) return;
+    DAY_SKELETON_FIELDS.forEach(f => { if(f in d){ delete d[f]; changed = true; } });
+  });
+  return changed;
 }
 /* ================================================================
    IMPORTACIÓN DE MARÍA (Fase 12) · María compartió mapas de Google Maps
@@ -2490,6 +2509,7 @@ if(!state || !Array.isArray(state.days)) state = buildSeedState();
 if(!state.check) state.check = {};
 if(!state.rate) state.rate = 170;
 ensureSharedShape(state);
+if(stripDaySkeleton(state.days)) persistLocal(); // 12.52: fuera el esqueleto especulativo
 // Migración de catálogo de arranque (no-op si la versión ya es la actual).
 // La subida del catálogo fusionado la hace adoptRemote al sincronizar.
 // La consolidación 10b del modelo original corre en INIT (final del script).
@@ -2597,6 +2617,7 @@ function adoptRemote(payload){
         d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
       });
       canonicalizeDayPids(v2days); // un v2 antiguo puede traer pids con clave curada
+      stripDaySkeleton(v2days);    // 12.52: un v2 remoto aún trae city/title/icon
       if(v2days.length && v2.updatedAt > (state.updatedAt || 0)){
         state.days = v2days;
         state.rate = v2.rate || state.rate;
@@ -2822,6 +2843,18 @@ function hotelForNight(dayDate){
   if(!dayDate) return null;
   return state.places.find(p => isBookedHotel(p) && p.checkIn && p.checkOut &&
     dayDate >= p.checkIn && dayDate < p.checkOut) || null;
+}
+/* Los vuelos que salen ESE día, leídos de FLIGHTS (fuente única, la misma que
+   lee Confirmado). Cada vuelo cae en su fecha real: el AY0074 sale de Narita
+   el 27 a las 23:05, no el 28. */
+function flightsOn(dayDate){
+  return dayDate ? FLIGHTS.filter(f => f.date === dayDate) : [];
+}
+/* La ÚNICA ciudad que REALIDAD puede afirmar de una noche: la de la reserva que
+   la cubre. Sin reserva no hay ciudad — el viaje todavía no lo dice. */
+function nightCityFor(dayDate){
+  const h = hotelForNight(dayDate);
+  return h ? (h.region || '') : '';
 }
 /* ================================================================
    ESTADO / CAPA (Fase 12 · Foil Press) · CONFIRMADO es un eje aparte de
@@ -3444,7 +3477,7 @@ function cachedRoute(a, b, profile){
    NAVEGACIÓN
 ================================================================ */
 // Orden = eje de certeza (Ideas ← Plan → Confirmado); Mapa/Hoteles/Guía tras "Más".
-const TABS = [['sitios','🧭','Ideas'],['itinerario','🗓️','Plan'],['inicio','✈️','Confirmado'],['mapa','🗺️','Mapa'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
+const TABS = [['sitios','🧭','Ideas'],['itinerario','🗓️','Itinerarios'],['inicio','✈️','Confirmado'],['mapa','🗺️','Mapa'],['hoteles','🏨','Hoteles'],['guia','🧳','Guía']];
 let curTab = 'inicio';
 /* ================================================================
    AXIS (Fase 12 · Stage 6) · navegación por CERTEZA: Ideas ← Plan →
@@ -3453,7 +3486,7 @@ let curTab = 'inicio';
    Hoteles siguen siendo lentes/utilidades, fuera del eje.
 ================================================================ */
 const AXIS_REGIONS = ['sitios', 'itinerario', 'inicio']; // Ideas · Plan · Confirmado(Wallet)
-const AXIS_LABELS = ['Ideas', 'Plan', 'Confirmado'];
+const AXIS_LABELS = ['Ideas', 'Itinerarios', 'Confirmado'];
 function axisIndexOf(tab){ return AXIS_REGIONS.indexOf(tab); }
 function axisGo(delta){
   const cur = axisIndexOf(curTab); if(cur < 0) return;
@@ -3587,7 +3620,9 @@ const fmtDateShort = iso => new Date(iso + 'T12:00:00').toLocaleDateString('es-E
 /* EmptyState (Fase 12): un día libre es una INVITACIÓN, no un error. Ofrece
    un par de ideas cercanas sin planificar para plantar de un toque. */
 function emptyDayHTML(d){
-  const city = d.city || '';
+  // La cercanía se mide desde donde de verdad dormís esa noche (12.52); sin
+  // reserva no hay ancla y la invitación va sin sugerencias.
+  const city = nightCityFor(d.date);
   const planned = new Set();
   state.days.forEach(dd => (dd.stops || []).forEach(s => planned.add(s.pid)));
   const near = state.places.filter(p => p && p.lat != null && !p.airport && !p.baseLayer && !p.cityBase &&
@@ -3710,9 +3745,13 @@ function renderDayChips(elId, sel, onclick, withAll){
   $(elId).innerHTML = (withAll ? `<button class="day-chip ${sel === -1 ? 'active' : ''}" data-i="-1">🗾 Todos</button>` : '') +
   state.days.map((d, i) => {
     const dt = new Date(d.date + 'T12:00');
+    // El punto y el rótulo solo aparecen si una reserva cubre esa noche: el
+    // chip informa de dónde dormís, no de un plan de ciudades (12.52).
+    const city = nightCityFor(d.date);
+    const glyph = d.flight ? '✈️' : '';
     return `<button class="day-chip ${i === sel ? 'active' : ''}" data-i="${i}">
-      <span class="cdot" style="background:${CITY_COLORS[d.city] || '#888'}"></span>${d.icon} ${dt.getDate()} ${dt.toLocaleDateString('es-ES',{month:'short'}).replace('.','')}
-      <small>${esc(d.city)}</small></button>`;
+      ${city ? `<span class="cdot" style="background:${CITY_COLORS[city] || '#888'}"></span>` : ''}${glyph} ${dt.getDate()} ${dt.toLocaleDateString('es-ES',{month:'short'}).replace('.','')}
+      ${city ? `<small>${esc(city)}</small>` : ''}</button>`;
   }).join('');
   $$(elId + ' .day-chip').forEach(b => b.addEventListener('click', () => onclick(+b.dataset.i)));
 }
@@ -3775,8 +3814,10 @@ function stopHTML(s, idx, dayIdx){
 /* --- Vista "Ruta Dani" (paridad con la app original, fase 7b) ---
    Muestra los 14 días de DANI_ROUTE_GROUPS en modo solo lectura, con el
    botón ★ Pasar (adoptPlace) y el documento original (DANI_PDF_URL). */
-let itinMode = 'ours'; // 'ours' | 'dani' | 'orig' (P1: app original, solo lectura)
-let itinAlt = 'trip';  // Fase 12: altitud del Plan · 'trip' (Cord) | 'day' | 'plain' (dani/orig)
+// 'ours' = REALIDAD (la clave interna se mantiene: viaja en ningún sitio, pero
+// renombrarla no cambia nada visible). 'seed'/'dani' son las referencias.
+let itinMode = 'ours';
+let itinAlt = 'trip';  // Fase 12: altitud del Plan · 'trip' (Cord) | 'day' | 'plain' (referencias)
 function setItinAlt(alt){
   itinAlt = alt;
   const v = $('#view-itinerario'); if(v && v.setAttribute) v.setAttribute('data-alt', alt);
@@ -3787,60 +3828,16 @@ function setItinMode(mode){
   $('#itinModeOurs').classList.toggle('active', mode === 'ours');
   const seedChip = $('#itinModeSeed'); if(seedChip) seedChip.classList.toggle('active', mode === 'seed');
   $('#itinModeDani').classList.toggle('active', mode === 'dani');
-  $('#itinModeOrig').classList.toggle('active', mode === 'orig');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
   setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
   renderItinerary();
 }
-/* P1 · Itinerario de la app original, SOLO LECTURA: espejo de state.origDays
-   (llega por la nube o al importar su copia) + lugares asignados por dayId,
-   ordenados como allí (order → hora → nombre). Aquí no se edita nada del
-   modelo original: se consulta y, como mucho, se abre la ficha del lugar. */
-function renderOrigItinerary(){
-  const days = normArr(state.origDays).slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
-  if(!days.length){
-    $('#dayPanel').innerHTML = `<div class="card" style="padding:16px;font-size:13.5px;color:var(--muted)">
-      Aquí se conserva, en solo lectura, el itinerario tal como quedó en la app original.
-      Todavía no ha llegado a este dispositivo: se recibe con la nube activada (☁️) o al importar una copia suya.</div>`;
-    return;
-  }
-  const stopsFor = dayId => state.places
-    .filter(p => p && p.dayId === dayId)
-    .sort((a, b) => {
-      const ao = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
-      const bo = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
-      if(ao !== bo) return ao - bo;
-      const t = String(a.time || '').localeCompare(String(b.time || ''));
-      if(t) return t;
-      return String(a.name || '').localeCompare(String(b.name || ''));
-    });
-  $('#dayPanel').innerHTML =
-    `<div class="card" style="padding:14px;font-size:13px;color:var(--muted);margin-bottom:12px">
-      Archivo del itinerario de la app original (solo lectura). Sus paradas con día
-      asignado ya están incorporadas a vuestro plan; aquí se conserva el original.
-    </div>` +
-    days.map(d => {
-      const stops = stopsFor(d.id);
-      const rows = stops.map(p => {
-        const c = catOfShared(p);
-        return `<div class="dani-row" data-pid="${p.id}">
-          <div class="emoji" style="background:${c.color}22">${c.emoji || '📍'}</div>
-          <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.name)}</b>
-            ${p.region ? `<div style="font-size:12px;color:var(--muted)">${esc(p.region)}</div>` : ''}</div>
-          ${p.time ? `<span class="pill" style="flex:none">🕐 ${esc(p.time)}</span>` : ''}
-        </div>`;
-      }).join('') || `<div style="font-size:12.5px;color:var(--muted);padding:6px 0">Sin paradas este día</div>`;
-      return `<div class="card" style="padding:14px 16px;margin-bottom:12px">
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
-          <span class="pill" style="flex:none">${d.isFlightDay ? '✈️' : (parseInt(String(d.date || '').split('-')[2], 10) || '·')}</span>
-          <b>${esc(d.label || d.date || '')}</b>
-          ${d.date ? `<span style="font-size:12px;color:var(--muted)">${esc(d.date)}</span>` : ''}
-        </div>
-        <div>${rows}</div>
-      </div>`;
-    }).join('');
-  bindPlaceOpen('#dayPanel .dani-row');
-}
+/* 12.52 · La vista "📄 Original" se retiró: era un archivo de solo lectura
+   que ya no aporta (sus paradas viven consolidadas en el plan desde la fase
+   10b). El DATO state.origDays NO se toca: sigue llegando de la nube
+   (adoptRemote lo refleja desde el linaje real de la app original) y viaja en
+   las copias. La consolidación 10b (maybeMigrateOriginal) tampoco lo lee:
+   trabaja sobre rs.transfers y los lugares con dayId, así que sigue intacta. */
 function renderDaniItinerary(){
   const byId = new Map(state.places.map(p => [p && p.id, p]));
   $('#dayPanel').innerHTML =
@@ -3938,12 +3935,17 @@ function plantFromProposal(pid, dayIdx){
    dorado. La certeza se hace material: día con paradas → Ink; día libre
    → Washi. Tocar un día es The Zoom (12.6) hacia la altitud de Día.
 ================================================================ */
+/* El Hilo de hoteles recorre las noches que cubre UNA MISMA reserva y se rompe
+   al cambiar de reserva o en un vuelo. Antes agrupaba por day.city (la ciudad
+   que la propuesta afirmaba); ahora por la reserva real (hotelForNight): una
+   noche sin reserva no tiene hilo (tone 0), porque no hay nada que hilar. */
 function cordStays(days){
-  let group = -1, prevCity = null;
+  let group = -1, prevStay = null;
   return (days || []).map(d => {
-    if(d && d.flight){ prevCity = null; return {tone: 0, flight: true}; }
-    const city = (d && d.city) || '';
-    if(city !== prevCity){ group++; prevCity = city; }
+    if(d && d.flight){ prevStay = null; return {tone: 0, flight: true}; }
+    const h = hotelForNight(d && d.date);
+    if(!h){ prevStay = null; return {tone: 0, flight: false}; }
+    if(h.id !== prevStay){ group++; prevStay = h.id; }
     return {tone: (group % 4) + 1, flight: false};
   });
 }
@@ -3975,15 +3977,19 @@ function renderCord(){
     if(completed) cls.push('is-done');
     if(isFlight) cls.push('is-flight-day');
     const names = stops.slice(0, 3).map(s => { const p = placeById(s.pid); return p ? esc(p.name) : ''; }).filter(Boolean).join(' · ');
-    const sub = isFlight ? 'Día de vuelos' : (nStops ? names : 'Día libre');
+    // Lo único que el día afirma por sí mismo es su fecha; debajo, lo real que
+    // le toca (vuelos, dónde dormís) y luego lo que hayáis decidido plantar.
+    const night = hotelForNight(d.date);
+    const sub = isFlight ? 'Día de vuelos'
+      : (nStops ? names : (night ? '🛏 ' + esc(night.name) : 'Día libre'));
     const rail = isFlight ? '' : `--stay:var(--stay-${stays[i].tone})`;
+    const city = nightCityFor(d.date);
     return `<button class="${cls.join(' ')}" data-day="${i}" style="${rail}"
-      aria-label="Día ${i + 1}, ${esc(d.city || d.title || '')}, ${isFlight ? 'vuelos' : nStops + ' paradas'}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
+      aria-label="Día ${i + 1}, ${fmtDateShort(d.date)}${city ? ', noche en ' + esc(city) : ''}, ${isFlight ? 'vuelos' : nStops + ' paradas'}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
       <span class="cord-rail" aria-hidden="true"></span>
       <span class="cord-idx u-tabular">${isFlight ? '✈' : (i + 1)}</span>
-      <span class="cord-glyph" aria-hidden="true">${esc(d.icon || '')}</span>
       <span class="cord-body">
-        <span class="cord-city">${esc(d.city || d.title || '')}</span>
+        <span class="cord-city">${fmtDateShort(d.date)}${city ? ` · <span class="cord-night">${esc(city)}</span>` : ''}</span>
         <span class="cord-stops">${sub}</span>
       </span>
       <span class="cord-fill" aria-hidden="true">${cordFill(nStops)}</span>
@@ -4009,33 +4015,36 @@ function renderItinerary(){
   const cord = $('#cord');
   if(itinMode === 'seed'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderSeedItinerary(); return; }
   if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderDaniItinerary(); return; }
-  if(itinMode === 'orig'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderOrigItinerary(); return; }
   renderCord();
   renderDayChips('#dayChips', curDay, i => { curDay = i; renderItinerary(); });
   const d = state.days[curDay];
   fixTransfers(d);
   const doneN = d.stops.filter(s => s.done).length;
+  // La cabecera del día ya no tiene título ni ciudad inventados: la fecha es el
+  // día, y lo único que se afirma junto a ella es la reserva de esa noche (12.52).
+  const city = nightCityFor(d.date);
   let html = `<div class="card day-head">
     <div class="dh-main">
-      <h3>${d.icon} ${esc(d.title)}</h3>
-      <div class="sub">${fmtDateLong(d.date)}</div>
+      <h3>${fmtDateLong(d.date)}</h3>
+      <div class="sub">Día ${curDay + 1} de ${state.days.length}</div>
     </div>
     <div class="tots">
-      <span class="pill" style="color:${CITY_COLORS[d.city]}">📍 ${esc(d.city)}</span>
+      ${city ? `<span class="pill" style="color:${CITY_COLORS[city] || ''}">🛏 ${esc(city)}</span>` : ''}
       ${d.stops.length ? `<span class="pill green">✓ ${doneN}/${d.stops.length}</span>` : ''}
     </div>
     ${d.stops.length ? `<div class="progress"><i style="width:${d.stops.length ? Math.round(doneN / d.stops.length * 100) : 0}%"></i></div>` : ''}
   </div>`;
 
+  // Los vuelos salen de FLIGHTS por FECHA (no de day.flight): así el AY0074 de
+  // vuelta aparece el 27, el día en que de verdad se embarca.
+  html += flightsOn(d.date).map(f =>
+    `<div class="card flight" style="margin-bottom:12px">
+      <div class="route"><span>${esc(f.from)}</span><div class="arrow"><span>✈️</span></div><span>${esc(f.to)}</span></div>
+      <div class="times"><div><b>${f.dep}</b><small>salida</small></div><div style="text-align:right"><b>${f.arr}</b><small>llegada</small></div></div>
+      <div class="meta"><span class="pill red">${f.flight}</span><span class="pill">${esc(f.terminal)}</span>${f.note ? `<span class="pill">${esc(f.note)}</span>` : ''}</div>
+    </div>`).join('');
+
   if(d.flight){
-    html += d.flight.map(fid => {
-      const f = FLIGHTS.find(x => x.id === fid);
-      return `<div class="card flight" style="margin-bottom:12px">
-        <div class="route"><span>${esc(f.from)}</span><div class="arrow"><span>✈️</span></div><span>${esc(f.to)}</span></div>
-        <div class="times"><div><b>${f.dep}</b><small>salida</small></div><div style="text-align:right"><b>${f.arr}</b><small>llegada</small></div></div>
-        <div class="meta"><span class="pill red">${f.flight}</span><span class="pill">${esc(f.terminal)}</span>${f.note ? `<span class="pill">${esc(f.note)}</span>` : ''}</div>
-      </div>`;
-    }).join('');
     html += `<div class="card" style="padding:16px;font-size:13.5px;color:var(--muted)">
       ${d.date === '2027-04-08'
         ? '🧳 Día de vuelos. Facturación Finnair en Madrid T4 desde 3 h antes. En Helsinki hay ~2 h 20 de escala: da tiempo de sobra (misma terminal Schengen→No Schengen, control de pasaporte).'
@@ -4195,7 +4204,7 @@ function openPlace(pid){
   // Solo el ancla muestra la nota conservada de su gemelo Dani, aparte.
   const twinGroup = twinGroupOf(pid);
   const daniTwinNotes = (twinGroup && twinGroup.anchor === pid) ? twinDaniNotes(twinGroup) : [];
-  const dayOpts = state.days.map((d, i) => d.flight ? '' : `<option value="${i}">${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('');
+  const dayOpts = state.days.map((d, i) => d.flight ? '' : `<option value="${i}">Día ${i + 1} · ${fmtDateShort(d.date)}</option>`).join('');
   openModal(`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">
       <div class="emoji" style="width:52px;height:52px;border-radius:16px;background:${c.color}22;display:flex;align-items:center;justify-content:center;font-size:26px">${c.emoji}</div>
@@ -4424,7 +4433,7 @@ function openStopEdit(dayIdx, stopIdx){
     <div class="form-row"><label>Mover a otro día</label>
       <div style="display:flex;gap:8px">
         <select id="esMoveDay" style="flex:1">${state.days.map((d, i) =>
-          d.flight ? '' : `<option value="${i}" ${i === dayIdx ? 'selected' : ''}>${fmtDateShort(d.date)} · ${esc(d.title)}</option>`).join('')}</select>
+          d.flight ? '' : `<option value="${i}" ${i === dayIdx ? 'selected' : ''}>Día ${i + 1} · ${fmtDateShort(d.date)}</option>`).join('')}</select>
         <button class="btn small ghost" id="esMove">Mover</button>
       </div>
     </div>
@@ -5124,6 +5133,7 @@ $('#importFile').addEventListener('change', async e => {
         d.trans.forEach(tr => { tr.opts = normArr(tr.opts); });
       });
       canonicalizeDayPids(v2Days); // copias antiguas: pids con clave curada
+      stripDaySkeleton(v2Days);    // 12.52: una copia anterior trae city/title/icon
     }
     const merge = confirm('Aceptar = FUSIONAR la copia con el plan actual (añade los lugares que falten, no borra nada).\nCancelar = REEMPLAZAR el plan por la copia.');
     let placesChanged = false, daysChanged = false;
@@ -5210,7 +5220,6 @@ buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
 $('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
-$('#itinModeOrig').addEventListener('click', () => setItinMode('orig'));
 onClick('#cordBack', () => zoomOut());
 $('#btnDaniPdf').href = DANI_PDF_URL;
 renderAll();

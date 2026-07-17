@@ -95,25 +95,19 @@ const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); 
   api.addPlaceToDay('catalog_sensoji');
   check('M11: add-to-day infers last+60', d3.stops[d3.stops.length - 1].time === api.formatMinutes(d3last + 60));
 
-  // ---- P1: read-only original itinerary ----
-  api.setItinMode('orig');
-  check('P1: empty origDays shows explanation', els['#dayPanel'].innerHTML.includes('Todavía no ha llegado'));
+  // ---- 12.52: la vista "Original" se retiró; el DATO origDays sobrevive ----
+  // Se retiró la vista, no el linaje: origDays sigue siendo el espejo que
+  // adoptRemote rellena desde la app original y que viaja en las copias.
   api.state.origDays = [
     {id: 'd_2027-04-10', label: 'Día 10', date: '2027-04-10', isFlightDay: false},
     {id: 'd_2027-04-09', label: 'Día 9', date: '2027-04-09', isFlightDay: false},
   ];
-  const pa = api.state.places.find(p => p.id === 'catalog_sensoji');
-  const pb = api.state.places.find(p => p.id === 'catalog_ueno');
-  pa.dayId = 'd_2027-04-09'; pa.time = '09:00'; pa.order = 2;
-  pb.dayId = 'd_2027-04-09'; pb.time = '11:00'; pb.order = 1;
-  api.renderItinerary();
-  const h = els['#dayPanel'].innerHTML;
-  check('P1: days sorted by date (Día 9 before Día 10)', h.indexOf('Día 9') < h.indexOf('Día 10'));
-  check('P1: stops ordered by order field (ueno before sensoji)', h.indexOf('catalog_ueno') < h.indexOf('catalog_sensoji'));
-  check('P1: shows time pill', h.includes('🕐 09:00'));
-  check('P1: read-only (no edit/add controls)', !h.includes('add-stop') && !h.includes('b-edit') && !h.includes('adoptPlace'));
   api.setItinMode('ours');
-  check('P1: back to ours renders editable timeline', els['#dayPanel'].innerHTML.includes('add-stop'));
+  check('12.52: el espejo origDays se conserva intacto (dato, no vista)',
+    api.state.origDays.length === 2 && api.state.origDays[0].label === 'Día 10');
+  check('12.52: REALIDAD no pinta el archivo original',
+    !els['#dayPanel'].innerHTML.includes('Día 10') && !els['#dayPanel'].innerHTML.includes('Todavía no ha llegado'));
+  check('12.52: REALIDAD sigue siendo la línea editable', els['#dayPanel'].innerHTML.includes('add-stop'));
 
   console.log(fail ? '\n' + fail + ' FAILURES' : '\nALL PASS');
   process.exit(fail ? 1 : 0);
