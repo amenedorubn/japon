@@ -47,7 +47,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   ;return { state, placeById, placeView, listablePlaces, sourceMatchesFilter, renderSitios, openPlace,
     TWIN_GROUPS, twinGroupOf, isTwinMember, twinGroupProvenances, placeProvenances, twinDaniNotes,
     provTag, provenanceLabel,
-    setSrc: v => { placeSrc = v; }, setRegion: v => { placeRegion = v; } };`);
+    setSrc: v => { placeSrc = v; }, setZone: v => { placeZone = v; }, zoneOf };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -60,7 +60,7 @@ const gridIds = () => {
   let m; while ((m = re.exec(els['#placesGrid'].innerHTML))) out.push(m[1]);
   return out;
 };
-const idsFor = (src, region) => { api.setSrc(src); api.setRegion(region || ''); api.renderSitios(); return gridIds(); };
+const idsFor = (src, zone) => { api.setSrc(src); api.setZone(zone || ''); api.renderSitios(); return gridIds(); };
 const countOf = (list, id) => list.filter(x => x === id).length;
 
 // ---- 1) registry sanity: 60 groups, each with exactly 1 dani member ----
@@ -87,7 +87,7 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
 
 // ---- 4) Sitios list: appears exactly once under 'all', with BOTH chips ----
 (function(){
-  const rgn = byId('kiyomizu').region;
+  const rgn = api.zoneOf(byId('kiyomizu'));
   const all = idsFor('all', rgn);
   check('sitios[all]: kiyomizu (fused group) appears exactly once', countOf(all, 'kiyomizu') === 1);
   check('sitios[all]: the dani twin never appears on its own', !all.includes('dani_kiyomizu'));
@@ -101,7 +101,7 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
 
 // ---- 5) appears under 'solo Dani' and under 'solo IA' ----
 (function(){
-  const rgn = byId('kiyomizu').region;
+  const rgn = api.zoneOf(byId('kiyomizu'));
   check('sitios[dani]: fused group visible under the Dani-only filter', idsFor('dani', rgn).includes('kiyomizu'));
   check('sitios[ai]: fused group visible under the IA-only filter', idsFor('ai', rgn).includes('kiyomizu'));
   check('sitios[maria]: fused group NOT visible under an unrelated filter', !idsFor('maria', rgn).includes('kiyomizu'));
@@ -110,10 +110,10 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
 // ---- 6) non-twins are unaffected (ordinary ai place, ordinary ours place) ----
 (function(){
   check('sanity: toji has no twin group (test fixture check)', api.twinGroupOf('toji') === null);
-  const rgnAi = byId('toji').region; // ai, standalone, no twin
+  const rgnAi = api.zoneOf(byId('toji')); // ai, standalone, no twin
   check('non-twin: toji (ai, no group) still listed once under ai', countOf(idsFor('ai', rgnAi), 'toji') === 1);
   check('non-twin: toji absent under dani (no group to union it in)', !idsFor('dani', rgnAi).includes('toji'));
-  const rgnOurs = byId('catalog_sensoji').region;
+  const rgnOurs = api.zoneOf(byId('catalog_sensoji'));
   check('non-twin: catalog_sensoji (ours, no group) still listed once under ours', countOf(idsFor('ours', rgnOurs), 'catalog_sensoji') === 1);
 })();
 

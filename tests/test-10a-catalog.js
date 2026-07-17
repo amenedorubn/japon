@@ -46,7 +46,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
     renderSitios, renderHoteles, openAddStop, hotelBasePlaceholders,
     setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; },
-    setRegion: v => { placeRegion = v; },
+    setZone: v => { placeZone = v; }, zoneOf,
     _seedDays: () => buildSeedState().days };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
@@ -136,44 +136,46 @@ const gridIds = () => {
 };
 // La vista Ideas agrupa por región y limita cada grupo (divulgación progresiva);
 // para comprobar la presencia de un lugar concreto se fuerza el modo plano
-// fijando su región (con región elegida se listan todos los de esa región).
-const idsFor = (src, region) => { api.setSrc(src); api.setRegion(region || ''); api.renderSitios(); return gridIds(); };
+// fijando su ZONA (con zona elegida se listan todos los de esa zona). Antes se
+// hacía fijando su region: en 12.53 el filtro geográfico de Ideas pasó a ser la
+// zona derivada, y el de region se retiró.
+const idsFor = (src, zone) => { api.setSrc(src); api.setZone(zone || ''); api.renderSitios(); return gridIds(); };
 // Los filtros de Ideas son por PROCEDENCIA (curador), cubos exclusivos.
 for (const f of ['all', 'ours', 'dani', 'maria', 'instagram', 'ai']) {
-  api.setSrc(f); api.setRegion(''); api.renderSitios();
+  api.setSrc(f); api.setZone(''); api.renderSitios();
   const g = gridIds();
   const dups = g.filter((x, i) => g.indexOf(x) !== i);
   check(`sitios[${f}]: no dup ids`, dups.length === 0);
 }
 // NUESTROS = Itinerario.docx (12.48): los lugares del documento van a 'ours';
 // el resto de la semilla (curado no-docx) es 'ai'.
-let g = idsFor('ours', byId('catalog_sensoji').region);
+let g = idsFor('ours', api.zoneOf(byId('catalog_sensoji')));
 check('sitios[ours]: docx twin listed once (catalog_sensoji), legacy slug gone',
   g.includes('catalog_sensoji') && !g.includes('sensoji'));
 check('sitios[ours]: docx zone listed (catalog_harajuku)',
-  idsFor('ours', byId('catalog_harajuku').region).includes('catalog_harajuku'));
+  idsFor('ours', api.zoneOf(byId('catalog_harajuku'))).includes('catalog_harajuku'));
 check('sitios[ai]: non-docx curated entry listed (nakamise)',
-  idsFor('ai', byId('nakamise').region).includes('nakamise'));
+  idsFor('ai', api.zoneOf(byId('nakamise'))).includes('nakamise'));
 check('sitios[ours]: no dani, city bases, airports, hotels, transporte',
   !g.some(i => i.startsWith('dani_')) && !g.includes('catalog_tokio') &&
   !g.includes('airport_narita_llegada') && !g.includes('nrt') && !g.includes('hotel_tokyo'));
 // AI y Nuestros son cubos exclusivos: lo no-docx no entra en Nuestros ni al revés.
 check('sitios[ours]: non-docx seed separated out (nakamise NOT here)',
-  !idsFor('ours', byId('nakamise').region).includes('nakamise'));
+  !idsFor('ours', api.zoneOf(byId('nakamise'))).includes('nakamise'));
 check('sitios[ai]: docx place separated out (catalog_sensoji NOT here)',
-  !idsFor('ai', byId('catalog_sensoji').region).includes('catalog_sensoji'));
+  !idsFor('ai', api.zoneOf(byId('catalog_sensoji'))).includes('catalog_sensoji'));
 // dani_shirakawago (no gemelo IA, Fase 1.5) para no acoplar esta prueba al
 // plegado de gemelos, que tiene su propia suite en test-12-twins.js.
-g = idsFor('dani', byId('dani_shirakawago').region);
+g = idsFor('dani', api.zoneOf(byId('dani_shirakawago')));
 check('sitios[dani]: dani places listed, hotels excluded', g.includes('dani_shirakawago') && !g.includes('dani_rise_osaka'));
 (function(){ const m = api.state.places.find(p => /^maria_/.test(p.id));
-  check('sitios[maria]: María curation listed under her bucket', !!(m && idsFor('maria', m.region).includes(m.id))); })();
+  check('sitios[maria]: María curation listed under her bucket', !!(m && idsFor('maria', api.zoneOf(m)).includes(m.id))); })();
 
 // ---- 8) adoption: provenance is immutable (§12.13) ----
 (function(){
   // dani_roppongi (no gemelo IA, Fase 1.5): mismo motivo que arriba.
   const dp = byId('dani_roppongi');
-  const rgn = dp.region;
+  const rgn = api.zoneOf(dp);
   dp.source = 'user'; dp.dani = false; dp.daniAdopted = true; dp.catalogItem = false;
   // Adoptar cambia el estado (pasa a plantable), NO la procedencia: sigue bajo "Dani".
   check('adopt: stays under dani (provenance immutable)', idsFor('dani', rgn).includes('dani_roppongi'));

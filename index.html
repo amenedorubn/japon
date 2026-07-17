@@ -409,10 +409,10 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .filter-bar input[type=search]{flex:1;min-width:180px;}
 /* Filas de filtros (curador/región/categoría): una sola fila con scroll
    horizontal en vez de envolver a 4 líneas — menos ruido, más calma. */
-#srcChips, #regionChips, #catChips{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;
+#srcChips, #zoneChips, #catChips{flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-#srcChips::-webkit-scrollbar, #regionChips::-webkit-scrollbar, #catChips::-webkit-scrollbar{display:none;}
-#srcChips .fchip, #regionChips .fchip, #catChips .fchip{flex:0 0 auto;}
+#srcChips::-webkit-scrollbar, #zoneChips::-webkit-scrollbar, #catChips::-webkit-scrollbar{display:none;}
+#srcChips .fchip, #zoneChips .fchip, #catChips .fchip{flex:0 0 auto;}
 .fchip{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--card);
   border:1px solid var(--line);color:var(--muted);}
 @media(hover:hover){.fchip:hover{border-color:color-mix(in srgb,var(--muted) 40%,var(--line));color:var(--ink);}}
@@ -797,6 +797,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
     <div class="map-toggles" id="mapCatChips" aria-label="Filtrar el mapa por categoría"></div>
+    <div class="map-toggles" id="mapZoneChips" aria-label="Filtrar el mapa por zona"></div>
     <div id="map"></div>
     <div class="map-legend" id="mapLegend"></div>
     <div class="map-note">Las rutas siguen calles y carreteras reales (OSRM/OpenStreetMap). En tramos de metro y tren el trazado sobre el plano es orientativo: consulta la conexión exacta en la tarjeta del trayecto o con el botón de Google Maps.</div>
@@ -809,7 +810,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="btn small" id="btnAddPlace">＋ Añadir sitio</button>
     </div>
     <div class="filter-bar" id="srcChips"></div>
-    <div class="filter-bar" id="regionChips"></div>
+    <div class="filter-bar" id="zoneChips"></div>
     <div class="filter-bar" id="catChips"></div>
     <div class="places-grid" id="placesGrid"></div>
   </section>
@@ -1560,6 +1561,97 @@ const NARA_PARK_POLYGON = [
   [34.6958,135.8238],[34.6947,135.8466],[34.6829,135.8560],[34.6728,135.8456],
   [34.6719,135.8268],[34.6803,135.8169],[34.6899,135.8162]
 ];
+
+/* ================================================================
+   EJE DE ZONA (12.53) · DÓNDE está un sitio, en la geografía real.
+   Es un eje NUEVO E INDEPENDIENTE: no toca el eje de fuente, ni el de
+   confirmado, ni los gemelos.
+
+   No reutiliza `region` a propósito. region se escribe a mano y dice cosas
+   que no son geografía: es quien produjo "Dani · Osaka" (la procedencia
+   colada en el nombre del sitio), "Kioto y Nara" (dos ciudades en una
+   etiqueta) o "Ideas" (que no es un lugar). Un filtro geográfico construido
+   sobre eso hereda sus mentiras: "Osaka" y "Dani · Osaka" son la MISMA
+   geografía y salían como dos sitios distintos.
+
+   La zona se DERIVA de las coordenadas y no se escribe nunca a mano:
+     1) las 3 grandes, por point-in-polygon (sus polígonos ya existían);
+     2) el resto, por el anclaje más cercano dentro de su radio (haversine).
+   Una zona puede tener VARIOS anclajes: los Alpes no tienen un centro
+   (Takayama, Kamikochi y Shirakawa-gō están a ~40 km entre sí), y el Fuji se
+   vive desde Kawaguchiko o desde Hakone. La distancia a la zona es la del
+   anclaje más próximo.
+
+   El polígono manda sobre el radio a propósito: el sur de Tokio está más
+   cerca del ancla de Yokohama que de la de Tokio, y sin el polígono de los
+   23 barrios acabaría en Yokohama.
+
+   Sin coordenadas, o fuera de todos los radios, NO hay zona: null. Es la
+   respuesta honesta — Okinawa u Ogasawara no están en ninguna de estas
+   zonas, y un aeropuerto no es un sitio que visitar. Ideas/Excursiones/
+   Aeropuerto NO son zonas: son etiquetas de region, no geografía.
+================================================================ */
+const ZONES = [
+  {id:'tokio',     label:'Tokio',      polygon:TOKYO_CITY_POLYGON,
+    anchors:[[35.6762,139.6503]], r:35},
+  {id:'kioto',     label:'Kioto',      polygon:KYOTO_CITY_POLYGON,
+    anchors:[[35.0116,135.7681]], r:20},
+  {id:'osaka',     label:'Osaka',      polygon:OSAKA_CITY_POLYGON,
+    anchors:[[34.6937,135.5023]], r:25},
+  {id:'nara',      label:'Nara',       anchors:[[34.6851,135.8048],[34.6851,135.8430]], r:15},
+  {id:'hiroshima', label:'Hiroshima',  anchors:[[34.3853,132.4553]], r:20},
+  {id:'miyajima',  label:'Miyajima',   anchors:[[34.2960,132.3197]], r:8},
+  {id:'nikko',     label:'Nikko',      anchors:[[36.7198,139.6982],[36.7553,139.6012]], r:25},
+  {id:'kamakura',  label:'Kamakura',   anchors:[[35.3192,139.5467]], r:12},
+  {id:'yokohama',  label:'Yokohama',   anchors:[[35.4437,139.6380]], r:15},
+  // Kawaguchiko · Hakone · la cumbre: el Fuji se ve desde varios sitios.
+  {id:'fuji',      label:'Monte Fuji', anchors:[[35.5017,138.7575],[35.2324,139.0266],[35.3606,138.7274]], r:25},
+  // Takayama · Kamikochi · Shirakawa-gō: un valle largo, no un punto.
+  {id:'alpes',     label:'Alpes',      anchors:[[36.1408,137.2531],[36.2500,137.6333],[36.2578,136.9063]], r:25},
+  {id:'nagoya',    label:'Nagoya',     anchors:[[35.1815,136.9066]], r:25},
+  // Nagano ciudad y Jigokudani (los monos), a ~30 km.
+  {id:'nagano',    label:'Nagano',     anchors:[[36.6513,138.1810],[36.7327,138.4623]], r:30},
+  {id:'fukuoka',   label:'Fukuoka',    anchors:[[33.5904,130.4017]], r:30},
+];
+const ZONE_BY_ID = new Map(ZONES.map(z => [z.id, z]));
+const zoneLabel = id => (ZONE_BY_ID.get(id) || {}).label || '';
+/* Valor del filtro para "fuera de todas las zonas". No es una zona (por eso no
+   está en ZONES): es la ausencia de una, y se puede filtrar por ella. */
+const ZONE_NONE = '_none';
+/* Ray casting. El polígono es [[lat,lng],…] (el orden de Leaflet). */
+function pointInPolygon(p, poly){
+  let inside = false;
+  for(let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const yi = poly[i][0], xi = poly[i][1], yj = poly[j][0], xj = poly[j][1];
+    if((yi > p.lat) !== (yj > p.lat) && p.lng < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const zoneDistance = (p, z) => Math.min.apply(null,
+  z.anchors.map(a => haversine(p, {lat: a[0], lng: a[1]})));
+/* La zona es función PURA de las coordenadas: mismo punto, misma zona, en los
+   tres móviles y en cualquier orden. Por eso la caché va por coordenada (mover
+   un sitio recalcula sola) y por eso no se guarda en state: no hay nada que
+   migrar, ni sincronizar, ni que se quede viejo, ni que se pueda editar a mano. */
+const _zoneCache = new Map();
+function zoneOf(p){
+  if(!p || p.lat == null || p.lng == null) return null;
+  const key = p.lat + ',' + p.lng;
+  if(_zoneCache.has(key)) return _zoneCache.get(key);
+  let id = null;
+  const inPoly = ZONES.find(z => z.polygon && pointInPolygon(p, z.polygon));
+  if(inPoly){
+    id = inPoly.id;
+  } else {
+    let bestD = Infinity;
+    ZONES.forEach(z => {
+      const d = zoneDistance(p, z);
+      if(d <= z.r && d < bestD){ bestD = d; id = z.id; }
+    });
+  }
+  _zoneCache.set(key, id);
+  return id;
+}
 const ZONE_POLYGONS = {
   shibuya:[[35.6775,139.6805],[35.6752,139.7108],[35.6578,139.7212],[35.6417,139.7035],[35.6485,139.6818],[35.6632,139.6737]],
   ueno:[[35.7219,139.7661],[35.7248,139.7775],[35.7169,139.7842],[35.7090,139.7785],[35.7107,139.7670]],
@@ -2854,7 +2946,10 @@ const placeUid = () => uid('id_'); // ids de usuario: prefijo id_ (contrato comp
    (nombres del esquema original) pasan tal cual. */
 function placeView(p){
   const isUser = p.source === 'user' && !p.catalogItem;
+  // zone se DERIVA aquí en cada lectura (12.53): nunca se guarda en state, así
+  // que no se puede escribir a mano ni quedarse vieja si el sitio se mueve.
   return {name: p.name, cat: CATS[p.category] ? p.category : 'otro', region: p.region || 'Mis sitios',
+    zone: zoneOf(p),
     lat: p.lat, lng: p.lng,
     dur: p.dur || 60, yen: p.yen == null ? null : p.yen, price: p.price || '',
     hours: p.hours || '', web: p.web || '', tip: p.tip || '',
@@ -4682,6 +4777,7 @@ function initMapView(){
     map.on('zoomend', () => { clearTimeout(zoomT); zoomT = setTimeout(renderZones, 120); });
   }
   renderMapCatChips();
+  renderMapZoneChips();
   syncFlightsChip();
   setTimeout(() => { map.invalidateSize(); renderMapDay(); }, 60);
 }
@@ -4724,6 +4820,27 @@ function renderMapCatChips(){
     if(activeMapCategories.has(c)) activeMapCategories.delete(c);
     else activeMapCategories.add(c);
     renderMapCatChips(); renderMapDay();
+  }));
+}
+
+/* --- 12.53 · Filtro del mapa por ZONA. Antes el mapa no tenía ningún filtro
+   geográfico: o todo Japón, o el día. Selección única (no multi-toggle como
+   las categorías): con una zona se quiere mirar UN sitio, no una combinación.
+   Solo se ofrecen las zonas que de verdad tienen algo que enseñar. --- */
+let mapZone = '';
+function zonesWithPlaces(){
+  const seen = new Set();
+  state.places.forEach(p => { const z = zoneOf(p); if(z) seen.add(z); });
+  return ZONES.filter(z => seen.has(z.id));
+}
+function renderMapZoneChips(){
+  const host = $('#mapZoneChips'); if(!host) return;
+  host.innerHTML = `<button class="fchip ${!mapZone ? 'active' : ''}" data-z="">🗾 Todas</button>` +
+    zonesWithPlaces().map(z =>
+      `<button class="fchip ${mapZone === z.id ? 'active' : ''}" data-z="${z.id}">${esc(z.label)}</button>`).join('');
+  $$('#mapZoneChips .fchip').forEach(b => b.addEventListener('click', () => {
+    mapZone = b.dataset.z;
+    renderMapZoneChips(); renderMapDay();
   }));
 }
 
@@ -4863,7 +4980,10 @@ function renderZones(){
     const isZone = Array.isArray(p.polygon) || Array.isArray(p.fallbackPolygon) || p.boundaryQuery || p.boundaryQueries || p.geojson || p.geojsons;
     if(!isZone) return;
     const base = isBaseCityZone(p);
-    if(!base && !srcState.n) return;                       // zonas de barrio: solo con "Nosotros"
+    // 12.53: la zona es un eje INDEPENDIENTE. Antes las zonas de barrio solo
+    // existían si la capa "Nosotros" estaba encendida, que es una fuente: la
+    // geografía no depende de quién propuso el sitio.
+    if(mapZone && zoneOf(p) !== mapZone) return;           // filtro de zona (eje propio)
     if(!base && !activeMapCategories.has(CATS[p.category] ? p.category : 'otro')) return; // M5
     if(!base && zoom < zonePolygonZoomThreshold(p)){ drawZonePin(p); return; } // M6: pin, no desaparecer
     if(!base && !p.fixedPolygon && !hasAllBoundaries(p)) requestBoundary(p);
@@ -5009,6 +5129,7 @@ async function renderMapDay(){
   }
   pois.forEach(({pid, p, ring, badge}) => {
     if(!p.lat || p.region === 'Ideas') return;
+    if(mapZone && p.zone !== mapZone) return; // 12.53: filtro de zona (eje propio)
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
     if(day && day.stops.some(s => s.pid === pid)) return;
     poiPts.push([p.lat, p.lng]);
@@ -5102,7 +5223,9 @@ async function renderMapDay(){
 /* ================================================================
    SITIOS
 ================================================================ */
-let placeQ = '', placeRegion = '', placeCat = '', placeSrc = 'all';
+// placeRegion desapareció en 12.53: lo geográfico se filtra por zona (derivada),
+// no por el campo region (escrito a mano). El campo sigue: solo se fue su filtro.
+let placeQ = '', placeCat = '', placeSrc = 'all', placeZone = '';
 function renderSitios(){
   $('#srcChips').innerHTML = srcChipsHTML(placeSrc);
   $$('#srcChips .fchip').forEach(b => b.addEventListener('click', () => { placeSrc = b.dataset.s; renderSitios(); }));
@@ -5112,18 +5235,31 @@ function renderSitios(){
     .filter(p => sourceMatchesFilter(p, placeSrc))
     .map(p => ({pid: p.id, p: placeView(p)}));
 
-  const regions = [];
-  all.forEach(x => { const r = x.p.region || 'Mis sitios'; if(!regions.includes(r)) regions.push(r); });
-  if(placeRegion && !regions.includes(placeRegion)) placeRegion = '';
-  $('#regionChips').innerHTML = `<button class="fchip ${!placeRegion ? 'active' : ''}" data-r="">Todas</button>` +
-    regions.map(r => `<button class="fchip ${placeRegion === r ? 'active' : ''}" data-r="${esc(r)}">${esc(r)}</button>`).join('');
+  // 12.53 · Filtro de ZONA: geografía derivada de las coordenadas, eje aparte
+  // del de fuente y del campo region. Solo se ofrecen las zonas presentes en lo
+  // que ya está filtrado, más "Sin zona" si hay algo fuera de todas ellas
+  // (Okinawa, Ogasawara, los aeropuertos…): esconderlos sería perderlos.
+  const zonesHere = ZONES.filter(z => all.some(x => x.p.zone === z.id));
+  const hasUnzoned = all.some(x => !x.p.zone);
+  if(placeZone && placeZone !== ZONE_NONE && !zonesHere.some(z => z.id === placeZone)) placeZone = '';
+  if(placeZone === ZONE_NONE && !hasUnzoned) placeZone = '';
+  $('#zoneChips').innerHTML = `<button class="fchip ${!placeZone ? 'active' : ''}" data-z="">🗾 Todas las zonas</button>` +
+    zonesHere.map(z => `<button class="fchip ${placeZone === z.id ? 'active' : ''}" data-z="${z.id}">${esc(z.label)}</button>`).join('') +
+    (hasUnzoned ? `<button class="fchip ${placeZone === ZONE_NONE ? 'active' : ''}" data-z="${ZONE_NONE}"
+        title="Fuera de todas las zonas del viaje">Sin zona</button>` : '');
+  $$('#zoneChips .fchip').forEach(b => b.addEventListener('click', () => { placeZone = b.dataset.z; renderSitios(); }));
+
+  // 12.53: lo geográfico se filtra SOLO por zona. El filtro por region se
+  // retiró: era el ruido que la zona viene a arreglar (ofrecía "Osaka" y
+  // "Dani · Osaka" como dos sitios distintos, y "Kioto y Nara" como uno).
+  // El CAMPO region no se toca: sigue en la ficha, en el formulario y aquí
+  // debajo, en el subtítulo de cada tarjeta.
   $('#catChips').innerHTML = `<button class="fchip ${!placeCat ? 'active' : ''}" data-c="">Todo</button>` +
     Object.keys(CATS).filter(c => c !== 'transporte').map(c => `<button class="fchip ${placeCat === c ? 'active' : ''}" data-c="${c}">${CATS[c].emoji} ${CATS[c].label}</button>`).join('');
-  $$('#regionChips .fchip').forEach(b => b.addEventListener('click', () => { placeRegion = b.dataset.r; renderSitios(); }));
   $$('#catChips .fchip').forEach(b => b.addEventListener('click', () => { placeCat = b.dataset.c; renderSitios(); }));
 
   const items = all
-    .filter(x => !placeRegion || x.p.region === placeRegion)
+    .filter(x => !placeZone || (placeZone === ZONE_NONE ? !x.p.zone : x.p.zone === placeZone))
     .filter(x => !placeCat || x.p.cat === placeCat)
     .filter(x => !placeQ || (x.p.name + ' ' + x.p.desc + ' ' + x.p.region).toLowerCase().includes(placeQ));
   const cardHTML = x => {
@@ -5155,30 +5291,37 @@ function renderSitios(){
   // Exploración editorial, sin muro (DIRECTION §7): con búsqueda o región elegida,
   // lista plana; en la vista general, se AGRUPA por región y cada grupo muestra un
   // avance (divulgación progresiva) con "ver todos" que entra en esa región.
-  const flat = !!placeRegion || !!placeQ;
+  const flat = !!placeQ || !!placeZone;
   if(flat){
     grid.classList.remove('grouped');
     grid.innerHTML = items.map(cardHTML).join('');
   } else {
+    // Se agrupa por ZONA, el mismo eje por el que se filtra: agrupar por region
+    // mientras se filtra por zona dejaría rótulos ("Dani · Osaka") que ningún
+    // chip puede seleccionar, y el "ver todos" llevaría a un filtro sin vuelta.
     grid.classList.add('grouped');
-    const byRegion = new Map();
-    items.forEach(x => { const r = x.p.region || 'Otros'; if(!byRegion.has(r)) byRegion.set(r, []); byRegion.get(r).push(x); });
-    const ORDER = ['Tokio', 'Nikko', 'Kamakura', 'Monte Fuji', 'Kioto', 'Kioto y Nara', 'Nara', 'Osaka', 'Hiroshima', 'Nagoya', 'Nagano'];
-    const rank = r => { const i = ORDER.indexOf(r); return i < 0 ? 90 : i; };
-    const regionsSorted = Array.from(byRegion.keys()).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+    const byZone = new Map();
+    items.forEach(x => {
+      const z = x.p.zone || ZONE_NONE;
+      if(!byZone.has(z)) byZone.set(z, []);
+      byZone.get(z).push(x);
+    });
+    const rank = z => { const i = ZONES.findIndex(x => x.id === z); return i < 0 ? 90 : i; };
+    const zonesSorted = Array.from(byZone.keys()).sort((a, b) => rank(a) - rank(b));
     const CAP = 6;
-    grid.innerHTML = regionsSorted.map(r => {
-      const list = byRegion.get(r);
+    grid.innerHTML = zonesSorted.map(z => {
+      const list = byZone.get(z);
+      const name = z === ZONE_NONE ? 'Sin zona' : zoneLabel(z);
       const shown = list.slice(0, CAP).map(cardHTML).join('');
       const more = list.length - Math.min(list.length, CAP);
       return `<section class="ideas-group">
-        <h3 class="ideas-region">${esc(r)}<small>${list.length}</small></h3>
+        <h3 class="ideas-region">${esc(name)}<small>${list.length}</small></h3>
         <div class="places-grid">${shown}</div>
-        ${more > 0 ? `<button class="btn ghost small ideas-more" data-region="${esc(r)}">Ver los ${list.length} de ${esc(r)} →</button>` : ''}
+        ${more > 0 ? `<button class="btn ghost small ideas-more" data-zone="${esc(z)}">Ver los ${list.length} de ${esc(name)} →</button>` : ''}
       </section>`;
     }).join('');
     $$('#placesGrid .ideas-more').forEach(b => b.addEventListener('click', () => {
-      placeRegion = b.dataset.region; renderSitios(); window.scrollTo({top: 0});
+      placeZone = b.dataset.zone; renderSitios(); window.scrollTo({top: 0});
     }));
   }
   bindPlaceOpen('#placesGrid .place-card');
