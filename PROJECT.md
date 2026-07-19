@@ -36,6 +36,7 @@ modelo v2 y sus nodos en la nube quedaron como archivo de solo lectura.
 | `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
 | `PROJECT.md` `PRODUCT.md` `DIRECTION.md` `DESIGN.md` `design/` `PARITY.md` | Documentación (continuidad → estrategia → dirección creativa → sistema visual y su versión modular → paridad) |
 | `Itinerario.docx` | Fuente de la procedencia `ours` (lista de deseos de los tres); lo lee `tools/docx-import.js` |
+| `Ruta-21-dias.docx` | La Ruta 21 días hora a hora (12.57), descargable desde el botón 📄 del itinerario Ruta; en el SHELL del SW. Se regenera con el script dev-time de la sesión que la creó |
 | `tests/run-all.js` + `tests/test-*.js` | Suite de regresión completa (ver §10) |
 | `.claude/serve.ps1` | Servidor local de desarrollo (`http://localhost:8734/`) |
 
@@ -61,9 +62,11 @@ ganchos del DOM (ver §12).
 **Pestañas vigentes (desde 12.54–12.56):** Ideas 🧭 · Itinerarios 🗓️ · Confirmado ✈️ · Hoteles 🏨
 · Guía 🧳. La pestaña Mapa suelta se retiró en 12.54: el mapa de Ideas vive dentro de Ideas
 (eje de zona) y el mapa del plan dentro de Itinerarios (por días, escopado al itinerario ACTIVO
-desde 12.56). Itinerarios presenta 4 itinerarios al mismo nivel: **Realidad** (editable; un día
-solo afirma su fecha + vuelos + reserva de esa noche) · **Propuesta** (IA, solo lectura,
-plantable con ＋) · **Dani** · **María** (referencias solo lectura).
+desde 12.56). Itinerarios presenta 5 itinerarios al mismo nivel: **Realidad** (editable; un día
+solo afirma su fecha + vuelos + reserva de esa noche) · **Ruta** (12.57: la Ruta 21 días
+diseñada sobre todo el catálogo, solo lectura y plantable con ＋, con documento descargable) ·
+**Propuesta** (IA, solo lectura, plantable con ＋) · **Dani** · **María** (referencias solo
+lectura).
 
 ## 4. Modelo de datos (`state`, persistido en localStorage `japon27_app_v1`)
 
@@ -218,6 +221,7 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.55 | `f54dc96` | **Zona Kyūshū** | "Fukuoka" (radio) → polígono de toda la isla, cortado en el estrecho de Kanmon para no colarse a Honshu; solo cambia la zona, nunca fuente ni coordenadas |
 | 12.56 | `d205107` | **El mapa sigue al itinerario ACTIVO** | Escopado por PERTENENCIA, no por procedencia (la Propuesta incluye sus lugares `ai`; las ideas sueltas no salen); capas por fuente retiradas de ese mapa; el mapa sube bajo la fila de selección y los 4 itinerarios quedan al mismo nivel (fuera el rótulo "referencias") |
 | Docs | (este commit) | Docs al día hasta 12.56 + decisiones 2026-07-19 | Propuesta de IA de 5 pestañas RECHAZADA; reparto de alojamientos 12–25 abr reconocido como NO decidido (copy corregido); `CLAUDE.md` reescrito para describir el proyecto real |
+| 12.57 | `f2f9518`+`199c485`+`85f7bea` | **La Ruta 21 días** (petición del usuario: "el viaje perfecto" sobre todo lo apuntado) | Quinto itinerario **Ruta** (solo lectura, plantable, anillo propio, mapa por pertenencia, vuelos): 121 paradas/19 días útiles que cubren los 60 gemelos y 12 zonas (Nikko con noche, Kanazawa ×2, Shirakawa-gō, Takayama con ryokan, Kioto+Uji, Hiroshima, Miyajima, Fukuoka, Osaka+Nara+USJ, Kamakura+Yokohama, Fuji), anclada en Louis House 9–12 y APA 25–27 (propone ampliar al 24). Catálogo v11: **USJ** (petición), 5 sitios de Kanazawa, 3 de Fukuoka, 5 bases de hotel de la Ruta, zona Kanazawa. `Ruta-21-dias.docx` hora a hora (reservas con plazos, variante Narai-juku, descartes razonados) en el SHELL del SW (caché v2). Suite `test-12-ruta.js` (19 checks) |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -333,7 +337,9 @@ Sin nuevos estados (favourite/visited/want) por ahora: modelo mínimo (§8).
   Tokio (12–16 y 22–25) / Kioto (16–19) / Osaka (19–22) era la PROPUESTA hablando en nombre del
   viaje, no una decisión. Reservar los alojamientos de esas noches sigue pendiente, pero no
   necesariamente con ese reparto. El copy de la checklist de la Guía y de las tres bases
-  "por reservar" del catálogo se corrigió para decirlo.
+  "por reservar" del catálogo se corrigió para decirlo. *(12.57: la Ruta 21 días PROPONE un
+  reparto concreto de esas noches — Nikko, Kanazawa ×2, Takayama, Kioto ×3, Hiroshima,
+  Fukuoka, Osaka ×3 — siempre etiquetado como propuesta de la Ruta, nunca como decisión.)*
 
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
