@@ -771,12 +771,14 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="filter-bar" style="justify-content:space-between">
       <div class="itin-mode-group">
         <button class="fchip active" id="itinModeOurs" title="Lo que el viaje ya afirma: vuelos y noches reservadas · en progreso">🗓️ Realidad</button>
+        <button class="fchip" id="itinModeRuta" title="La Ruta 21 días diseñada sobre todo el catálogo: gemelos imprescindibles, trenes y comidas">🧠 Ruta</button>
         <button class="fchip" id="itinModeSeed" title="Propuesta generada por la IA">✨ Propuesta</button>
         <button class="fchip" id="itinModeDani" title="Ruta que sugirió Dani">🧭 Dani</button>
         <button class="fchip" id="itinModeMaria" title="El viaje que hizo María en 2024">📋 María</button>
       </div>
       <div style="display:flex;gap:6px">
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
+        <a class="btn small ghost" id="btnRutaDoc" download style="display:none">📄 Ruta hora a hora</a>
       </div>
     </div>
     <!-- 12.56 · El itinerario ACTIVO sobre el mapa: cada itinerario, su mapa y
@@ -1451,6 +1453,207 @@ post:T(O('shinkansen','Shinkansen de vuelta',85,10620,'Hiroshima ~19:30 → Shin
 {date:'2027-04-28', title:'Vuelos de vuelta', city:'Vuelo', icon:'✈️', flight:[3,4], stops:[], trans:{}},
 ];
 
+/* ================================================================
+   LA RUTA 21 DÍAS (referencia solo lectura, plantable con ＋)
+   Diseñada el 19-jul-2026 sobre TODO el catálogo (nuestros + Dani +
+   María + Instagram + IA). Reglas de diseño:
+   - Los 60 gemelos (mismo sitio en dos fuentes) son imprescindibles:
+     TODOS tienen parada. Ancla las noches reservadas (Louis House
+     9-12, APA 25-27, que la Ruta propone ampliar al 24).
+   - Más que las tres grandes: Nikko, Kanazawa, Shirakawa-gō, Takayama
+     (ryokan), Hiroshima, Miyajima, Fukuoka, Nara, Uji, Kamakura,
+     Yokohama y el Fuji. Descartes razonados en el documento (Kamikochi
+     cierra hasta ~17 abr, Okinawa/Takachiho/Ogasawara no caben).
+   - Horas de tren TÍPICAS de 2026 (Nozomi cada 10-15 min): son de
+     planificación, no de compromiso; el documento trae los detalles.
+   Es una PROPUESTA: nunca entra sola en el plan (regla 12.49). ==== */
+const RUTA_DOC_URL = 'Ruta-21-dias.docx';
+const RUTA_DAYS = [
+{date:'2027-04-08', city:'Vuelo', icon:'✈️', flight:[1,2], stops:[],
+  note:'MAD T4 10:15 AY1662 → HEL 15:25 · HEL 17:45 AY0073 → Tokio (noche a bordo).'},
+
+{date:'2027-04-09', city:'Tokio', icon:'🛬', stay:'Louis House Otsuka Nishi (RESERVADO)',
+  note:'Llegada NRT 13:05 · Skyliner a Nippori 41 min + Yamanote a Ōtsuka 12 min.', stops:[
+  S('nrt','13:05',90,'Inmigración con Visit Japan Web, maletas, Suica y yenes del 7-Eleven.'),
+  S('id_louis_otsuka_nishi','16:00',45,'Check-in y ducha rápida: la tarde es de Asakusa.'),
+  S('catalog_sensoji','17:15',60,'Kaminarimon y el templo con luz de tarde (Yamanote+Ginza, 25 min).'),
+  S('nakamise','18:15',30,'Ningyō-yaki recién hechos de merienda.'),
+  S('sumida_park','18:45',30,'La Skytree encendiéndose desde el puente Azuma.'),
+  S('skytree','19:30',75,'Subida nocturna: Tokio infinito el primer día (entrada en el móvil).'),
+  S('hoppy','21:00',60,'Cena en las izakayas de Hoppy Street. Si el jet lag gana: konbini y a dormir.'),
+]},
+{date:'2027-04-10', city:'Tokio', icon:'🌇', stay:'Louis House Otsuka Nishi (RESERVADO)',
+  note:'Día del oeste: Meiji → Harajuku → Shibuya. Todo en la línea Yamanote.', stops:[
+  S('catalog_meiji','09:00',75,'Entrad por el gran torii de Harajuku: bosque en plena ciudad.'),
+  S('catalog_yoyogi','10:30',40,'Paseo por el parque (los rockabillies salen a mediodía).'),
+  S('catalog_takeshita','11:15',60,'Takeshita Street: crepes y caos adolescente.'),
+  S('gyoza_lou','12:30',60,'Comida: las gyozas míticas de Harajuku. La cola va rápida.'),
+  S('catalog_harajuku','13:45',60,'Omotesandō y Cat Street, la otra cara de Harajuku.'),
+  S('catalog_shibuya','15:15',45,'El cruce y Hachikō (el ángulo bueno: la azotea del Magnet, gratis).'),
+  S('daikanyama','16:15',60,'La "Brooklyn de Tokio": T-Site y boutiques.'),
+  S('shibuya109','17:30',30,'La torre 109, icono kawaii.'),
+  S('shibuya_sky','18:10',90,'RESERVADO con semanas: atardecer sobre el cruce (sol ~18:15).'),
+  S('hiroo','20:15',90,'Cena en Hiroo, la zona de vuestra lista de comida.'),
+]},
+{date:'2027-04-11', city:'Tokio', icon:'🏮', stay:'Louis House Otsuka Nishi (RESERVADO)',
+  note:'Domingo: Ueno → Akihabara (peatonal) → Jimbōchō → Hamarikyū → Shinjuku de noche.', stops:[
+  S('catalog_ueno','09:00',60,'Parque Ueno: los últimos sakura y los museos por fuera.'),
+  S('ameyoko','10:00',45,'El mercado bajo las vías: ambiente de posguerra.'),
+  S('catalog_akihabara','11:00',105,'Primera pasada friki; los domingos la calle es peatonal. Comida aquí.'),
+  S('jimbocho','13:45',45,'El barrio de las librerías: 180 tiendas de viejo.'),
+  S('hamarikyu','15:00',60,'Jardín del shōgun junto a la bahía; té matcha en la isla del estanque.'),
+  S('catalog_tokyo_metropolitan','16:45',45,'Mirador GRATIS del Gobierno Metropolitano (45º piso).'),
+  S('catalog_shinjuku','17:45',45,'Neones de Shinjuku al caer el sol.'),
+  S('omoide','18:45',75,'Cena: yakitori con humo bajo las vías en Omoide Yokochō.'),
+  S('golden_gai','20:15',45,'Bares de 6 plazas en Golden Gai: entrad donde no haya "members only".'),
+  S('kabukicho','21:15',30,'Godzilla asomado y el neón de Kabukichō de remate.'),
+]},
+{date:'2027-04-12', city:'Nikko', icon:'⛩️', stay:'Ryokan/onsen en Nikko (por reservar)',
+  note:'Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento).', stops:[
+  S('tobu_nikko','09:25',20,'Consigna de maletas en la estación (o ya en el ryokan).'),
+  S('shinkyo','10:00',20,'El puente rojo sagrado sobre el Daiya.'),
+  S('toshogu','10:30',105,'La joya de Ieyasu: puerta Yōmeimon, el gato dormido, los 3 monos. Entrada online.'),
+  S('dani_futarasan','12:30',30,'El santuario tranquilo de al lado, favorito de Dani.'),
+  S('rinnoji','13:10',40,'Los tres budas dorados de Rinnō-ji.'),
+  S('kanmangafuchi','15:00',60,'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.'),
+]},
+{date:'2027-04-13', city:'Kanazawa', icon:'🚄', stay:'Kanazawa centro (por reservar)',
+  note:'Nikko → JR a Utsunomiya 45 min → Yamabiko a Ōmiya → Kagayaki a Kanazawa. ~08:45–12:30.', stops:[
+  S('omicho_market','13:00',60,'Comida: kaisendon (bol de marisco) en el mercado Ōmichō.'),
+  S('kanazawa_castle','14:30',45,'El parque del castillo, gratis, camino del jardín.'),
+  S('kenrokuen','15:30',90,'Uno de los tres grandes jardines de Japón; aquí el sakura llega tarde y os espera.'),
+  S('higashi_chaya','17:30',75,'El barrio de las casas de té al atardecer + helado con pan de oro.'),
+]},
+{date:'2027-04-14', city:'Kanazawa', icon:'🍵', stay:'Kanazawa centro (por reservar)',
+  note:'Día entero sin trenes. Ojo: muchos puestos de Ōmichō cierran los miércoles.', stops:[
+  S('nagamachi','09:30',75,'El barrio samurái con las calles vacías; casa Nomura (¥550).'),
+  S('catalog_kanazawa','11:30',150,'A elegir: Museo del s. XXI, D.T. Suzuki (zen) o el templo "ninja" Myōryū-ji (reservar). Comida en Katamachi.'),
+  S('kenrokuen','16:00',60,'Segunda pasada al jardín con luz baja (la entrada vale todo el día no; ¥320 bien pagados).'),
+  S('higashi_chaya','17:30',60,'Kazue-machi y la orilla del Asano, la parte que nadie mira.'),
+]},
+{date:'2027-04-15', city:'Takayama', icon:'🏔️', stay:'RYOKAN en Takayama, cena kaiseki (por reservar)',
+  note:'Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40.', stops:[
+  S('dani_shirakawago','10:05',150,'La aldea gassho-zukuri: subid al mirador Shiroyama. Comida: soba.'),
+  S('dani_ogimachi_bridge','12:45',20,'El puente colgante sobre el Shō para la última foto.'),
+  S('dani_sanmachi','16:15',90,'El casco antiguo de Takayama: sake tasting en las bodegas (cedro colgado = sake nuevo).'),
+  S('dani_nakabashi','18:00',20,'El puente rojo con el río de fondo.'),
+]},
+{date:'2027-04-16', city:'Kioto', icon:'🚅', stay:'Kioto zona Shijō (por reservar)',
+  note:'Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. Variante B por Matsumoto y Narai-juku: en el documento.', stops:[
+  S('dani_miyagawa_market','07:45',45,'El mercado matutino junto al río: desayuno de puesto en puesto.'),
+  S('dani_sanmachi','08:45',45,'Takayama Jinya y última vuelta antes del tren.'),
+  S('catalog_gion','16:30',75,'Primer paseo por Hanamikōji: quizá veáis una geiko de camino al trabajo.'),
+  S('catalog_yasaka','18:00',30,'El santuario de los farolillos encendidos.'),
+  S('catalog_pontocho','19:00',90,'Cena en el callejón de Pontochō, mesa con vistas al Kamo si suena la flauta.'),
+]},
+{date:'2027-04-17', city:'Kioto', icon:'🍂', stay:'Kioto zona Shijō (por reservar)',
+  note:'Kioto Este de punta a punta, todo a pie.', stops:[
+  S('kiyomizu','07:30',90,'A las 7:30 tendréis la terraza casi sola; a las 10 es un festival escolar.'),
+  S('catalog_sannenzaka','09:15',45,'Las cuestas de madera: fotos AHORA, antes de las hordas.'),
+  S('kodaiji','10:15',45,'El templo de la viuda de Hideyoshi: bambú y jardín zen sin las colas de al lado.'),
+  S('catalog_higashiyama','11:15',60,'Callejeo por Higashiyama y Yasaka Pagoda.'),
+  S('maria_issen_yoshoku_kioto_y_nara','12:30',60,'Comida: el okonomiyaki histórico de Gion que apuntó María.'),
+  S('catalog_nijo_castle','14:15',90,'El castillo del shōgun y sus suelos de ruiseñor (chirrían a propósito).'),
+  S('nishiki','16:30',60,'El mercado Nishiki: tako tamago y encurtidos de merienda.'),
+  S('catalog_shijo_kawaramachi','17:30',75,'Teramachi y compras de la tarde.'),
+  S('maria_k36_the_bar_rooftop_kioto_y_nara','19:30',60,'Copa en el rooftop K36 (María dixit) y cena por Kiyamachi.'),
+]},
+{date:'2027-04-18', city:'Kioto', icon:'🎋', stay:'Kioto zona Shijō (por reservar)',
+  note:'Arashiyama al alba, el norte dorado por la tarde. teamLab: RESERVAR fecha y hora.', stops:[
+  S('catalog_arashiyama','08:00',60,'El bambú ANTES de las 9 o no hay foto.'),
+  S('tenryuji','09:00',60,'El jardín zen con los montes prestados de fondo.'),
+  S('togetsukyo','10:15',30,'El puente sobre el Katsura; helado en la orilla.'),
+  S('kimono_forest','10:50',20,'Las columnas de kimono de la estación Randen.'),
+  S('dani_otagi','11:30',45,'Los 1.200 rakan con caras de risa: el rincón secreto de Dani. Comida en Arashiyama.'),
+  S('ryoanji','13:45',45,'El jardín seco más famoso del mundo: contad las 15 piedras (no se ven todas).'),
+  S('catalog_kinkakuji','15:00',60,'El Pabellón Dorado con la luz de la tarde en el estanque.'),
+  S('teamlab_kyoto','18:00',90,'teamLab Biovortex, reservado con fecha: arte digital para cerrar el día.'),
+]},
+{date:'2027-04-19', city:'Hiroshima', icon:'🦊', stay:'Hiroshima centro (por reservar)',
+  note:'Check-out (consigna en la estación) · Nozomi 15:30 → Hiroshima 17:10.', stops:[
+  S('fushimi','07:30',120,'Los mil torii a primera hora: subid al menos al mirador Yotsutsuji.'),
+  S('vermillion','09:30',30,'Café con vistas del Vermillion, el respiro tras los torii.'),
+  S('maria_byodo_in_hoodo_kioto_y_nara','11:00',60,'JR a Uji 25 min: Byōdō-in, el templo de la moneda de ¥10.'),
+  S('catalog_uji_excursion','12:15',75,'Uji es LA capital del té: matcha en Nakamura Tōkichi (comida ligera).'),
+  S('okonomimura','19:00',90,'Cena: okonomiyaki de Hiroshima (en capas, con fideos) en Okonomimura.'),
+]},
+{date:'2027-04-20', city:'Fukuoka', icon:'⛴️', stay:'Fukuoka, Hakata/Nakasu (por reservar)',
+  note:'Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00.', stops:[
+  S('peace_museum','08:30',105,'El museo al abrir (8:30): duro e imprescindible. Luego el parque y la llama.'),
+  S('atomic_dome','10:30',30,'La cúpula en pie bajo el hipocentro. Silencio y a la estación.'),
+  S('itsukushima','12:30',75,'JR 25 min + ferry 10: el torii sobre el mar (mirad la tabla de mareas).'),
+  S('kakiya','13:45',60,'Comida: ostras a la brasa de la isla en Kakiya.'),
+  S('daishoin','15:00',60,'El templo que casi nadie sube a ver: 500 rakan con gorritos.'),
+  S('momiji','16:15',20,'Momiji manjū recién hecho para el ferry de vuelta.'),
+  S('nakasu_yatai','20:30',90,'Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.'),
+]},
+{date:'2027-04-21', city:'Osaka', icon:'🍜', stay:'Osaka, Namba (por reservar)',
+  note:'Mañana en Hakata · Nozomi 15:00 → Shin-Osaka 17:26 · Midōsuji a Namba.', stops:[
+  S('kushida_jinja','09:30',45,'El santuario patrón de Hakata con la carroza gigante del Yamakasa.'),
+  S('catalog_fukuoka','10:30',45,'Paseo por Hakata/Tenjin, la ciudad que el documento pedía pisar.'),
+  S('ohori_park','11:45',60,'El lago del castillo: el Japón cotidiano que no sale en los reels.'),
+  S('dotonbori','19:00',90,'Glico Man, neones y cena en Dōtonbori: bienvenidos a la cocina de Japón.'),
+  S('dani_hozenji','20:45',20,'El templo cubierto de musgo escondido entre bares (se le echa agua).'),
+]},
+{date:'2027-04-22', city:'Osaka', icon:'🦌', stay:'Osaka, Namba (por reservar)',
+  note:'Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta ~18:00.', stops:[
+  S('catalog_nara','09:00',45,'Los ciervos que hacen reverencia (las galletas shika senbei, ¥200).'),
+  S('todaiji','10:00',75,'El Gran Buda de 15 m en el edificio de madera más grande del mundo.'),
+  S('dani_nigatsudo','11:30',30,'La terraza con vistas a Nara: el favorito de Dani, gratis y vacío.'),
+  S('kasuga','12:15',60,'Los 3.000 farolillos de piedra entre ciervos.'),
+  S('dani_mizuya','13:20',40,'Té y udon bajo los árboles en Mizuya Chaya.'),
+  S('kofukuji','14:30',45,'La pagoda de 5 pisos, recién restaurada.'),
+  S('naramachi','15:30',60,'Las machiya del casco viejo: cafés y tiendas de artesanos.'),
+  S('nakatanidou','16:45',20,'El mochi más rápido de Japón: el show del machacado y a comerlo caliente.'),
+  S('shinsekai','19:30',90,'Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).'),
+]},
+{date:'2027-04-23', city:'Osaka', icon:'🍄', stay:'Osaka, Namba (por reservar)',
+  note:'USJ: JR Loop + rama Sakurajima a Universal City, 15 min desde Nishikujō.', stops:[
+  S('usj','09:00',540,'Día entero: a la apertura y directos a Super Nintendo World (turno de área en la app). Express Pass = horas de vida.'),
+]},
+{date:'2027-04-24', city:'Tokio', icon:'🚄', stay:'APA Asakusabashi (AMPLIAR reserva: entrar hoy 24)',
+  note:'Mañana de mercado · Nozomi 13:50 → Tokio 16:24 · la tarde cae sola: todo pegado a la estación.', stops:[
+  S('kuromon','08:30',60,'Desayuno de mercado en Kuromon: atún, melón y lo que caiga.'),
+  S('doguyasuji','09:45',30,'La calle del menaje: cuchillos y moldes de tako-yaki de recuerdo.'),
+  S('shitennoji','10:30',60,'El templo más antiguo del país (593), fundado por el príncipe Shōtoku.'),
+  S('catalog_namba','11:45',30,'Último neón de Namba y Den Den Town de pasada.'),
+  S('catalog_denden_town','12:15',30,'El Akihabara de Osaka, camino del tren.'),
+  S('tokyo_st','16:30',45,'Llegáis A la estación: Character Street en el sótano (Ghibli, Pokémon).'),
+  S('apa_asakusabashi','17:45',30,'Check-in APA (reserva ampliada al 24) y a la calle.'),
+  S('catalog_ginza','18:30',75,'Ginza encendida: papelería Itoya, Uniqlo de 12 plantas.'),
+  S('kabukiza','19:45',20,'El teatro kabuki iluminado (entradas de un acto si os tienta).'),
+  S('nihonbashi','20:15',30,'El puente-kilómetro cero y cena por la zona.'),
+]},
+{date:'2027-04-25', city:'Kamakura', icon:'🌊', stay:'APA Asakusabashi (RESERVADO)',
+  note:'JR Yokosuka 08:04 → Kamakura 09:00 · Enoden a Hase · JR a Yokohama 14:45 · vuelta 20:30.', stops:[
+  S('tsurugaoka','09:15',45,'El gran santuario de los shōgun Minamoto.'),
+  S('komachi','10:00',45,'Komachi-dōri: picoteo y compras camino del Enoden.'),
+  S('kamakura_buddha','11:15',45,'El Gran Buda de bronce a cielo abierto desde 1495 (se entra dentro, ¥50).'),
+  S('hasedera','12:15',60,'La Kannon de 11 caras y la terraza con la bahía entera. Comida: shirasu-don en Hase.'),
+  S('chinatown_y','15:30',90,'El Chinatown más grande de Japón: merienda-cena de nikuman en Yokohama.'),
+  S('minato_mirai','17:30',90,'El puerto al atardecer: Cosmo Clock, Red Brick y el skyline.'),
+]},
+{date:'2027-04-26', city:'Monte Fuji', icon:'🗻', stay:'APA Asakusabashi (RESERVADO)',
+  note:'Bus directo Shinjuku 07:45 → Kawaguchiko 09:30 (RESERVAR highway-buses.jp) · vuelta 17:00.', stops:[
+  S('chureito','10:15',90,'LA foto: pagoda Chūreitō + Fuji. 400 escalones y los subiréis contentos.'),
+  S('honcho','12:00',45,'La otra foto famosa: la calle retro con el Fuji llenando el fondo. Comida: hōtō (guiso local).'),
+  S('kawaguchi','14:00',120,'La orilla norte del lago: el Fuji doblado en el agua; ropeway o barco si apetece.'),
+]},
+{date:'2027-04-27', city:'Tokio', icon:'🛫', flight:[3], stay:'Vuelo AY0074 23:05 (check-in hasta 22:05)',
+  note:'Día entero de despedida en el este; NEX desde Tokyo Station ~16:30 → NRT 17:30.', stops:[
+  S('kagetsudo','09:00',20,'El melon pan del desayuno, recién sacado.'),
+  S('miyabi','09:30',90,'Opcional: kimono de alquiler para las fotos de despedida en Asakusa.'),
+  S('kameido','11:15',60,'Las glicinas de Kameido Tenjin: finales de abril es SU semana.'),
+  S('kameido_gyoza','12:30',45,'Comida: solo hacen una cosa y la bordan.'),
+  S('kappabashi','13:45',40,'Últimas compras: un buen cuchillo japonés viaja bien.'),
+  S('imperial','14:45',50,'Los jardines del Este del Palacio (hoy martes abren; lun/vie no).'),
+  S('nihonbashi','15:50',20,'Último vistazo al kilómetro cero y a por las maletas al APA.'),
+  S('nrt','17:30',270,'Facturación con calma, cena en la T2 y compras de aeropuerto. Sayōnara, Japón.'),
+]},
+{date:'2027-04-28', city:'Vuelo', icon:'✈️', flight:[4], stops:[],
+  note:'HEL 05:55 · AY1661 16:40 → MAD 20:05. Se aterriza con el viaje entero en la mochila.'},
+];
+
 /* ---------------- Checklist de preparativos ---------------- */
 const CHECKLIST = [
   ['Pasaportes en regla','Caducidad posterior a octubre 2027. Los españoles no necesitan visado (90 días).'],
@@ -1462,11 +1665,15 @@ const CHECKLIST = [
   ['Reservar Shibuya Sky','Franja del atardecer se agota semanas antes. web oficial.'],
   ['Reservar teamLab Biovortex (Kioto)','Entradas con fecha y hora, se agotan.'],
   ['Reservar Jambo Hanare y Kitan Hibiki','Los dos restaurantes estrella de vuestros reels necesitan reserva previa.'],
-  ['Bus a Kawaguchiko','Ida y vuelta en highway-buses.jp para el 15 de abril.'],
+  ['Bus a Kawaguchiko','Ida y vuelta en highway-buses.jp. La Ruta 21 días lo sitúa el 26 de abril desde Shinjuku.'],
   ['Efectivo y tarjetas','Revolut/tarjeta sin comisiones + sacar yenes en ATMs de 7-Eleven. Japón aún usa bastante efectivo.'],
   ['Adaptador de enchufe tipo A','Clavija plana americana, 100 V. Un adaptador por persona + regleta pequeña.'],
   ['Seguro de viaje','La sanidad japonesa es carísima sin seguro.'],
   ['Maleta: dejar hueco','Volveréis con más de lo que llevabais. Takkyubin (envío de maletas entre hoteles) ≈ ¥2.000/bulto.'],
+  ['Si seguís la Ruta: bus Kanazawa–Shirakawa-gō–Takayama','Asiento reservado obligatorio (Nouhi/Hokutetsu); abren ~1 mes antes. nouhibus.co.jp'],
+  ['Si seguís la Ruta: entradas USJ + Nintendo World','Entrada con FECHA en la web oficial; turno de área en la app al entrar. Express Pass opcional.'],
+  ['Si seguís la Ruta: ampliar APA al 24 de abril','La Ruta vuelve a Tokio el 24 por la tarde: añadid esa noche a la reserva existente del 25–27.'],
+  ['Si seguís la Ruta: ryokan de Takayama y noche de Nikko','Los dos alojamientos con más demanda de la Ruta: reservar en cuanto se decida.'],
 ];
 
 /* ---------------- Consejos ---------------- */
@@ -4031,7 +4238,9 @@ function setItinMode(mode){
   const seedChip = $('#itinModeSeed'); if(seedChip) seedChip.classList.toggle('active', mode === 'seed');
   $('#itinModeDani').classList.toggle('active', mode === 'dani');
   const mariaChip = $('#itinModeMaria'); if(mariaChip) mariaChip.classList.toggle('active', mode === 'maria');
+  const rutaChip = $('#itinModeRuta'); if(rutaChip) rutaChip.classList.toggle('active', mode === 'ruta');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
+  const rutaDoc = $('#btnRutaDoc'); if(rutaDoc) rutaDoc.style.display = mode === 'ruta' ? '' : 'none';
   setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
   // 12.56: el mapa sigue al itinerario activo. Al cambiar, arranca en "Todos"
   // (todo el itinerario) y se redibuja con los elementos de ESE itinerario.
@@ -4131,8 +4340,47 @@ function plantFromProposal(pid, dayIdx){
     dur: (p && p.dur) || 60, note: '', done: false});
   fixTransfers(day);
   commit();
-  renderSeedItinerary(); // el botón pasa a "✓ en el plan" sin salir de la referencia
+  renderItinerary(); // el botón pasa a "✓ en el plan" sin salir de la referencia activa
   toast('Plantado en ' + fmtDateShort(day.date) + ' ✓');
+}
+/* --- Vista "Ruta 21 días": la propuesta DISEÑADA sobre todo el catálogo
+   (gemelos imprescindibles, trenes, comidas, noches). Solo lectura y
+   plantable con ＋, exactamente como la Propuesta (regla 12.49: ninguna
+   propuesta entra sola en el plan). El documento hora a hora se descarga
+   con el botón 📄 (RUTA_DOC_URL). --- */
+function renderRutaItinerary(){
+  const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
+  let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
+    🧠 <b>La Ruta 21 días</b> · diseñada sobre TODO lo apuntado (nuestros + Dani + María + Insta + IA):
+    los 60 sitios repetidos en dos fuentes tienen parada, con trenes, comidas y noches resueltos.
+    No es el viaje: plantad con ＋ lo que os convenza. El documento 📄 la cuenta hora a hora.</div>`;
+  html += RUTA_DAYS.map((rd, i) => {
+    const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
+    const rows = (rd.stops || []).map(s => {
+      const pid = canonicalPid(s.pid);
+      const p = placeById(pid);
+      if(!p) return '';
+      const inPlan = planned.has(pid);
+      return `<div class="seed-row" data-pid="${esc(pid)}">
+        <span class="sr-time u-tabular">${esc(s.time || '')}</span>
+        <span class="sr-name">${esc(p.name)}${s.note ? `<small style="display:block;color:var(--muted);font-weight:400">${esc(s.note)}</small>` : ''}</span>
+        ${inPlan ? '<span class="pill green" style="flex:none">✓ en el plan</span>'
+                 : `<button class="btn small ghost b-plant" data-pid="${esc(pid)}" data-day="${i}" title="Plantar en nuestro viaje" style="flex:none">＋</button>`}
+      </div>`;
+    }).join('');
+    if(!rows && !rd.flight && !rd.note) return '';
+    return `<div class="m-washi seed-day">
+      <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b><small>${fmtDateShort(rd.date)}</small></div>
+      ${rd.note ? `<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">🚉 ${esc(rd.note)}</div>` : ''}
+      ${(rd.flight && !rows) ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
+      ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
+    </div>`;
+  }).join('');
+  $('#dayPanel').innerHTML = html;
+  $$('#dayPanel .b-plant').forEach(b => b.addEventListener('click', ev => {
+    ev.stopPropagation(); plantFromProposal(b.dataset.pid, +b.dataset.day);
+  }));
+  bindPlaceOpen('#dayPanel .seed-row');
 }
 /* --- Vista "María" (12.52) · el viaje que ella HIZO en 2024, como referencia
    de solo lectura (Washi). No es el nuestro y no se planta nada: es para mirar
@@ -4271,6 +4519,7 @@ function zoomOut(){
 }
 function renderItinerary(){
   const cord = $('#cord');
+  if(itinMode === 'ruta'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderRutaItinerary(); return; }
   if(itinMode === 'seed'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderSeedItinerary(); return; }
   if(itinMode === 'dani'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderDaniItinerary(); return; }
   if(itinMode === 'maria'){ if(cord) cord.innerHTML = ''; setItinAlt('plain'); renderMariaItinerary(); return; }
@@ -4879,7 +5128,7 @@ function renderIdeasMap(items){
    contener lugares de procedencia 'ai', pero son SUYOS y sí van al mapa; en
    cambio las ideas sueltas de fuente 'insta'/'ai' no pertenecen a ningún
    itinerario y nunca aparecen aquí. --- */
-const ITIN_RING = {ours: '#fff', seed: '#a97b12', dani: '#223A5E', maria: '#7a4fa3'};
+const ITIN_RING = {ours: '#fff', seed: '#a97b12', dani: '#223A5E', maria: '#7a4fa3', ruta: '#2b8ca3'};
 // Los grupos de Dani vuelven a su base a diario: un mismo id sale pegado varias
 // veces. Se colapsan las repeticiones consecutivas al convertirlos en "día".
 function daniGroupAsDay(r){
@@ -4891,6 +5140,7 @@ function daniGroupAsDay(r){
 // Los "días" del itinerario activo (filtro por días + paradas numeradas).
 // María es por ciudad, sin paradas geográficas por día: no tiene días de mapa.
 function itineraryDays(mode){
+  if(mode === 'ruta') return RUTA_DAYS;
   if(mode === 'seed') return SEED_DAYS;
   if(mode === 'dani') return DANI_ROUTE_GROUPS.map(daniGroupAsDay);
   if(mode === 'maria') return [];
@@ -5277,9 +5527,9 @@ async function renderMapDay(){
     mk.bindPopup(`<b>${i + 1}. ${esc(x.p.name)}</b><br>${x.s.time ? '🕐 ' + x.s.time + ' · ' : ''}${fmtMin(x.s.dur)}<br><a href="javascript:openPlace('${x.s.pid}')">Ver ficha →</a>`);
     mk.addTo(map); mapLayers.push(mk);
   });
-  // Vuelos: solo tienen sentido en los itinerarios del viaje real (Realidad y
-  // Propuesta); Dani y María no llevan vuelos.
-  const showFlights = (itin === 'ours' || itin === 'seed') && flightsVisible;
+  // Vuelos: solo tienen sentido en los itinerarios del viaje real (Realidad,
+  // Ruta y Propuesta); Dani y María no llevan vuelos.
+  const showFlights = (itin === 'ours' || itin === 'seed' || itin === 'ruta') && flightsVisible;
   const flightPts = showFlights ? drawFlights(day) : [];
   // Encuadre: día = sus paradas (+aeropuertos si hay vuelos);
   // "Todos" = todos los marcadores dibujados (+vuelos si están activos)
@@ -5611,11 +5861,13 @@ maybeMigrateOriginal(_legacyTransfers);
 
 buildNav();
 $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
+onClick('#itinModeRuta', () => setItinMode('ruta'));
 $('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 onClick('#itinModeMaria', () => setItinMode('maria'));
 onClick('#cordBack', () => zoomOut());
 $('#btnDaniPdf').href = DANI_PDF_URL;
+const rutaDocBtn = $('#btnRutaDoc'); if(rutaDocBtn) rutaDocBtn.href = RUTA_DOC_URL;
 renderAll();
 applyTripTitle();
 updateNotifyButton();
