@@ -3,7 +3,7 @@
 // with DOM/Leaflet stubs and checks: single appearance under 'all' and under
 // each single-source filter, the union of provenance chips, the preserved
 // Dani note in the fused detail, that non-twins are unaffected, and the
-// count sanity (436 data entries, 60 folded duplicates).
+// count sanity (438 data entries, 60 folded duplicates).
 const fs = require('fs');
 const appJs = fs.readFileSync(process.argv[2], 'utf8');
 
@@ -150,12 +150,12 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
     !html.includes('Nota de Dani'));
 })();
 
-// ---- 10) count sanity: 436 data entries unchanged; 60 members folded away ----
-check('sanity: total data entries still 436 (nothing deleted)', api.state.places.filter(Boolean).length === 436);
+// ---- 10) count sanity: 438 data entries unchanged; 60 members folded away ----
+check('sanity: total data entries still 438 (nothing deleted)', api.state.places.filter(Boolean).length === 438);
 const foldedCount = api.state.places.filter(p => p && api.isTwinMember(p.id)).length;
 check('sanity: exactly 60 places fold away as non-anchor twins', foldedCount === 60);
-check('sanity: visible identities with everything active = 436 - 60 = 376',
-  api.state.places.filter(Boolean).length - foldedCount === 376);
+check('sanity: visible identities with everything active = 438 - 60 = 378',
+  api.state.places.filter(Boolean).length - foldedCount === 378);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

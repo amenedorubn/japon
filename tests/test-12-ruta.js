@@ -1,7 +1,8 @@
 // Verificación de la Ruta 21 días (quinto itinerario, referencia plantable).
 // Fija las promesas de diseño: mismo linaje de días que el viaje (8–28 abr),
-// TODOS los gemelos (los "sí o sí") con parada, solo lectura hasta plantar,
-// noches reservadas respetadas y política de escritura v2-only intacta.
+// gemelos cubiertos salvo descartes documentados (regla v2: el criterio manda),
+// el cumpleaños del 19-abr protegido, solo lectura hasta plantar, noches
+// reservadas respetadas y política de escritura v2-only intacta.
 const fs = require('fs');
 const appJs = fs.readFileSync(process.argv[2], 'utf8');
 
@@ -71,14 +72,36 @@ check('ruta: las horas de cada día van en orden estrictamente creciente',
     return t.every((v, i) => i === 0 || v > t[i - 1]);
   }));
 
-// ================= 3) LOS GEMELOS SON IMPRESCINDIBLES =================
-// Los sitios apuntados por DOS fuentes (los "sí o sí" del usuario): TODOS
-// los grupos de gemelos tienen parada en la Ruta (vía su ancla o un miembro).
+// ================= 3) LOS GEMELOS PESAN, EL CRITERIO MANDA (v2) =================
+// Regla v2 (decisión del usuario, 19-jul-2026): estar apuntado en dos fuentes
+// pesa mucho pero no obliga. La Ruta cubre todos los grupos de gemelos SALVO
+// cuatro descartes razonados; si un descarte nuevo aparece sin documentarse
+// aquí, este check lo caza.
+const OMITTED_TWINS = {
+  shibuya109: 'es un centro comercial: se ve EN el cruce, no merece parada propia',
+  hiroo: 'zona residencial de cenas: cruzar la ciudad por ella no compensa (Ebisu la sustituye)',
+  nihonbashi: 'un puente historico bajo una autopista: 2 min de foto que no sostienen parada',
+  jimbocho: 'librerias de viejo en japones: nicho; su hueco lo ganan Tsukiji y Hamarikyu',
+};
 const rutaIds = api.itineraryPlaceIds('ruta');
 const missing = api.TWIN_GROUPS.filter(g =>
   !api.groupIdsOf(g.anchor).some(id => rutaIds.has(id)));
-check('ruta: los 60 grupos de gemelos tienen parada (faltan: ' +
-  (missing.length ? missing.map(g => g.anchor).join(',') : 'ninguno') + ')', missing.length === 0);
+check('ruta: 56 de 60 gemelos con parada; los que faltan son EXACTAMENTE los 4 descartes documentados',
+  missing.length === 4 && missing.every(g => g.anchor in OMITTED_TWINS));
+check('ruta: los descartes son de verdad (ninguno tiene parada)',
+  Object.keys(OMITTED_TWINS).every(id => !rutaIds.has(id)));
+check('ruta: a cambio entran Himeji y Tsukiji por criterio (v2)',
+  rutaIds.has('himeji_castle') && rutaIds.has('tsukiji'));
+
+// ================= 3b) EL 19 DE ABRIL ES EL CUMPLE =================
+const cumple = R[11];
+check('cumple: el 19-abr se celebra (Fushimi al alba, Uji, Himeji, cena de cumpleaños)',
+  cumple.date === '2027-04-19' && /CUMPLEAÑOS/.test(cumple.note || '') &&
+  cumple.stops.some(s => s.pid === 'himeji_castle') &&
+  cumple.stops.some(s => /CUMPLEAÑOS/.test(s.note || '')));
+check('cumple: la bomba NO cae en el cumpleaños (el Museo de la Paz es el día 20)',
+  !cumple.stops.some(s => ['peace_museum', 'atomic_dome'].includes(s.pid)) &&
+  R[12].stops.some(s => s.pid === 'peace_museum'));
 
 // ================= 4) EL QUINTO ITINERARIO EXISTE Y ESCOPA EL MAPA =================
 check('mapa: itineraryDays("ruta") son los días de la Ruta', api.itineraryDays('ruta') === R);
