@@ -83,8 +83,9 @@ Antes de proceder, pregunta si:
 ## 🚀 Estado actual
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.56** (mapa escopado al itinerario activo).
-- Pestañas vigentes: Ideas · Itinerarios · Confirmado · Hoteles · Guía.
+  materialización **12.57** (la Ruta 21 días: quinto itinerario + catálogo v11 + docx descargable).
+- Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Propuesta · Dani · María) ·
+  Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
   del 12 al 25 de abril está SIN DECIDIR (ver PROJECT.md §9).
 
