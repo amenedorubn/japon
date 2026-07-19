@@ -83,7 +83,8 @@ Antes de proceder, pregunta si:
 ## 🚀 Estado actual
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.57** (la Ruta 21 días: quinto itinerario + catálogo v11 + docx descargable).
+  materialización **12.58** (Ruta v2: gemelos curados a criterio con 4 descartes fijados en test,
+  Himeji y Tsukiji dentro, y el 19-abr protegido como cumpleaños: el Museo de la Paz va el 20).
 - Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Propuesta · Dani · María) ·
   Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
