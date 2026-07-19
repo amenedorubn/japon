@@ -1130,6 +1130,9 @@ itsukushima:    P('Santuario Itsukushima y O-torii','templo','Miyajima',34.2959,
 daishoin:       P('Templo Daishō-in','templo','Miyajima',34.2925,132.3180,60,0,'Gratis','8:00–17:00','https://daisho-in.com/','El templo más bonito de la isla: 500 estatuillas rakan con gorritos, cuevas de linternas y nadie.','La mayoría de turistas no sube: error que aprovecharéis.'),
 kakiya:         P('Kakiya (ostras)','comida','Miyajima',34.2994,132.3217,45,2000,'~¥2.000','10:00–18:00','https://www.kakiya.jp/','Las famosas ostras de Miyajima a la brasa, en la calle principal.','El "kakiya teishoku" (menú degustación) si vais con hambre.'),
 momiji:         P('Momiji manjū (probar)','comida','Miyajima',34.2985,132.3210,20,200,'¥100–200/ud','Tiendas 9:00–18:00','','El dulce de la isla: bizcochito de arce relleno (prueba el de matcha o el frito, age-momiji).',''),
+/* ---- Curación experta de la Ruta v2 (12.58) ---- */
+himeji_castle:  P('Castillo de Himeji','museo','Himeji',34.8394,134.6939,105,1000,'¥1.000','9:00–17:00 (última entrada 16:00)','https://www.city.himeji.lg.jp/castle/','La Garza Blanca: el castillo original más espectacular de Japón (nunca destruido, Patrimonio de la Humanidad). A 45 min de Kioto en Nozomi, de paso hacia Hiroshima.','Subid descalzos las 6 plantas del torreón: las vigas son de 1609. La entrada combinada con el jardín Kōko-en (+¥50) vale la pena si sobra hora.'),
+tsukiji:        P('Mercado exterior de Tsukiji','comida','Tokio',35.6654,139.7707,60,1500,'Desayuno ~¥1.500–2.500','~5:00–14:00 (parte cierra dom/mié)','https://www.tsukiji.or.jp/','El mercado exterior que quedó cuando la lonja se fue a Toyosu: 400 puestos de tamagoyaki, atún, erizo y cuchillos.','Desayunad de puesto en puesto: brocheta de atún, tamagoyaki dulce recién hecho y uni si el bolsillo sonríe. Pegado a Hamarikyū.'),
 /* ---- Kanazawa (deseo del documento: la Ruta le da 2 noches) ---- */
 kenrokuen:      P('Jardín Kenroku-en','naturaleza','Kanazawa',36.5622,136.6625,90,320,'¥320','7:00–18:00 (mar–oct)','https://www.pref.ishikawa.jp/siro-niwa/kenrokuen/','Uno de los "tres grandes jardines" de Japón: estanques, farolillo Kotoji y sakura tardía a mediados de abril.','A primera hora o última: la luz baja lo transforma. La entrada de las 7:00 va casi vacía.'),
 kanazawa_castle:P('Castillo de Kanazawa','museo','Kanazawa',36.5657,136.6588,60,320,'Parque gratis · ¥320 interiores','7:00–18:00','https://www.pref.ishikawa.jp/siro-niwa/kanazawajou/','Murallas y almacenes restaurados con carpintería tradicional, pegado a Kenroku-en.','El parque en sí es gratis y enlaza Kenroku-en con Ōmichō en un paseo.'),
@@ -1457,9 +1460,12 @@ post:T(O('shinkansen','Shinkansen de vuelta',85,10620,'Hiroshima ~19:30 → Shin
    LA RUTA 21 DÍAS (referencia solo lectura, plantable con ＋)
    Diseñada el 19-jul-2026 sobre TODO el catálogo (nuestros + Dani +
    María + Instagram + IA). Reglas de diseño:
-   - Los 60 gemelos (mismo sitio en dos fuentes) son imprescindibles:
-     TODOS tienen parada. Ancla las noches reservadas (Louis House
-     9-12, APA 25-27, que la Ruta propone ampliar al 24).
+   - Los gemelos (mismo sitio en dos fuentes) pesan mucho pero no
+     mandan solos (v2, decisión del usuario): 56 de 60 tienen parada
+     y 4 se descartan con motivo (109, Hiroo, Nihonbashi, Jimbōchō);
+     a cambio entran Himeji y Tsukiji por puro mérito.
+   - El 19 de abril es EL CUMPLE: Fushimi al alba, Uji, Himeji y cena
+     de celebración. El Museo de la Paz se ve el 20, a propósito.
    - Más que las tres grandes: Nikko, Kanazawa, Shirakawa-gō, Takayama
      (ryokan), Hiroshima, Miyajima, Fukuoka, Nara, Uji, Kamakura,
      Yokohama y el Fuji. Descartes razonados en el documento (Kamikochi
@@ -1489,20 +1495,18 @@ const RUTA_DAYS = [
   S('catalog_takeshita','11:15',60,'Takeshita Street: crepes y caos adolescente.'),
   S('gyoza_lou','12:30',60,'Comida: las gyozas míticas de Harajuku. La cola va rápida.'),
   S('catalog_harajuku','13:45',60,'Omotesandō y Cat Street, la otra cara de Harajuku.'),
-  S('catalog_shibuya','15:15',45,'El cruce y Hachikō (el ángulo bueno: la azotea del Magnet, gratis).'),
-  S('daikanyama','16:15',60,'La "Brooklyn de Tokio": T-Site y boutiques.'),
-  S('shibuya109','17:30',30,'La torre 109, icono kawaii.'),
-  S('shibuya_sky','18:10',90,'RESERVADO con semanas: atardecer sobre el cruce (sol ~18:15).'),
-  S('hiroo','20:15',90,'Cena en Hiroo, la zona de vuestra lista de comida.'),
+  S('catalog_shibuya','15:15',60,'El cruce, Hachikō y la torre 109 en una pasada (el ángulo bueno: la azotea del Magnet, gratis).'),
+  S('daikanyama','16:30',60,'La "Brooklyn de Tokio": T-Site y boutiques, paseando desde el cruce.'),
+  S('shibuya_sky','18:10',90,'RESERVADO con semanas: atardecer sobre el cruce (sol ~18:15). Después, cena en Ebisu Yokochō (2 min en Yamanote): puestos de izakaya bajo un techo.'),
 ]},
 {date:'2027-04-11', city:'Tokio', icon:'🏮', stay:'Louis House Otsuka Nishi (RESERVADO)',
-  note:'Domingo: Ueno → Akihabara (peatonal) → Jimbōchō → Hamarikyū → Shinjuku de noche.', stops:[
-  S('catalog_ueno','09:00',60,'Parque Ueno: los últimos sakura y los museos por fuera.'),
-  S('ameyoko','10:00',45,'El mercado bajo las vías: ambiente de posguerra.'),
-  S('catalog_akihabara','11:00',105,'Primera pasada friki; los domingos la calle es peatonal. Comida aquí.'),
-  S('jimbocho','13:45',45,'El barrio de las librerías: 180 tiendas de viejo.'),
-  S('hamarikyu','15:00',60,'Jardín del shōgun junto a la bahía; té matcha en la isla del estanque.'),
-  S('catalog_tokyo_metropolitan','16:45',45,'Mirador GRATIS del Gobierno Metropolitano (45º piso).'),
+  note:'Domingo: Tsukiji de desayuno → Hamarikyū → Ueno → Akihabara peatonal → Shinjuku de noche.', stops:[
+  S('tsukiji','08:30',60,'Desayuno de mercado: tamagoyaki, brocheta de atún, uni si el bolsillo sonríe. Parte cierra los domingos; los que abren sobran.'),
+  S('hamarikyu','09:45',60,'A 5 min a pie: el jardín del shōgun junto a la bahía, té matcha en la isla del estanque.'),
+  S('catalog_ueno','11:15',45,'Metro a Ueno: los últimos sakura y los museos por fuera.'),
+  S('ameyoko','12:00',60,'Comida callejera bajo las vías: pinchos, marisco a la plancha, posguerra viva.'),
+  S('catalog_akihabara','13:30',120,'Los domingos la calle principal es PEATONAL: retro-games, arcades, UFO catchers.'),
+  S('catalog_tokyo_metropolitan','16:30',45,'Mirador GRATIS del Gobierno Metropolitano (45º piso).'),
   S('catalog_shinjuku','17:45',45,'Neones de Shinjuku al caer el sol.'),
   S('omoide','18:45',75,'Cena: yakitori con humo bajo las vías en Omoide Yokochō.'),
   S('golden_gai','20:15',45,'Bares de 6 plazas en Golden Gai: entrad donde no haya "members only".'),
@@ -1569,13 +1573,14 @@ const RUTA_DAYS = [
   S('catalog_kinkakuji','15:00',60,'El Pabellón Dorado con la luz de la tarde en el estanque.'),
   S('teamlab_kyoto','18:00',90,'teamLab Biovortex, reservado con fecha: arte digital para cerrar el día.'),
 ]},
-{date:'2027-04-19', city:'Hiroshima', icon:'🦊', stay:'Hiroshima centro (por reservar)',
-  note:'Check-out (consigna en la estación) · Nozomi 15:30 → Hiroshima 17:10.', stops:[
-  S('fushimi','07:30',120,'Los mil torii a primera hora: subid al menos al mirador Yotsutsuji.'),
-  S('vermillion','09:30',30,'Café con vistas del Vermillion, el respiro tras los torii.'),
+{date:'2027-04-19', city:'Hiroshima', icon:'🎂', stay:'Hiroshima centro (POR RESERVAR)',
+  note:'CUMPLEAÑOS. Check-out y consigna · Nozomi 14:10 → Himeji 14:55 · 18:10 → Hiroshima 19:10. El Museo de la Paz queda para mañana A PROPÓSITO: hoy se celebra.', stops:[
+  S('fushimi','07:30',120,'Empezar el cumpleaños amaneciendo entre los mil torii: el mirador Yotsutsuji con la ciudad despertando abajo.'),
+  S('vermillion','09:30',30,'Café de cumpleaños con vistas al bosque de Inari.'),
   S('maria_byodo_in_hoodo_kioto_y_nara','11:00',60,'JR a Uji 25 min: Byōdō-in, el templo de la moneda de ¥10.'),
-  S('catalog_uji_excursion','12:15',75,'Uji es LA capital del té: matcha en Nakamura Tōkichi (comida ligera).'),
-  S('okonomimura','19:00',90,'Cena: okonomiyaki de Hiroshima (en capas, con fideos) en Okonomimura.'),
+  S('catalog_uji_excursion','12:15',60,'Matcha en Nakamura Tōkichi: comida ligera y tarta de té verde con vela improvisada.'),
+  S('himeji_castle','15:15',105,'La Garza Blanca, el castillo original más bello de Japón (última entrada 16:00: llegáis justos y bien). Regalo de cumpleaños a la vista.'),
+  S('okonomimura','20:00',90,'CENA DE CUMPLEAÑOS: okonomiyaki en la barra con espectáculo de plancha; si apetece más fiesta, teppanyaki de wagyū y bares de Nagarekawa.'),
 ]},
 {date:'2027-04-20', city:'Fukuoka', icon:'⛴️', stay:'Fukuoka, Hakata/Nakasu (por reservar)',
   note:'Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00.', stops:[
@@ -1583,7 +1588,7 @@ const RUTA_DAYS = [
   S('atomic_dome','10:30',30,'La cúpula en pie bajo el hipocentro. Silencio y a la estación.'),
   S('itsukushima','12:30',75,'JR 25 min + ferry 10: el torii sobre el mar (mirad la tabla de mareas).'),
   S('kakiya','13:45',60,'Comida: ostras a la brasa de la isla en Kakiya.'),
-  S('daishoin','15:00',60,'El templo que casi nadie sube a ver: 500 rakan con gorritos.'),
+  S('daishoin','15:00',60,'El templo que casi nadie sube a ver: 500 rakan con gorritos. Con energía: ropeway al monte Misen (+2 h, el mar Interior entero).'),
   S('momiji','16:15',20,'Momiji manjū recién hecho para el ferry de vuelta.'),
   S('nakasu_yatai','20:30',90,'Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.'),
 ]},
@@ -1621,8 +1626,7 @@ const RUTA_DAYS = [
   S('tokyo_st','16:30',45,'Llegáis A la estación: Character Street en el sótano (Ghibli, Pokémon).'),
   S('apa_asakusabashi','17:45',30,'Check-in APA (reserva ampliada al 24) y a la calle.'),
   S('catalog_ginza','18:30',75,'Ginza encendida: papelería Itoya, Uniqlo de 12 plantas.'),
-  S('kabukiza','19:45',20,'El teatro kabuki iluminado (entradas de un acto si os tienta).'),
-  S('nihonbashi','20:15',30,'El puente-kilómetro cero y cena por la zona.'),
+  S('kabukiza','19:45',20,'El teatro kabuki iluminado (entradas de un acto si os tienta) y cena en Ginza.'),
 ]},
 {date:'2027-04-25', city:'Kamakura', icon:'🌊', stay:'APA Asakusabashi (RESERVADO)',
   note:'JR Yokosuka 08:04 → Kamakura 09:00 · Enoden a Hase · JR a Yokohama 14:45 · vuelta 20:30.', stops:[
@@ -1646,8 +1650,7 @@ const RUTA_DAYS = [
   S('kameido','11:15',60,'Las glicinas de Kameido Tenjin: finales de abril es SU semana.'),
   S('kameido_gyoza','12:30',45,'Comida: solo hacen una cosa y la bordan.'),
   S('kappabashi','13:45',40,'Últimas compras: un buen cuchillo japonés viaja bien.'),
-  S('imperial','14:45',50,'Los jardines del Este del Palacio (hoy martes abren; lun/vie no).'),
-  S('nihonbashi','15:50',20,'Último vistazo al kilómetro cero y a por las maletas al APA.'),
+  S('imperial','14:45',60,'Los jardines del Este del Palacio (hoy martes abren; lun/vie no): el respiro final. Después, al APA a por las maletas.'),
   S('nrt','17:30',270,'Facturación con calma, cena en la T2 y compras de aeropuerto. Sayōnara, Japón.'),
 ]},
 {date:'2027-04-28', city:'Vuelo', icon:'✈️', flight:[4], stops:[],
@@ -1728,7 +1731,7 @@ const isoDate = d => {
   return `${y}-${m}-${day}`;
 };
 const addDays = (base,n) => { const d = new Date(base); d.setDate(d.getDate()+n); return d; };
-const CATALOG_VERSION = 'sitios-japon-2026-07-19-v11-ruta';
+const CATALOG_VERSION = 'sitios-japon-2026-07-19-v12-ruta2';
 
 function softAreaPolygon(lat, lng, radiusLat, radiusLng, points){
   points = points || 36;
@@ -1844,6 +1847,8 @@ const ZONES = [
   {id:'nara',      label:'Nara',       anchors:[[34.6851,135.8048],[34.6851,135.8430]], r:15},
   {id:'hiroshima', label:'Hiroshima',  anchors:[[34.3853,132.4553]], r:20},
   {id:'miyajima',  label:'Miyajima',   anchors:[[34.2960,132.3197]], r:8},
+  // Himeji (Ruta v2, 12.58): la Garza Blanca, de paso entre Kioto y Hiroshima.
+  {id:'himeji',    label:'Himeji',     anchors:[[34.8394,134.6939]], r:15},
   {id:'nikko',     label:'Nikko',      anchors:[[36.7198,139.6982],[36.7553,139.6012]], r:25},
   {id:'kamakura',  label:'Kamakura',   anchors:[[35.3192,139.5467]], r:12},
   {id:'yokohama',  label:'Yokohama',   anchors:[[35.4437,139.6380]], r:15},
@@ -4351,8 +4356,9 @@ function plantFromProposal(pid, dayIdx){
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
-    🧠 <b>La Ruta 21 días</b> · diseñada sobre TODO lo apuntado (nuestros + Dani + María + Insta + IA):
-    los 60 sitios repetidos en dos fuentes tienen parada, con trenes, comidas y noches resueltos.
+    🧠 <b>La Ruta 21 días</b> · diseñada sobre TODO lo apuntado (nuestros + Dani + María + Insta + IA)
+    y curada a criterio: casi todos los repetidos tienen parada (4 descartes razonados) y entran
+    Himeji o Tsukiji por mérito. Trenes, comidas y noches resueltos; el 19-abr es el 🎂 y se celebra.
     No es el viaje: plantad con ＋ lo que os convenza. El documento 📄 la cuenta hora a hora.</div>`;
   html += RUTA_DAYS.map((rd, i) => {
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));

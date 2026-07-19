@@ -115,9 +115,9 @@ check('zona: un sitio de la lista "Tokio" que está en el Fuji cae en Monte Fuji
 
 // ================= 4) LAS ZONAS SON LAS PEDIDAS =================
 // 12.55: "Fukuoka" pasó a ser "Kyūshū" (cubre toda la isla).
-const LABELS = ['Tokio', 'Kioto', 'Osaka', 'Nara', 'Hiroshima', 'Miyajima', 'Nikko', 'Kamakura',
-  'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Kanazawa', 'Nagano', 'Kyūshū'];
-check('zonas: son exactamente las 15 pedidas (14 de 12.53/12.55 + Kanazawa de la Ruta)',
+const LABELS = ['Tokio', 'Kioto', 'Osaka', 'Nara', 'Hiroshima', 'Miyajima', 'Himeji', 'Nikko',
+  'Kamakura', 'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Kanazawa', 'Nagano', 'Kyūshū'];
+check('zonas: son exactamente las 16 pedidas (14 de 12.53/12.55 + Kanazawa y Himeji de la Ruta)',
   JSON.stringify(api.ZONES.map(z => z.label)) === JSON.stringify(LABELS));
 check('zonas: Ideas/Excursiones/Aeropuerto NO son zonas',
   !api.ZONES.some(z => /ideas|excursion|aeropuerto/i.test(z.label)));
