@@ -116,8 +116,8 @@ check('zona: un sitio de la lista "Tokio" que está en el Fuji cae en Monte Fuji
 // ================= 4) LAS ZONAS SON LAS PEDIDAS =================
 // 12.55: "Fukuoka" pasó a ser "Kyūshū" (cubre toda la isla).
 const LABELS = ['Tokio', 'Kioto', 'Osaka', 'Nara', 'Hiroshima', 'Miyajima', 'Nikko', 'Kamakura',
-  'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Nagano', 'Kyūshū'];
-check('zonas: son exactamente las 14 pedidas',
+  'Yokohama', 'Monte Fuji', 'Alpes', 'Nagoya', 'Kanazawa', 'Nagano', 'Kyūshū'];
+check('zonas: son exactamente las 15 pedidas (14 de 12.53/12.55 + Kanazawa de la Ruta)',
   JSON.stringify(api.ZONES.map(z => z.label)) === JSON.stringify(LABELS));
 check('zonas: Ideas/Excursiones/Aeropuerto NO son zonas',
   !api.ZONES.some(z => /ideas|excursion|aeropuerto/i.test(z.label)));
@@ -142,8 +142,8 @@ check('kyushu: no se cuela a Honshu (Shimonoseki y Yamaguchi fuera)',
   zoneOf({lat: 33.9576, lng: 130.9412}) !== 'kyushu' &&
   zoneOf({lat: 34.1785, lng: 131.4737}) !== 'kyushu' &&
   !api.pointInPolygon({lat: 33.9576, lng: 130.9412}, KYU_POLY));
-check('kyushu: la ampliación no reasigna otros lugares (exactamente esos 3 en la zona)',
-  places.filter(p => zoneOf(p) === 'kyushu').length === 3);
+check('kyushu: en la zona caen esos 3 + los 3 sitios de Fukuoka y su base de hotel (Ruta)',
+  places.filter(p => zoneOf(p) === 'kyushu').length === 7);
 
 // ================= 5) NO ROMPE LOS OTROS EJES =================
 // Fuente: los 139 de María siguen siendo de María, etc.
