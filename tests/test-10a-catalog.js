@@ -60,7 +60,7 @@ const dupIds = ids.filter((x, i) => ids.indexOf(x) !== i);
 // María es aditiva (Exploración, provenance 'maria'): se excluye del recuento
 // del catálogo fusionado para que re-importar sus listas no rompa el test.
 const nonMaria = api.state.places.filter(p => p.provenance !== 'maria');
-check('seed: 283 merged places excl. María (190 shared + 92 curated + Louis House booking)', nonMaria.length === 283);
+check('seed: 297 merged places excl. María (190 shared + 106 curated + Louis House booking)', nonMaria.length === 297);
 check('seed: María curation seeded as Exploración (provenance maria)', api.state.places.some(p => p.provenance === 'maria'));
 check('seed: no duplicate ids', dupIds.length === 0);
 const aliasKeys = Object.keys(api.LEGACY_PID_MAP);
@@ -188,8 +188,8 @@ check('hoteles[ours]: APA (curated, reservado) listed as real hotel',
   els['#hotelsList'].innerHTML.includes('APA Hotel Asakusabashi') && els['#hotelsList'].innerHTML.includes('✓ Reservado'));
 check('hoteles[ours]: por-reservar bases NOT in the booked list',
   !els['#hotelsList'].innerHTML.includes('Alojamiento en Tokio') && !els['#hotelsList'].innerHTML.includes('Alojamiento en Kioto'));
-check('hoteles: 3 bases por reservar as placeholders',
-  api.hotelBasePlaceholders().length === 3 && els['#hotelPlaceholders'].innerHTML.includes('Por reservar'));
+check('hoteles: 8 bases por reservar as placeholders (3 clásicas + 5 de la Ruta 21 días)',
+  api.hotelBasePlaceholders().length === 8 && els['#hotelPlaceholders'].innerHTML.includes('Por reservar'));
 api.setHotelSrc('dani'); api.renderHoteles();
 check('hoteles[dani]: 6 Dani lodgings with D pill',
   (els['#hotelsList'].innerHTML.match(/🏨/g) || []).length >= 6 && els['#hotelsList'].innerHTML.includes('D Dani'));
