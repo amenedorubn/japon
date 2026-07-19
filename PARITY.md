@@ -96,6 +96,10 @@ Con un `fb` falso inyectado en la app real (suite `test-8c-gate.js`):
 Además: comprobación de sintaxis del script completo y smoke HTTP
 (index 200, PDF 200 `application/pdf`, manifest servido).
 
+*Nota (2026-07-19): esta tabla es la foto del gate 8c. `test-7c-lists.js` se retiró después,
+al desaparecer la capa de alias con la fusión real del catálogo (10a), y la Fase 12 añadió 13
+suites nuevas. La lista vigente la define `tests/run-all.js` (ver PROJECT.md §10).*
+
 ## 5. Fases posteriores (estado)
 
 - **Fase 9** — rediseño visual completo (Apple HIG + minimalismo japonés): HECHA (`1db5185`).
@@ -106,6 +110,9 @@ Además: comprobación de sintaxis del script completo y smoke HTTP
   (onclick inline globales) cerradas; `userPlaceView`→`placeView`, `userHotels`→`bookedHotels`;
   em-dashes fuera de comentarios. Sin cambios visuales/funcionales (suite verde). Con esto, la
   tabla de Deuda técnica (D1–D7) queda íntegramente en verde.
+- **Fase 12** — procedencia, importadores y pestaña Itinerarios (12.1–12.56 + F1–F3b): EN CURSO.
+  Historia completa y decisiones en PROJECT.md §7–§9. La paridad de este informe no se ve
+  afectada: los cambios son de modelo de producto sobre la base ya paritaria.
 
 ## 6. Riesgos conocidos (revisados tras la Fase 10)
 

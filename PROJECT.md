@@ -27,14 +27,15 @@ modelo v2 y sus nodos en la nube quedaron como archivo de solo lectura.
 
 | Fichero | Papel |
 |---|---|
-| `index.html` | LA app entera (~4.7k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
+| `index.html` | LA app entera (~5.6k líneas: head+PWA, CSS del sistema visual, HTML, JS) |
 | `sw.js` | Service worker offline (Fase 10c): cache-first del shell + CDNs versionadas, refresco en segundo plano. Subir junto a index.html a GitHub Pages |
-| `tools/maria-import.js` `tools/maria-bake.js` | Importador de María (Fase 12.33+): extrae con Playwright las listas de Google Maps que compartió y hornea el resultado en `MARIA_PLACES`. **Dev-time**: la app en runtime no usa Playwright ni red |
-| `import/maria-places.json` | Datos extraídos de las listas de María (139 sitios). Fuente que se hornea en `index.html`; re-generable con el importador |
+| `tools/*.js` | Importadores **dev-time** (la app en runtime no usa red ni dependencias): María (`maria-import.js` con Playwright + `maria-bake.js` + `maria-xlsx-import.js`), Dani (`dani-import.js`, parsea el PDF con Node puro, F3a), NUESTRA/docx (`docx-import.js`, F3b), Instagram (`insta-import.js`) e IA (`ai-import.js`) — todos con el mismo patrón import→bake→seed que hornea bloques entre marcadores de `index.html` |
+| `import/*.json` | Datos extraídos por los importadores (maria-places 139 sitios, dani-places 150, ours-places/DOCX, insta-places, ai-places, maria-trip). Fuentes que se hornean en `index.html`; re-generables |
 | `package.json` / `package-lock.json` | Declaran la ÚNICA dependencia (Playwright), sólo para el importador dev-time. `node_modules/` está en `.gitignore` |
 | `index-pre-source.html` | App original descomprimida. **Referencia permanente, no borrar**: contiene además el único embed del PDF de Dani |
 | `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
-| `PROJECT.md` `PRODUCT.md` `DESIGN.md` `PARITY.md` | Documentación (este orden: continuidad → estrategia → visual → paridad) |
+| `PROJECT.md` `PRODUCT.md` `DIRECTION.md` `DESIGN.md` `design/` `PARITY.md` | Documentación (continuidad → estrategia → dirección creativa → sistema visual y su versión modular → paridad) |
+| `Itinerario.docx` | Fuente de la procedencia `ours` (lista de deseos de los tres); lo lee `tools/docx-import.js` |
 | `tests/run-all.js` + `tests/test-*.js` | Suite de regresión completa (ver §10) |
 | `.claude/serve.ps1` | Servidor local de desarrollo (`http://localhost:8734/`) |
 
@@ -56,6 +57,13 @@ Los manejadores se enlazan tras cada render con `addEventListener` (helpers `onC
 `bindPlaceOpen`, más bloques como `bindDayPanel`); las plantillas exponen `data-pid`/ids en vez
 de `onclick` inline (D5 cerrada en la Fase 11: cero handlers inline). Los tests dependen de esos
 ganchos del DOM (ver §12).
+
+**Pestañas vigentes (desde 12.54–12.56):** Ideas 🧭 · Itinerarios 🗓️ · Confirmado ✈️ · Hoteles 🏨
+· Guía 🧳. La pestaña Mapa suelta se retiró en 12.54: el mapa de Ideas vive dentro de Ideas
+(eje de zona) y el mapa del plan dentro de Itinerarios (por días, escopado al itinerario ACTIVO
+desde 12.56). Itinerarios presenta 4 itinerarios al mismo nivel: **Realidad** (editable; un día
+solo afirma su fecha + vuelos + reserva de esa noche) · **Propuesta** (IA, solo lectura,
+plantable con ＋) · **Dani** · **María** (referencias solo lectura).
 
 ## 4. Modelo de datos (`state`, persistido en localStorage `japon27_app_v1`)
 
@@ -197,6 +205,19 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.48 | `95fb36a` | **NUESTROS = Itinerario.docx (corrección)** | `DOCX_OURS` (35 ids canónicos 1:1 del documento) define `ours`; hotel con reserva sigue `ours` (§9.4); TODO lo demás no-Dani/María/Instagram → `ai` (incluidos añadidos a mano). Reparación bidireccional en `ensureProvenance`; producción sanada (ours 3→37). Capas del mapa por procedencia (N=docx, +capa IA) |
 | 12.49 | `44b5e9d` | **El viaje canónico es lo DECIDIDO (corrección)** | La propuesta sembrada se RETIRA del plan editable (marca monótona `seedRetired` en el payload v2, ligada al linaje de días); queda como referencia "Propuesta" (solo lectura, plantable con ＋). El plan real: vuelos + hoteles + lo plantado (verificado en producción: 1 parada real, APA 25-abr). "Vaciar el plan" sustituye a "Restablecer plan sugerido". SUPERSEDE el mecanismo §12.14 de "retirada día a día" |
 | 12.50 | `4279edf` | **Prioridad de clic del mapa (corrección UX)** | Pane propio 'zones' (z 350) bajo el overlayPane: un sitio siempre gana el clic al polígono de zona; el área se inspecciona tocando mapa vacío. Verificado en navegador real |
+| 12.51 | `328c879`+`2f3ecbf`+`3f44fc1` | Docs de las correcciones 12.47–12.50 | `Itinerario.docx` entra como asset del repo; primer `CLAUDE.md` (nota: describía un stack TS/SQL erróneo, corregido el 2026-07-19) |
+| F1 | `309764c` | **Guardas de procedencia IA** | `test-12-provenance.js` ampliado: precedencia de `provenanceOf` fijada (`dani_*` manda sobre señales contradictorias); auditados los 422 lugares de la semilla, 0 con marca explícita caen al fallback `ai` |
+| F1.5 | `08063ca` | **Gemelos multi-procedencia** | `TWIN_GROUPS`: 60 pares Dani↔IA del mismo sitio real, ancla siempre la entrada IA (gana id/nombre/coords/web/horario/precio), nota de Dani conservada en el detalle. La unión de procedencias es SOLO capa de agrupación/render; cada entrada conserva su única `provenance`. Un gemelo no-ancla nunca pinta pin/tarjeta propia |
+| F2 | `908eba6` | **Pipelines INSTA/IA conectados** | `ensureInstaPlaces`/`ensureAiPlaces` (patrón de `ensureMariaPlaces`, idempotentes) en boot, adoptRemote e import; `tools/insta-import.js` + `tools/ai-import.js` con `--bake` verificados end-to-end |
+| Fix | `a47eafa` | **Hoteles de Dani adoptados NO son reservas** | Sus 6 alojamientos documentan SU viaje de junio 2025 (fechas/bookingRef de 2025): al adoptarlos entraban en Confirmado como "✓ Reservado". Guarda por id `dani_*` en `isBookedHotel`. Lo único confirmado nuestro: vuelos, APA y Louis House |
+| F3a | `ccbd611` | **Importador Dani (import→bake→seed)** | Los 150 lugares de Dani salen del HTML escrito a mano (157 líneas retiradas): `tools/dani-import.js` parsea el PDF con Node puro (zlib + CMaps ToUnicode) y verifica cada entrada curada contra el texto real. El PDF es fuente del CONTENIDO; ids/coords/categorías son curación |
+| F3b | `8c2ad6a` | **Importador NUESTRA/docx** | `tools/docx-import.js` (lector ZIP mínimo + inflate, sin dependencias) lee `Itinerario.docx`; puente manual `DOCX_TO_CATALOG` nombre→id (avisa si el docx cambia, nunca adivina); `DOCX_OURS_IDS` pasa a hornearse |
+| 12.52 | `8c3290b`+`d9e14b5` | **Pestaña Itinerarios: la REALIDAD manda** | "Plan"→"Itinerarios". Los días de REALIDAD pierden `city/title/icon` (`stripDaySkeleton` en local y remoto): un día solo afirma su FECHA, más los vuelos (de `FLIGHTS`, por fecha real) y la reserva de esa noche (`hotelForNight`/`bookedHotels`, la misma fuente que Confirmado). La vista "📄 Original" se retira. Ficha de referencia María: sus 15 días de feb–mar 2024, solo lectura, `MARIA_MAPS` con `city` anotado |
+| 12.53 | `dfa7a11` | **Eje de ZONA geográfica derivada** | DÓNDE está un sitio, derivado SOLO de coordenadas (polígonos de las 3 grandes + anclas con radio; multi-ancla en Alpes/Fuji; el polígono manda). Nunca se guarda en state: lectura cacheada en `placeView`. `region` NO se reutiliza a propósito (mezcla procedencia y etiquetas no geográficas) |
+| 12.54 | `886afed` | **Dos mapas embebidos; fuera la pestaña Mapa** | Mapa de Ideas (por zona, con "Sin zona" visible) + mapa del plan (por días) dentro de sus pestañas; KIX pasa a zona Osaka; líneas de Dani apagadas por defecto |
+| 12.55 | `f54dc96` | **Zona Kyūshū** | "Fukuoka" (radio) → polígono de toda la isla, cortado en el estrecho de Kanmon para no colarse a Honshu; solo cambia la zona, nunca fuente ni coordenadas |
+| 12.56 | `d205107` | **El mapa sigue al itinerario ACTIVO** | Escopado por PERTENENCIA, no por procedencia (la Propuesta incluye sus lugares `ai`; las ideas sueltas no salen); capas por fuente retiradas de ese mapa; el mapa sube bajo la fila de selección y los 4 itinerarios quedan al mismo nivel (fuera el rótulo "referencias") |
+| Docs | (este commit) | Docs al día hasta 12.56 + decisiones 2026-07-19 | Propuesta de IA de 5 pestañas RECHAZADA; reparto de alojamientos 12–25 abr reconocido como NO decidido (copy corregido); `CLAUDE.md` reescrito para describir el proyecto real |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -226,6 +247,9 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 - **"Restablecer plan sugerido"**: retirado en 12.49. La propuesta ya no entra en el plan; el
   botón es ahora "Vaciar el plan" (deja los 21 días sin paradas, conservando vuelos/hoteles/
   catálogo y la referencia Propuesta).
+- **IA de 5 pestañas Hoy/Plan/Ideas/Mapa/Guía**: RECHAZADA (2026-07-19, decisión del usuario).
+  Las pestañas actuales (Ideas · Itinerarios · Confirmado · Hoteles · Guía, con los mapas
+  embebidos de 12.54) funcionan bien hoy. No re-proponer sin decisión del usuario.
 
 ## 9. Deuda técnica restante y fases futuras
 
@@ -255,8 +279,10 @@ decisión pendiente): rendimiento de re-render por sección (hoy se reconstruye 
 y `state/places` sigue siendo un nodo de escritura total (mitigado; ver PARITY §6).
 
 **Fase 12 — Procedencia y separación conceptual (EN CURSO, arquitectura aprobada por el usuario).**
-No es limpieza: es modelo de producto. Documentación canónica primero (este cambio), implementación
-después. Objetivo: hacer visibles tres modelos mentales distintos (ver PRODUCT.md y §11):
+No es limpieza: es modelo de producto. *(Estado 2026-07-19: el alcance 1–5 de abajo está
+implementado y verificado — ver historia 12.1–12.56 y F1–F3b en §7; la fase sigue abierta como
+paraguas del trabajo de producto en marcha.)* Objetivo: hacer visibles tres modelos mentales
+distintos (ver PRODUCT.md y §11):
 - **Confirmado**: vuelos y hoteles reservados. Información cierta.
 - **Planificación**: el itinerario que deciden los tres, procedente de sus documentos de Google
   Drive (fuente de verdad). La app se pone al día a mano, sin importador.
@@ -292,23 +318,34 @@ Sin nuevos estados (favourite/visited/want) por ahora: modelo mínimo (§8).
   (animation-vocabulary, design-taste-frontend, emil-design-eng, impeccable) con mandato de RETAR
   la interfaz (no pulirla): jerarquía, interacción, animación, estados de día vacío y día completado
   (sin definir a propósito: los diseña la Skill), transiciones, divulgación progresiva; producto de
-  viaje premium moderno.
-- **Propuesta de implementación presentada, PENDIENTE de aprobación** (aún NO canónica): IA de 5
-  pestañas (Hoy/Plan/Ideas/Mapa/Guía) con hoteles dentro de Confirmado/Hoy y Sitios→Ideas; matar la
-  fila de tarjetas de coste del Home y las rejillas de tarjetas iguales; interacciones con nombre
-  (pluck-and-place Exploración→Planificación, hold-to-seal Planificación→Confirmado, segmented day
-  scrub). Decisiones pendientes: aprobar IA; etiqueta "IA"; `confirmed` como segundo estado; alta de
-  destinos nuevos como Ideas `ours`; y si construir un prototipo visual (Artifact) antes de tocar
-  `index.html`.
+  viaje premium moderno. *(Iteración realizada: su resultado canónico es `DIRECTION.md` y el
+  sistema modular `design/`; las materializaciones, en la historia 12.1–12.56.)*
+- ~~**Propuesta de implementación presentada, PENDIENTE de aprobación**~~ **CERRADA: RECHAZADA
+  (2026-07-19, decisión del usuario).** La IA de 5 pestañas (Hoy/Plan/Ideas/Mapa/Guía) NO se
+  adopta: las pestañas actuales (Ideas · Itinerarios · Confirmado · Hoteles · Guía) funcionan bien
+  en el momento actual (ver §8). Las piezas de aquella propuesta que se materializaron por su
+  cuenta (retirada de la pestaña Mapa en 12.54, hoteles como hechos de Confirmado, etiqueta "IA",
+  `confirmed` explícito) ya están recogidas en la historia de fases; el resto (pluck-and-place,
+  hold-to-seal, segmented day scrub tal como se describieron) queda sin compromiso.
+
+**Correcciones canónicas (2026-07-19):**
+- **Del 12 al 25 de abril el plan está SIN DECIDIR (ciudades, orden y noches).** El reparto
+  Tokio (12–16 y 22–25) / Kioto (16–19) / Osaka (19–22) era la PROPUESTA hablando en nombre del
+  viaje, no una decisión. Reservar los alojamientos de esas noches sigue pendiente, pero no
+  necesariamente con ese reparto. El copy de la checklist de la Guía y de las tres bases
+  "por reservar" del catálogo se corrigió para decirlo.
 
 ## 10. Verificación (disciplina obligatoria en cada fase)
 
 `node tests/run-all.js [volcado-firebase.json]` — extrae el JS de `index.html`, hace
 `node --check` y ejecuta las suites contra el **código real** con stubs de DOM/Leaflet:
-7a import (6 casos) · 7b Dani (11) · 10a catálogo fusionado (37) · 10b consolidación (29) ·
-10c service worker (12) · 8a mapa (23, incluye fugas de capas) · 8b plataforma (21) · 8c gate
-(20; necesita un volcado en vivo: `curl .../proyectos/viaje-japon.json > live.json`, nunca se
-versiona). Antes de cada commit: suite completa en verde + smoke HTTP con `.claude/serve.ps1`
+7a import · 7b Dani · 8a mapa (incluye fugas de capas) · 8b plataforma · 8c gate (necesita un
+volcado en vivo: `curl .../proyectos/viaje-japon.json > live.json`, nunca se versiona) ·
+10a catálogo fusionado · 10b consolidación · 10c service worker · y las suites de la Fase 12:
+provenance (con las guardas F1) · twins · pipelines · dani-import · docx-import · maria ·
+hotels · confirmed · axis · cord · seasons · realidad · zones. (`test-7c-lists.js` se retiró
+al desaparecer la capa de alias con la fusión real del catálogo; la lista vigente la define
+`tests/run-all.js`.) Antes de cada commit: suite completa en verde + smoke HTTP con `.claude/serve.ps1`
 (index, sw.js y PDF en 200). Cada fase termina en SU PROPIO commit (puntos de rollback). Si
 aparece deuda que bloquee la visión final: parar, proponer el refactor y esperar aprobación
 (regla vigente).

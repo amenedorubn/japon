@@ -26,6 +26,11 @@ No es una petición de rediseño ahora: es la filosofía de producto a largo pla
 
 ## Dirección de rediseño (antes de la Fase 12)
 
+*(Realizada: su resultado canónico es `DIRECTION.md` + el sistema modular `design/`, y sus
+materializaciones están en la historia 12.1–12.56 de PROJECT.md §7. La propuesta de IA de 5
+pestañas Hoy/Plan/Ideas/Mapa/Guía fue RECHAZADA el 19-jul-2026: las pestañas actuales —
+Ideas · Itinerarios · Confirmado · Hoteles · Guía — funcionan bien hoy.)*
+
 El rediseño visual de la Fase 9 se considera **demasiado conservador**: la app todavía se parece a una versión limpia de la app original. Antes de implementar la Fase 12 haremos una iteración DEDICADA de rediseño de producto/UX con las cuatro Skills de diseño (animation-vocabulary, design-taste-frontend, emil-design-eng, impeccable), con el mandato de **retar la interfaz, no pulirla**: jerarquía e información, modelo de interacción, animación con propósito, estados de **día vacío** y **día completado** (deliberadamente sin definir: los diseña la Skill), transiciones y divulgación progresiva. Objetivo: que se sienta como un producto de viaje premium moderno, no como el rediseño anterior.
 
 ## Procedencia y separación conceptual
