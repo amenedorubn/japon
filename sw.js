@@ -8,8 +8,8 @@
    el contenido se renueva solo en cada visita con red.
 ================================================================ */
 'use strict';
-const CACHE = 'japon27-v1';
-const SHELL = ['./', './JAPON-DEFINITIVO-Dani.pdf'];
+const CACHE = 'japon27-v2';
+const SHELL = ['./', './JAPON-DEFINITIVO-Dani.pdf', './Ruta-21-dias.docx'];
 
 /* CDNs de recursos estáticos versionados, cacheables bajo demanda.
    Todo lo demás (teselas del mapa, Nominatim, OSRM, Overpass, RTDB)
