@@ -1121,6 +1121,7 @@ matcha587:      P('Matcha 587','comida','Osaka',34.66408,135.50568,40,1000,'~¥8
 grenier:        P('Grenier Pâtisserie','comida','Osaka',34.70300,135.49920,40,800,'~¥600–1.000','Consultar','','Pastelería de Kitashinchi: hojaldre crujiente y crema perfecta (vuestro reel).','Está cerca de Umeda, no de Namba: encaja al ir/venir de Shin-Osaka.','','https://www.instagram.com/reel/DaFSecnsYQj/'),
 tokito:         P('Tokito (sando de wagyū)','comida','Osaka',34.67316,135.51380,60,2500,'~¥2.000–3.000','Sin reservas · cola','','El mejor steak-sando según vuestros reels: añadid huevo y jalapeños.','Local pequeño: id a la apertura.','','https://www.instagram.com/reel/DaFSecnsYQj/'),
 kitan:          P('Kitan Hibiki (wagyū burger)','comida','Osaka',34.66798,135.50266,90,3000,'~¥2.500–4.000','Reservar antes del viaje','','Hamburguesa de wagyū con hospitalidad de otro nivel (vuestro reel).','Reservad online antes de volar: se llena.','','https://www.instagram.com/reel/DaFSecnsYQj/'),
+umeda_sky:      P('Umeda Sky Building','mirador','Osaka',34.7052,135.4903,75,2000,'¥2.000 (Jardín Flotante)','9:30–22:30 (última entrada 22:00)','https://www.skybldg.co.jp/','Las dos torres unidas por el "Jardín Flotante": azotea abierta al cielo, entre los 20 edificios top del mundo según DK. La vista nocturna de Osaka.','De noche impresiona más que de día; el atardecer (~18:30 en abril) es la franja estrella. Se llega en 7 min a pie desde la estación de Osaka/Umeda.'),
 usj:            P('Universal Studios Japan','otro','Osaka',34.6654,135.4323,540,8600,'Entrada ~¥8.600 + Express opcional','~9:00–19:00 (varía por día)','https://www.usj.co.jp/','El parque de Universal en Osaka con Super Nintendo World (Mario Kart, Yoshi), Harry Potter, Minions y Jurassic Park.','Entrada con FECHA en la web oficial semanas antes. Para Nintendo World: entrad a la apertura o sacad turno (area timed entry) en la app nada más cruzar la puerta. El Express Pass ahorra horas de cola en abril.'),
 /* ---- Hiroshima / Miyajima ---- */
 atomic_dome:    P('Cúpula de la Bomba Atómica','museo','Hiroshima',34.3955,132.4536,30,0,'Gratis','Siempre visible','','El esqueleto del edificio de 1915 que quedó en pie bajo el hipocentro. Patrimonio de la Humanidad.',''),
@@ -1464,6 +1465,9 @@ post:T(O('shinkansen','Shinkansen de vuelta',85,10620,'Hiroshima ~19:30 → Shin
      mandan solos (v2, decisión del usuario): 56 de 60 tienen parada
      y 4 se descartan con motivo (109, Hiroo, Nihonbashi, Jimbōchō);
      a cambio entran Himeji y Tsukiji por puro mérito.
+   - v3 (contrastada con el canon de imprescindibles): el castillo de
+     Osaka VUELVE (decisión del usuario), y entran Umeda Sky de noche
+     y Sanjūsangen-dō (lo apuntó María). Nada del top se pierde.
    - El 19 de abril es EL CUMPLE: Fushimi al alba, Uji, Himeji y cena
      de celebración. El Museo de la Paz se ve el 20, a propósito.
    - Más que las tres grandes: Nikko, Kanazawa, Shirakawa-gō, Takayama
@@ -1555,11 +1559,12 @@ const RUTA_DAYS = [
   S('kiyomizu','07:30',90,'A las 7:30 tendréis la terraza casi sola; a las 10 es un festival escolar.'),
   S('catalog_sannenzaka','09:15',45,'Las cuestas de madera: fotos AHORA, antes de las hordas.'),
   S('kodaiji','10:15',45,'El templo de la viuda de Hideyoshi: bambú y jardín zen sin las colas de al lado.'),
-  S('catalog_higashiyama','11:15',60,'Callejeo por Higashiyama y Yasaka Pagoda.'),
-  S('maria_issen_yoshoku_kioto_y_nara','12:30',60,'Comida: el okonomiyaki histórico de Gion que apuntó María.'),
-  S('catalog_nijo_castle','14:15',90,'El castillo del shōgun y sus suelos de ruiseñor (chirrían a propósito).'),
-  S('nishiki','16:30',60,'El mercado Nishiki: tako tamago y encurtidos de merienda.'),
-  S('catalog_shijo_kawaramachi','17:30',75,'Teramachi y compras de la tarde.'),
+  S('catalog_higashiyama','11:15',45,'Callejeo por Higashiyama y Yasaka Pagoda.'),
+  S('maria_sanjusangen_do_kioto_y_nara','12:15',45,'Bus 10 min: las 1.001 Kannon doradas en fila, una de las salas más sobrecogedoras de Japón (María la apuntó; prohibido fotografiar, imposible olvidar).'),
+  S('maria_issen_yoshoku_kioto_y_nara','13:30',60,'Comida: el okonomiyaki histórico de Gion que apuntó María.'),
+  S('catalog_nijo_castle','15:00',90,'El castillo del shōgun y sus suelos de ruiseñor (chirrían a propósito).'),
+  S('nishiki','16:45',45,'El mercado Nishiki: tako tamago y encurtidos de merienda.'),
+  S('catalog_shijo_kawaramachi','17:45',60,'Teramachi y compras de la tarde.'),
   S('maria_k36_the_bar_rooftop_kioto_y_nara','19:30',60,'Copa en el rooftop K36 (María dixit) y cena por Kiyamachi.'),
 ]},
 {date:'2027-04-18', city:'Kioto', icon:'🎋', stay:'Kioto zona Shijō (por reservar)',
@@ -1610,19 +1615,21 @@ const RUTA_DAYS = [
   S('kofukuji','14:30',45,'La pagoda de 5 pisos, recién restaurada.'),
   S('naramachi','15:30',60,'Las machiya del casco viejo: cafés y tiendas de artesanos.'),
   S('nakatanidou','16:45',20,'El mochi más rápido de Japón: el show del machacado y a comerlo caliente.'),
+  S('shitennoji','18:30',40,'Kintetsu de vuelta y metro a Tennōji: el recinto del templo más antiguo del país (593) al atardecer, con la pagoda recortada. Estáis a 10 min a pie de Shinsekai.'),
   S('shinsekai','19:30',90,'Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).'),
 ]},
 {date:'2027-04-23', city:'Osaka', icon:'🍄', stay:'Osaka, Namba (por reservar)',
   note:'USJ: JR Loop + rama Sakurajima a Universal City, 15 min desde Nishikujō.', stops:[
   S('usj','09:00',540,'Día entero: a la apertura y directos a Super Nintendo World (turno de área en la app). Express Pass = horas de vida.'),
+  S('umeda_sky','19:45',75,'Si el parque os deja vivos: JR Loop a Osaka y el Jardín Flotante de noche, la azotea abierta al cielo. Cena en Umeda y a casa en Midōsuji.'),
 ]},
 {date:'2027-04-24', city:'Tokio', icon:'🚄', stay:'APA Asakusabashi (AMPLIAR reserva: entrar hoy 24)',
   note:'Mañana de mercado · Nozomi 13:50 → Tokio 16:24 · la tarde cae sola: todo pegado a la estación.', stops:[
-  S('kuromon','08:30',60,'Desayuno de mercado en Kuromon: atún, melón y lo que caiga.'),
-  S('doguyasuji','09:45',30,'La calle del menaje: cuchillos y moldes de tako-yaki de recuerdo.'),
-  S('shitennoji','10:30',60,'El templo más antiguo del país (593), fundado por el príncipe Shōtoku.'),
-  S('catalog_namba','11:45',30,'Último neón de Namba y Den Den Town de pasada.'),
-  S('catalog_denden_town','12:15',30,'El Akihabara de Osaka, camino del tren.'),
+  S('kuromon','08:15',45,'Desayuno de mercado en Kuromon: atún, melón y lo que caiga.'),
+  S('osaka_castle','09:30',90,'Tanimachi 10 min: el castillo de Hideyoshi entre fosos ciclópeos y 600 cerezos. El parque y las murallas son lo grande; el interior-museo, opcional si vais bien de hora.'),
+  S('doguyasuji','11:30',30,'De vuelta en Namba: la calle del menaje, cuchillos y moldes de tako-yaki.'),
+  S('catalog_namba','12:05',25,'Último neón de Namba.'),
+  S('catalog_denden_town','12:35',25,'El Akihabara de Osaka, camino del hotel a por maletas.'),
   S('tokyo_st','16:30',45,'Llegáis A la estación: Character Street en el sótano (Ghibli, Pokémon).'),
   S('apa_asakusabashi','17:45',30,'Check-in APA (reserva ampliada al 24) y a la calle.'),
   S('catalog_ginza','18:30',75,'Ginza encendida: papelería Itoya, Uniqlo de 12 plantas.'),
@@ -1731,7 +1738,7 @@ const isoDate = d => {
   return `${y}-${m}-${day}`;
 };
 const addDays = (base,n) => { const d = new Date(base); d.setDate(d.getDate()+n); return d; };
-const CATALOG_VERSION = 'sitios-japon-2026-07-19-v12-ruta2';
+const CATALOG_VERSION = 'sitios-japon-2026-07-19-v13-ruta3';
 
 function softAreaPolygon(lat, lng, radiusLat, radiusLng, points){
   points = points || 36;
@@ -4357,8 +4364,9 @@ function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
     🧠 <b>La Ruta 21 días</b> · diseñada sobre TODO lo apuntado (nuestros + Dani + María + Insta + IA)
-    y curada a criterio: casi todos los repetidos tienen parada (4 descartes razonados) y entran
-    Himeji o Tsukiji por mérito. Trenes, comidas y noches resueltos; el 19-abr es el 🎂 y se celebra.
+    y contrastada con el canon de imprescindibles: casi todos los repetidos tienen parada (4
+    descartes razonados) y entran Himeji, Tsukiji, el castillo de Osaka o Umeda Sky por mérito.
+    Trenes, comidas y noches resueltos; el 19-abr es el 🎂 y se celebra.
     No es el viaje: plantad con ＋ lo que os convenza. El documento 📄 la cuenta hora a hora.</div>`;
   html += RUTA_DAYS.map((rd, i) => {
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));

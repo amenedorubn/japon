@@ -92,6 +92,10 @@ check('ruta: los descartes son de verdad (ninguno tiene parada)',
   Object.keys(OMITTED_TWINS).every(id => !rutaIds.has(id)));
 check('ruta: a cambio entran Himeji y Tsukiji por criterio (v2)',
   rutaIds.has('himeji_castle') && rutaIds.has('tsukiji'));
+// v3 (decisión del usuario): el castillo de Osaka VUELVE y el canon de
+// imprescindibles queda cubierto (Umeda Sky y Sanjūsangen-dō entran).
+check('ruta v3: castillo de Osaka dentro (decisión del usuario), Umeda Sky y Sanjūsangen-dō dentro',
+  ['osaka_castle', 'umeda_sky', 'maria_sanjusangen_do_kioto_y_nara'].every(id => rutaIds.has(id)));
 
 // ================= 3b) EL 19 DE ABRIL ES EL CUMPLE =================
 const cumple = R[11];
