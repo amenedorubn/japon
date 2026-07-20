@@ -55,7 +55,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('live: v2 days restored with arrays repaired', Array.isArray(api.state.days) && api.state.days.length === 21 &&
     api.state.days.every(d => Array.isArray(d.stops) && Array.isArray(d.trans)));
   check('live: tripTitle adopted', api.state.tripTitle === livePayload.tripTitle);
-  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 299);
+  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 300);
   // Fase 10b: la consolidación única corre al adoptar el payload real
   check('live: original model consolidated exactly once (migratedOrig set)', !!api.state.migratedOrig);
   check('live: no transfers mirror kept in the local model', !('transfers' in api.state));

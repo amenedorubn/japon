@@ -60,7 +60,7 @@ const dupIds = ids.filter((x, i) => ids.indexOf(x) !== i);
 // María es aditiva (Exploración, provenance 'maria'): se excluye del recuento
 // del catálogo fusionado para que re-importar sus listas no rompa el test.
 const nonMaria = api.state.places.filter(p => p.provenance !== 'maria');
-check('seed: 299 merged places excl. María (190 shared + 108 curated + Louis House booking)', nonMaria.length === 299);
+check('seed: 300 merged places excl. María (190 shared + 109 curated + Louis House booking)', nonMaria.length === 300);
 check('seed: María curation seeded as Exploración (provenance maria)', api.state.places.some(p => p.provenance === 'maria'));
 check('seed: no duplicate ids', dupIds.length === 0);
 const aliasKeys = Object.keys(api.LEGACY_PID_MAP);
