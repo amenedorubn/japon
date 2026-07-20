@@ -89,9 +89,9 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
 
 (async () => {
   // Boot sanity: app evaluated, merged seed built (2 airports + 38 catalog +
-  // 150 dani + 109 curated folded in = 299, Fase 10a/12; +1 Louis House (Fase 12 §9.4) = 300)
+  // 150 dani + 110 curated folded in = 300, Fase 10a/12; +1 Louis House (Fase 12 §9.4) = 301)
   // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
-  check('boot: merged seed state built (300 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 300);
+  check('boot: merged seed state built (301 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 301);
 
   // Open the itinerary tab (12.54: el mapa vive embebido en Itinerarios; ya no
   // hay pestaña "Mapa" suelta). 12.56: el mapa muestra SOLO el itinerario activo

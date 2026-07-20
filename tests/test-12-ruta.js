@@ -45,7 +45,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   '"use strict";' + appJs + `
   ;return { state, RUTA_DAYS, SEED_DAYS, RUTA_DOC_URL, ITIN_RING, TWIN_GROUPS,
             itineraryDays, itineraryPlaceIds, canonicalPid, placeById, placeView,
-            provenanceOf, setItinMode, plantFromProposal, groupIdsOf };`);
+            provenanceOf, setItinMode, plantFromProposal, groupIdsOf,
+            NIGHTS, SKIPPED, TRANSPORT, PRICES, renderGuia, renderHoteles };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -82,12 +83,13 @@ const OMITTED_TWINS = {
   hiroo: 'zona residencial de cenas: cruzar la ciudad por ella no compensa (Ebisu la sustituye)',
   nihonbashi: 'un puente historico bajo una autopista: 2 min de foto que no sostienen parada',
   jimbocho: 'librerias de viejo en japones: nicho; su hueco lo ganan Tsukiji y Hamarikyu',
+  kakiya: 'ostras: fuera a proposito (a alguien no le gustan); Miyajima se come con anago-meshi',
 };
 const rutaIds = api.itineraryPlaceIds('ruta');
 const missing = api.TWIN_GROUPS.filter(g =>
   !api.groupIdsOf(g.anchor).some(id => rutaIds.has(id)));
-check('ruta: 56 de 60 gemelos con parada; los que faltan son EXACTAMENTE los 4 descartes documentados',
-  missing.length === 4 && missing.every(g => g.anchor in OMITTED_TWINS));
+check('ruta: 55 de 60 gemelos con parada; los que faltan son EXACTAMENTE los 5 descartes documentados',
+  missing.length === 5 && missing.every(g => g.anchor in OMITTED_TWINS));
 check('ruta: los descartes son de verdad (ninguno tiene parada)',
   Object.keys(OMITTED_TWINS).every(id => !rutaIds.has(id)));
 check('ruta: a cambio entran Himeji y Tsukiji por criterio (v2)',
@@ -146,6 +148,42 @@ check('usj: existe, es idea añadida a mano (provenance ai, regla 12.48) y cae e
 // ================= 7) LA POLÍTICA DE ESCRITURA NO SE TOCA =================
 check('firebase: siguen existiendo exactamente 3 call-sites de fb.set',
   (appJs.match(/fb\.set\(/g) || []).length === 3);
+
+// ================= 8) MIYAJIMA v4: SIN OSTRAS, CON MAREAS =================
+const miyajima = R[12]; // 20-abr
+check('miyajima: el día 20 NO lleva ostras (kakiya) y SÍ anago-meshi (decisión del usuario)',
+  miyajima.date === '2027-04-20' &&
+  !miyajima.stops.some(s => s.pid === 'kakiya') &&
+  miyajima.stops.some(s => s.pid === 'anago_meshi'));
+check('miyajima: la parada del torii documenta las mareas reales del 20-abr',
+  miyajima.stops.some(s => s.pid === 'itsukushima' && /pleamar|09:05/.test(s.note || '')) &&
+  miyajima.stops.some(s => /bajamar|15:21/.test(s.note || '')));
+check('catálogo: anago-meshi existe, es de Miyajima y no es marisco crudo',
+  !!api.placeById('anago_meshi') && api.placeView(api.placeById('anago_meshi')).zone === 'miyajima');
+
+// ================= 9) LA WEB DOCUMENTA NOCHES / TRANSPORTES / PRECIOS / DESCARTES =================
+check('noches: las 20 noches con Louis House y APA marcadas RESERVADO (ok)',
+  api.NIGHTS.length === 12 && // 12 tramos (algunos multi-noche)
+  api.NIGHTS.some(n => /Louis House/.test(n[1]) && n[2] === 'ok') &&
+  api.NIGHTS.some(n => /APA/.test(n[1]) && n[2] === 'amp'));
+check('transportes: hay reservas obligatorias (Kagayaki, buses Nouhi) y recomendadas (Nozomi)',
+  api.TRANSPORT.some(t => t[0] === 'obl' && /Kagayaki/.test(t[3])) &&
+  api.TRANSPORT.some(t => t[0] === 'obl' && /Nouhi/.test(t[3])) &&
+  api.TRANSPORT.some(t => t[0] === 'rec' && /Nozomi/.test(t[3])));
+check('precios: cubren hotel, comida, transporte y el veredicto JR Pass',
+  ['hotel', 'comida', 'transporte', 'bono'].every(c => api.PRICES.some(p => p[0] === c)) &&
+  api.PRICES.some(p => /JR Pass/.test(p[1]) && /NO compensa/.test(p[3])));
+check('descartes: documenta Nagano y Nagoya como zonas fuera, y las ostras',
+  api.SKIPPED.some(s => s[0] === 'zona' && /Nagano/.test(s[1])) &&
+  api.SKIPPED.some(s => s[0] === 'zona' && /Nagoya/.test(s[1])) &&
+  api.SKIPPED.some(s => /[Oo]stras/.test(s[1])));
+// Render real: las secciones pintan en el DOM (contrato de la Guía/Hoteles).
+api.renderHoteles(); api.renderGuia();
+check('render: Hoteles pinta las noches y Guía pinta transportes/precios/descartes',
+  /Louis House/.test(els['#nightsList'].innerHTML) &&
+  /Kagayaki/.test(els['#transportList'].innerHTML) &&
+  /JR Pass/.test(els['#pricesList'].innerHTML) &&
+  /Nagano/.test(els['#skippedList'].innerHTML));
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

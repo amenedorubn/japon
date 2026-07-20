@@ -83,8 +83,8 @@ Antes de proceder, pregunta si:
 ## 🚀 Estado actual
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.59** (Ruta v3, contrastada con el canon: castillo de Osaka de vuelta,
-  Umeda Sky y Sanjūsangen-dō dentro; el 19-abr sigue protegido como cumpleaños).
+  materialización **12.60** (Ruta v4: mareas de Miyajima y sin ostras; Guía con secciones nuevas
+  de Transportes, Precios, Lo que dejamos fuera, y las 20 noches en Hoteles).
 - Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Propuesta · Dani · María) ·
   Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
