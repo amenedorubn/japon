@@ -130,7 +130,7 @@ check('real build: AI_PLACES is empty (no real data curated yet)', Array.isArray
 check('real build: INSTA_PLACES is empty (no real data curated yet)', Array.isArray(api.INSTA_PLACES) && api.INSTA_PLACES.length === 0);
 check('real build: ensureAiPlaces() exposed and a no-op on empty', api.ensureAiPlaces() === false);
 check('real build: ensureInstaPlaces() exposed and a no-op on empty', api.ensureInstaPlaces() === false);
-check('real build: boot unaffected, seed still 439 places', api.state.places.filter(Boolean).length === 439);
+check('real build: boot unaffected, seed still 440 places', api.state.places.filter(Boolean).length === 440);
 
 // ---- 5) coexistence (Fase 1): a synthetic 'ai'-imported place and a
 // synthetic unattributed ('ai' fallback) place both resolve to 'ai',
