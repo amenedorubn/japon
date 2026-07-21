@@ -442,6 +442,23 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .seed-row:first-of-type{border-top:none;}
 .seed-row .sr-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);min-width:38px;}
 .seed-row .sr-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 12.62 · "Si sobra tiempo": <details> nativo, capa opcional aparte del
+   plan (nunca dentro de .timeline ni de .seed-day .rows). Recede a
+   propósito: sin acento rojo, Washi sobre Washi, se abre sin animación
+   (coherente con "lo frecuente casi no se anima"). */
+.spare-time{margin-top:10px;padding:0;overflow:hidden;}
+.spare-time summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
+  padding:10px 12px;min-height:44px;font-size:12.5px;font-weight:700;color:var(--muted);}
+.spare-time summary::-webkit-details-marker{display:none;}
+.spare-time summary::before{content:"▸";font-size:11px;transition:transform var(--dur-2) var(--ease);}
+.spare-time[open] summary::before{transform:rotate(90deg);}
+.spare-time summary .pill{font-size:10.5px;padding:1px 7px;}
+.spare-time-list{padding:0 12px 12px;}
+.spare-time-item{padding:8px 0;border-top:1px solid var(--hairline);font-size:12.5px;}
+.spare-time-item:first-child{border-top:1px solid var(--hairline);}
+.spare-time-item b{font-size:13px;}
+.spare-time-item small{color:var(--muted);}
+.spare-time-item p{margin:2px 0 0;color:var(--muted);line-height:1.4;}
 .places-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
 .places-grid.grouped{display:block;}
 .ideas-group{margin-bottom:26px;}
@@ -1147,7 +1164,7 @@ okonomimura:    P('Okonomimura','comida','Hiroshima',34.3907,132.4600,60,1200,'~
 itsukushima:    P('Santuario Itsukushima y O-torii','templo','Miyajima',34.2959,132.3198,90,500,'¥300 santuario (+¥300 tesoro)','6:30–18:00','https://www.itsukushimajinja.jp/','El santuario flotante y su torii de 16 m sobre el mar. Una de las "tres vistas de Japón".','Con marea alta "flota"; con marea baja se camina hasta el torii. Mirad la tabla de mareas y pillad ambas si podéis.'),
 daishoin:       P('Templo Daishō-in','templo','Miyajima',34.2925,132.3180,60,0,'Gratis','8:00–17:00','https://daisho-in.com/','El templo más bonito de la isla: 500 estatuillas rakan con gorritos, cuevas de linternas y nadie.','La mayoría de turistas no sube: error que aprovecharéis.'),
 kakiya:         P('Kakiya (ostras)','comida','Miyajima',34.2994,132.3217,45,2000,'~¥2.000','10:00–18:00','https://www.kakiya.jp/','Las famosas ostras de Miyajima a la brasa, en la calle principal.','El "kakiya teishoku" (menú degustación) si vais con hambre.'),
-anago_meshi:    P('Anago-meshi (anguila de mar)','comida','Miyajima',34.2960,132.3040,60,2500,'~¥2.500–3.000','10:00–19:00 (varía)','https://anagomeshi.com/','La OTRA gran especialidad de Miyajima (que no son ostras): anguila de mar a la brasa sobre arroz cocido en su caldo. La casa histórica es Ueno, junto al embarcadero de Miyajimaguchi; en la isla, Fujitaya.','Nada de marisco crudo ni ostras: esto es anguila glaseada, dulce y crujiente. Ueno abre cola pronto; pedid el bento para llevar si hay lista.'),
+anago_meshi:    P('Anago-meshi (anguila de mar)','comida','Miyajima',34.2960,132.3040,60,2500,'~¥2.500–3.000','10:00–19:00 (varía)','https://anagomeshi.com/','La otra gran especialidad culinaria de Miyajima, menos turística y tan emblemática como el resto: anguila de mar a la brasa sobre arroz cocido en su caldo. La casa histórica es Ueno, junto al embarcadero de Miyajimaguchi; en la isla, Fujitaya.','Anguila glaseada, dulce y crujiente. Ueno abre cola pronto; pedid el bento para llevar si hay lista.'),
 momiji:         P('Momiji manjū (probar)','comida','Miyajima',34.2985,132.3210,20,200,'¥100–200/ud','Tiendas 9:00–18:00','','El dulce de la isla: bizcochito de arce relleno (prueba el de matcha o el frito, age-momiji).',''),
 /* ---- Curación experta de la Ruta v2 (12.58) ---- */
 himeji_castle:  P('Castillo de Himeji','museo','Himeji',34.8394,134.6939,105,1000,'¥1.000','9:00–17:00 (última entrada 16:00)','https://www.city.himeji.lg.jp/castle/','La Garza Blanca: el castillo original más espectacular de Japón (nunca destruido, Patrimonio de la Humanidad). A 45 min de Kioto en Nozomi, de paso hacia Hiroshima.','Subid descalzos las 6 plantas del torreón: las vigas son de 1609. La entrada combinada con el jardín Kōko-en (+¥50) vale la pena si sobra hora.'),
@@ -1610,7 +1627,7 @@ const RUTA_DAYS = [
   S('peace_museum','08:30',105,'El museo al abrir (8:30): duro e imprescindible. Luego el parque y la llama.'),
   S('atomic_dome','10:30',30,'La cúpula en pie bajo el hipocentro. Silencio y a la estación.'),
   S('itsukushima','12:30',75,'Mareas del 20-abr 2027 (verificadas contra el JMA oficial): llegáis con el torii AÚN EN EL AGUA (pleamar 09:05, 3,35 m, bajando). JR 25 min + ferry 10.'),
-  S('anago_meshi','13:50',60,'Comida: anago-meshi, la anguila de mar a la brasa sobre arroz. NADA de ostras: dulce, glaseada y crujiente. (Ueno junto al ferry o Fujitaya en la isla.)'),
+  S('anago_meshi','13:50',60,'Comida: anago-meshi, la anguila de mar a la brasa sobre arroz, dulce y glaseada. (Ueno junto al ferry o Fujitaya en la isla.)'),
   S('daishoin','15:10',60,'A la vuelta, BAJAMAR (15:20, 0,17 m, verificada JMA): se camina hasta la base del torii para la foto de cerca. Luego Daishō-in: 500 rakan con gorritos. Con energía: ropeway al Misen (+2 h).'),
   S('momiji','16:20',20,'Momiji manjū recién hecho para el ferry de vuelta.'),
   S('nakasu_yatai','20:30',90,'Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.'),
@@ -1681,6 +1698,122 @@ const RUTA_DAYS = [
 {date:'2027-04-28', city:'Vuelo', icon:'✈️', flight:[4], stops:[],
   note:'HEL 05:55 · AY1661 16:40 → MAD 20:05. Se aterriza con el viaje entero en la mochila.'},
 ];
+
+/* ================================================================
+   DAY_EXTRAS (12.62) · "SI SOBRA TIEMPO" — capa OPCIONAL, de primera
+   clase, separada del plan. Un eje nuevo y distinto de procedencia,
+   estado y zona: NO son paradas, no cuentan para nada, no aparecen
+   en el mapa ni son plantables. Existen para que ningún día termine
+   en "hemos acabado pronto y no sabemos qué hacer": si vais más
+   rápido de lo previsto, aquí hay 2-4 sitios YA investigados, de bajo
+   desvío desde una parada real de ese día, listos sin tener que
+   buscar sobre la marcha.
+
+   Clave = fecha ISO (compartida por Realidad/Ruta/Propuesta/Dani: los
+   21 días son fijos, M10). Cada entrada: {name, near, mins, why}.
+   `near` = desde qué parada ya planificada · `mins` = minutos de
+   desvío a pie/transporte corto (una estimación, no un tiempo de
+   viaje reservado) · `why` = la razón concreta de que merezca la
+   pena (belleza / algo único / buena foto / joya escondida), nunca
+   relleno genérico ("también podéis visitar X").
+
+   Deliberadamente SIN pid/lat/lng: no son lugares curados del
+   catálogo (evita inflar PLACES con ~60 fichas de baja prioridad).
+   Si algún día se quiere pin en el mapa para uno de ellos, se
+   promociona a una entrada normal de PLACES con su propio pid.
+   Investigado el 21-jul-2026 (4 agentes de investigación en paralelo
+   + verificación propia para Tokio); marcado low-confidence donde la
+   fuente lo señaló explícitamente. Sin datos para los días de vuelo
+   (8 y 28): no tiene sentido "si sobra tiempo" sin plan del que sobrar.
+================================================================ */
+const DAY_EXTRAS = {
+  '2027-04-09': [ // Llegada · Asakusa/Skytree
+    {name:'Asakusa Jinja', near:'Sensō-ji', mins:3, why:'El santuario pegado al templo, dedicado a sus tres fundadores: casi nadie lo ve porque todos van directos a la pagoda.'},
+    {name:'Hanayashiki', near:'Sensō-ji', mins:2, why:'El parque de atracciones más antiguo de Japón (1853), diminuto y retro, a dos pasos de Nakamise: rareza divertida si el jet lag da tregua.'},
+  ],
+  '2027-04-10': [ // Meiji/Harajuku/Shibuya/Daikanyama
+    {name:'Tōkyū Plaza Omotesandō (entrada caleidoscopio)', near:'Omotesandō/Cat Street', mins:0, why:'La entrada de espejos más fotografiada de Tokio, justo en la acera de Omotesandō que ya cruzáis.'},
+    {name:'Nonbei Yokochō ("callejón de los borrachos")', near:'Cruce de Shibuya', mins:2, why:'Un callejón de bares diminutos de posguerra pegado literalmente al cruce, con el ambiente de Golden Gai sin cruzar Tokio.'},
+    {name:'Miyashita Park (azotea)', near:'Shibuya → Daikanyama', mins:5, why:'Parque elevado sobre la antigua terminal de autobuses: verde, moderno y de camino si vais andando hacia Daikanyama.'},
+  ],
+  '2027-04-11': [ // Tsukiji/Hamarikyū/Ueno/Akihabara/Tochō/Shinjuku
+    {name:'Tsukiji Hongan-ji', near:'Mercado de Tsukiji', mins:0, why:'Un templo budista con fachada de piedra de inspiración india, único en Tokio: está en la misma entrada del mercado exterior, cero desvío.'},
+    {name:'Shinobazu-ike y Bentendō', near:'Parque Ueno', mins:5, why:'El estanque de lotos con la islita del templo Bentendō en medio: la parte de Ueno que la mayoría no cruza.'},
+    {name:'Santuario Kanda Myōjin', near:'Akihabara', mins:10, why:'Santuario milenario que ahora bendice startups y ánime (colabora con series conocidas): encaja con el perfil frikis del grupo camino de Akiba.'},
+  ],
+  '2027-04-12': [ // Nikko
+    {name:'Taiyūin-byō (mausoleo de Iemitsu)', near:'Tōshōgū/Futarasan', mins:5, why:'El otro gran mausoleo de Nikko, mismo nivel de talla y laca que Tōshōgū con muchísima menos gente: el "Tōshōgū tranquilo".'},
+    {name:'Nikkō Tamozawa Goyōtei', near:'Puente Shinkyō', mins:5, why:'La antigua villa imperial de verano (106 salas, jardín paisajista): elegancia Meiji casi vacía, buen primer o último parón del día.'},
+    {name:'Roca "Kanman" (fin del sendero de Kanmangafuchi)', near:'Kanmangafuchi', mins:0, why:'Al final de la fila de jizōs hay una talla en sánscrito atribuida a Kōbō Daishi: cuesta cero, es solo seguir el camino hasta el final.'},
+  ],
+  '2027-04-13': [ // Kanazawa día 1
+    {name:'Santuario Ōyama + jardín Gyokusen’inmaru', near:'Parque del castillo', mins:10, why:'Una puerta sintoísta rarísima (vidrieras holandesas del s. XIX) y, detrás, un jardín Edo restaurado pegado a la muralla que casi nadie visita.'},
+    {name:'Villa Seison-kaku', near:'Kenroku-en', mins:0, why:'Mansión samurái construida para la madre de un señor Kaga, justo en el borde de Kenroku-en: contrapunto íntimo al jardín grande.'},
+  ],
+  '2027-04-14': [ // Kanazawa día 2
+    {name:'Museo del pan de oro Yasue', near:'Higashi Chaya', mins:5, why:'Kanazawa hace el 99% del pan de oro de Japón: un museo pequeño y curioso que casi nadie de Higashi Chaya cruza a ver.'},
+    {name:'Paseo Kyōka no Michi (río Asano)', near:'Kazue-machi', mins:0, why:'600 m de sendero junto al río entre viejas cercas de madera, uniendo Kazue-machi con Higashi Chaya: parón de fotos con luz de tarde. Cierra los martes.'},
+  ],
+  '2027-04-15': [ // Takayama
+    {name:'Casas Kusakabe y Yoshijima', near:'Sanmachi Suji', mins:0, why:'Dos casonas de comerciantes de sake, Bien Cultural Importante, con estructuras de madera imponentes: mucho más tranquilas que las tiendas de la calle principal.'},
+    {name:'Takayama Jinya', near:'Puente Nakabashi', mins:1, why:'La única sede de gobierno del periodo Edo que queda en pie en Japón entera: salas de tatami y sala de interrogatorios, a un paso del puente.'},
+    {name:'Santuario Sakurayama Hachimangū + Museo Yatai', near:'Sanmachi Suji', mins:5, why:'Aquí se guardan 4 de los carros dorados del festival de Takayama fuera de temporada: la única forma de verlos de cerca sin coincidir con el matsuri.'},
+  ],
+  '2027-04-16': [ // Llegada Kioto · Gion/Pontochō
+    {name:'Gion Shirakawa (canal de Shimbashi)', near:'Hanamikōji', mins:4, why:'El rincón más fotogénico de Gion según casi todo el mundo que lo compara con Hanamikōji: sauces, canal, casas de té de madera, más tranquilo.'},
+    {name:'Parque Maruyama (detrás de Yasaka)', near:'Santuario Yasaka', mins:2, why:'El sakura llorón gigante iluminado de noche, y la mayoría se va directa a Pontochō sin cruzar la puerta de atrás de Yasaka.'},
+    {name:'Kiyamachi-dōri', near:'Pontochō', mins:0, why:'El canal Takase paralelo a Pontochō, con farolillos y mucha menos gente: paseo de después de cenar sin coste añadido.'},
+  ],
+  '2027-04-17': [ // Higashiyama
+    {name:'Callejón Ishibe-kōji', near:'Kōdai-ji', mins:3, why:'Una de las calles empedradas mejor conservadas de Kioto, con muchísima menos gente que Sannenzaka justo al lado.'},
+    {name:'Yasaka Kōshin-dō ("templo de los monos")', near:'Pagoda Yasaka', mins:4, why:'Un templo diminuto y explosivo de color, cubierto de cientos de amuletos-mono kukurizaru: la foto más singular de Higashiyama.'},
+    {name:'Rokkaku-dō (Chōhō-ji)', near:'Entre Nijō y Nishiki', mins:0, why:'Templo hexagonal que marca el centro geográfico del Kioto histórico, justo en la línea recta entre el castillo y el mercado: parón gratis de camino.'},
+  ],
+  '2027-04-18': [ // Arashiyama
+    {name:'Villa Ōkōchi Sansō', near:'Fin del bosque de bambú', mins:15, why:'Los jardines de un actor del cine mudo, con vistas panorámicas sobre Arashiyama que casi nadie llega a ver por seguir de largo el sendero de bambú. Incluye té y dulce.'},
+    {name:'Jōjakkō-ji y Gio-ji', near:'Otagi Nenbutsu-ji', mins:6, why:'Un templo con mirador sobre los tejados de Sagano y, al lado, un templo de musgo denso asociado a una cortesana del s. XII: el rincón más silencioso de Arashiyama.'},
+    {name:'Tōji-in', near:'Entre Ryōan-ji y Kinkaku-ji', mins:10, why:'Templo de los Ashikaga con jardín de estanque y las 15 estatuas de los shōgun, en la línea recta entre los dos templos grandes y casi siempre vacío.'},
+  ],
+  '2027-04-19': [ // Cumpleaños · Fushimi/Uji (antes de salir hacia Himeji)
+    {name:'Bambú secreto tras el Senbon Torii', near:'Fushimi Inari', mins:5, why:'Un desvío a la derecha del túnel principal, cerca de Okusha: un eco silencioso del bosque de bambú de Arashiyama sin nadie alrededor.'},
+    {name:'Santuario Ujigami', near:'Byōdō-in', mins:12, why:'Cruzando el río: el edificio de santuario más antiguo que se conserva en Japón (datado en 1060), Patrimonio de la Humanidad y prácticamente vacío.'},
+  ],
+  '2027-04-20': [ // Miyajima + Fukuoka
+    {name:'Pabellón Senjōkaku + pagoda de 5 pisos', near:'Santuario Itsukushima', mins:2, why:'El mejor ángulo elevado sobre el torii y el santuario, y un salón de madera sin lacar del s. XVI casi vacío justo al lado de la salida.'},
+    {name:'Parque Momijidani', near:'Santuario Itsukushima', mins:10, why:'Valle boscoso con arroyo y puentes de piedra, casi para vosotros solos. En abril el momiji está verde, no rojo (el color llega en noviembre), pero el paseo vale igual.'},
+    {name:'Centro de Cultura Akarenga (Fukuoka)', near:'Camino Tenjin → Nakasu', mins:5, why:'Un edificio de ladrillo de 1909 iluminado de noche, con el mejor reflejo desde el puente Nishinakajima: pocos turistas paran aquí.'},
+    {name:'Canal City Hakata (show de luces y agua)', near:'Yatai de Nakasu', mins:8, why:'Espectáculo gratuito de agua y proyección dentro del centro comercial, buen remate de noche antes o después de los yatai.'},
+  ],
+  '2027-04-21': [ // Fukuoka mañana
+    {name:'Hakata Machiya Furusato-kan', near:'Kushida-jinja', mins:0, why:'Museo de casas de madera Meiji/Taishō justo enfrente del santuario, con la historia del festival Yamakasa: el desvío más pequeño posible.'},
+    {name:'Tōchō-ji (gran Buda de madera)', near:'Kushida-jinja', mins:7, why:'El Buda de madera sentado más grande de Japón (10,8 m) y un pasadizo oscuro bajo la estatua: energía muy distinta a los santuarios del resto del día.'},
+    {name:'Ruinas del castillo de Fukuoka + jardín japonés de Ōhori', near:'Parque Ōhori', mins:0, why:'Las murallas y un mirador 360° justo al borde oeste del parque, y dentro del propio parque un jardín de paseo tradicional (¥250) que casi nadie visita.'},
+  ],
+  '2027-04-22': [ // Nara
+    {name:'Santuario Tamukeyama Hachimangū', near:'Terraza Nigatsu-dō', mins:4, why:'Camino de farolillos de piedra bajando hacia Kasuga, con la atmósfera de Kasuga Taisha y sin la multitud.'},
+    {name:'Estanque Sarusawa', near:'Pagoda de Kōfuku-ji', mins:1, why:'El reflejo clásico de la pagoda de 5 pisos en el agua, con sauces: casi todo el mundo pasa de largo camino de Naramachi.'},
+    {name:'Templo Gangō-ji', near:'Naramachi', mins:4, why:'Patrimonio de la Humanidad con tejas originales del s. VI todavía puestas: templo silencioso escondido dentro del propio casco antiguo.'},
+  ],
+  '2027-04-23': [ // USJ + Umeda
+    {name:'Takimi Kōji (callejón retro Shōwa)', near:'Umeda Sky Building', mins:0, why:'Una calle recreada de los años 20-30 en el sótano del propio edificio: ambientazo y comida barata sin salir del sitio.'},
+    {name:'Santuario Ohatsu Tenjin', near:'Camino a Osaka Station', mins:12, why:'Santuario diminuto entre rascacielos, escenario de una obra clásica de Chikamatsu: contraste humano después de tanto skyline.'},
+  ],
+  '2027-04-24': [ // Osaka mañana + Tokio noche
+    {name:'Santuario Toyokuni (Hōkoku Jinja)', near:'Castillo de Osaka', mins:3, why:'Dedicado a Hideyoshi, con ema en forma de calabaza (su emblema de batalla): dentro del propio parque del castillo, nadie para aquí.'},
+    {name:'Hōzenji Yokochō', near:'Doguyasuji', mins:2, why:'Callejón de piedra con farolillos y la estatua de musgo a la que se le echa agua para la suerte: literalmente a una manzana.'},
+    {name:'Jardín de la azotea de KITTE', near:'Estación de Tokio', mins:0, why:'Terraza gratuita con la mejor vista de la fachada de ladrillo de 1914 de la estación: sin coste y sin desvío.'},
+  ],
+  '2027-04-25': [ // Kamakura + Yokohama
+    {name:'Templo Hōkoku-ji ("templo del bambú")', near:'Centro de Kamakura', mins:15, why:'Un bosquecillo de bambú con casa de té y matcha servido entre las cañas: la versión tranquila y pequeña de Arashiyama, sin las hordas.'},
+    {name:'Muelle Osanbashi', near:'Minato Mirai', mins:0, why:'Cubierta de madera ondulada que hace de mirador del puerto: la foto de Yokohama que no sale en las postales típicas, de camino.'},
+  ],
+  '2027-04-26': [ // Monte Fuji
+    {name:'Kawaguchiko Music Forest', near:'Orilla norte del lago', mins:5, why:'Jardín europeo con cajas de música antiguas y el Fuji de fondo: parón con encanto si el bus de vuelta (17:00) deja margen.'},
+  ],
+  '2027-04-27': [ // Despedida
+    {name:'Jardín Kyū-Yasuda Teien', near:'Kameido Tenjin', mins:10, why:'Jardín tradicional gratuito y casi vacío junto a Kinshichō, de camino entre Kameido y la vuelta hacia el hotel.'},
+  ],
+};
 
 /* ---------------- Checklist de preparativos ---------------- */
 const CHECKLIST = [
@@ -1772,7 +1905,7 @@ const SKIPPED = [
   ['criterio','Odaiba','Queda como plan B del día del Fuji si el tiempo lo estropea.'],
   ['criterio','Shibuya 109, Hiroo, Nihonbashi, Jimbōchō','Los 4 "gemelos" descartados: centro comercial que se ve desde el cruce / cruzar la ciudad para cenar / puente bajo una autopista / librerías de viejo en japonés.'],
   ['criterio','Katsuō-ji (los daruma de Osaka)','Media jornada a las montañas del norte; solo si sobra un día en Osaka.'],
-  ['criterio','Ostras de Miyajima','Fuera a propósito (a alguien no le gustan): la comida de la isla es anago-meshi, anguila de mar a la brasa.'],
+  ['criterio','Ostras de Miyajima','Cambiadas por anago-meshi: la otra gran especialidad culinaria de la isla, menos turística y igual de emblemática.'],
 ];
 
 /* ---------------- Transportes: qué coger (Ruta v4) ----------------
@@ -4475,6 +4608,24 @@ function plantFromProposal(pid, dayIdx){
    plantable con ＋, exactamente como la Propuesta (regla 12.49: ninguna
    propuesta entra sola en el plan). El documento hora a hora se descarga
    con el botón 📄 (RUTA_DOC_URL). --- */
+/* DAY_EXTRAS (12.62) · bloque "Si sobra tiempo", colapsado por defecto
+   (<details> nativo: sin JS de toggle, accesible por teclado, sin animación
+   de apertura — coherente con "lo frecuente casi no se anima"). Nunca se
+   muestra dentro de .timeline ni junto a los .stop: es un material Washi
+   aparte, para que se lea de un vistazo como "no es el plan". */
+function spareTimeHTML(date){
+  const extras = DAY_EXTRAS[date];
+  if(!extras || !extras.length) return '';
+  return `<details class="m-washi spare-time">
+    <summary>🎁 Si sobra tiempo <span class="pill">${extras.length}</span></summary>
+    <div class="spare-time-list">
+      ${extras.map(x => `<div class="spare-time-item">
+        <b>${esc(x.name)}</b> <small>· ${x.mins === 0 ? 'en la puerta de' : x.mins + ' min de'} ${esc(x.near)}</small>
+        <p>${esc(x.why)}</p>
+      </div>`).join('')}
+    </div>
+  </details>`;
+}
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
@@ -4504,6 +4655,7 @@ function renderRutaItinerary(){
       ${rd.note ? `<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">🚉 ${esc(rd.note)}</div>` : ''}
       ${(rd.flight && !rows) ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
       ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
+      ${spareTimeHTML(rd.date)}
     </div>`;
   }).join('');
   $('#dayPanel').innerHTML = html;
@@ -4716,6 +4868,8 @@ function renderItinerary(){
   html += '</div>';
   if(!d.stops.length) html += emptyDayHTML(d); // Fase 12: EmptyState · invitación de día libre
   html += seasonDayExtras(d); // Fase 12 · Stage 7: Now-Line + Recap durante/después del viaje
+  // 12.62: "si sobra tiempo" solo tiene sentido si HAY plan del que ir sobrado.
+  if(d.stops.length) html += spareTimeHTML(d.date);
   const nightHotel = hotelForNight(d.date); // dónde dormís esta noche (reserva confirmada → Foil)
   if(nightHotel) html += `<div class="night-pass m-foil">🛏 <b>${esc(nightHotel.name)}</b><div class="np-sub">Dónde dormís esta noche · reserva confirmada</div></div>`;
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;

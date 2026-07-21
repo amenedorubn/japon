@@ -68,6 +68,20 @@ diseñada sobre todo el catálogo, solo lectura y plantable con ＋, con documen
 **Propuesta** (IA, solo lectura, plantable con ＋) · **Dani** · **María** (referencias solo
 lectura).
 
+**Eje "Si sobra tiempo" (12.62):** capa OPCIONAL de primera clase, ortogonal a procedencia/
+estado/zona (§4). `DAY_EXTRAS` (constante en `index.html`, junto a `RUTA_DAYS`) mapea fecha ISO
+→ hasta 4 sugerencias de bajo desvío desde una parada YA planificada ese día, con nombre + desde
+qué parada + minutos de desvío + motivo concreto. `spareTimeHTML(date)` las pinta en un
+`<details class="m-washi spare-time">` (nativo, sin JS de toggle, colapsado por defecto: cero
+peso visual hasta que se abre) tanto en la vista Ruta (`renderRutaItinerary`, siempre que haya
+datos para esa fecha) como en Realidad (`renderItinerary`, solo si el día tiene paradas: no tiene
+sentido "sobrar tiempo" de un día vacío). Como las 21 fechas son fijas y compartidas por todos
+los itinerarios (M10), la misma entrada de `DAY_EXTRAS` sirve a cualquiera de ellos sin
+duplicar datos. Deliberadamente SIN `pid`/coordenadas ni pin de mapa (evita inflar el catálogo
+con ~50 fichas de baja prioridad); si algún extra concreto se quiere en el mapa, se promociona a
+una entrada normal de `PLACES` con su propio pid. No son paradas: no cuentan para el linaje de
+gemelos ni para ninguna cobertura de la Ruta, no son plantables, no aparecen en el mapa.
+
 ## 4. Modelo de datos (`state`, persistido en localStorage `japon27_app_v1`)
 
 ```
@@ -224,8 +238,9 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.57 | `f2f9518`+`199c485`+`85f7bea` | **La Ruta 21 días** (petición del usuario: "el viaje perfecto" sobre todo lo apuntado) | Quinto itinerario **Ruta** (solo lectura, plantable, anillo propio, mapa por pertenencia, vuelos): 121 paradas/19 días útiles que cubren los 60 gemelos y 12 zonas (Nikko con noche, Kanazawa ×2, Shirakawa-gō, Takayama con ryokan, Kioto+Uji, Hiroshima, Miyajima, Fukuoka, Osaka+Nara+USJ, Kamakura+Yokohama, Fuji), anclada en Louis House 9–12 y APA 25–27 (propone ampliar al 24). Catálogo v11: **USJ** (petición), 5 sitios de Kanazawa, 3 de Fukuoka, 5 bases de hotel de la Ruta, zona Kanazawa. `Ruta-21-dias.docx` hora a hora (reservas con plazos, variante Narai-juku, descartes razonados) en el SHELL del SW (caché v2). Suite `test-12-ruta.js` (19 checks) |
 | 12.58 | `655a3a8` | **Ruta v2: el criterio manda + el cumpleaños del 19** | La regla de gemelos deja de ser mecánica (decisión del usuario): 56/60 con parada y 4 descartes razonados FIJADOS en test (Shibuya 109, Hiroo, Nihonbashi, Jimbōchō). Entran por mérito **Himeji** (castillo + zona, catálogo v12) y **Tsukiji** (encadena con Hamarikyū el domingo 11). El 19-abr es el CUMPLEAÑOS de amenedorubn: Fushimi al alba + Uji + Himeji + cena de celebración; el Museo de la Paz pasa al 20 A PROPÓSITO (test lo protege). Docx regenerado como Versión 2 con sección "Curaduría v2" |
 | 12.59 | `954b993` | **Ruta v3: contrastada con el canon; el castillo de Osaka vuelve** | Investigado el top de imprescindibles (decisión del usuario: "no perder de ver cosas importantes"): el **castillo de Osaka** VUELVE (mañana del 24; Shitennō-ji pasa al atardecer del 22, pegado a Shinsekai), y entran **Umeda Sky** de noche tras USJ (ficha nueva, catálogo v13) y **Sanjūsangen-dō** (María) el 17. Kōya-san y Ginkaku-ji quedan como descartes/cambios documentados. Test nuevo fija el top v3 |
-| 12.60 | `(este commit)` | **Ruta v4 + Guía documentada** (mareas, sin ostras, transportes, precios, lo que dejamos) | Miyajima (20-abr) con las **mareas reales** (pleamar 09:05 → torii flotando a la llegada; bajamar 15:21 → torii a pie a la vuelta) y **sin ostras**: Kakiya → **anago-meshi** (ficha nueva, catálogo v14; Kakiya pasa a 5º gemelo descartado). Tres secciones nuevas horneadas y renderizadas en la Guía — **🚄 Transportes** (obligatorio vs recomendado, enlazada desde la Ruta con un botón), **💴 Precios** (hotel/comida/transporte/bonos + veredicto JR Pass) y **🚫 Lo que dejamos fuera** (Nagano, Nagoya, otro-viaje, descartes de criterio) — más **🗓️ las 20 noches** con fecha/ciudad/estado en Hoteles. Checklist y bases de hotel actualizadas a las noches de la Ruta. Docx regenerado v4; suite +8 checks nuevos. Verificado en navegador real |
+| 12.60 | `(este commit)` | **Ruta v4 + Guía documentada** (mareas, transportes, precios, lo que dejamos) | Miyajima (20-abr) con las **mareas reales** (pleamar 09:05 → torii flotando a la llegada; bajamar 15:21 → torii a pie a la vuelta) y **anago-meshi** en vez de Kakiya (ficha nueva, catálogo v14; Kakiya pasa a 5º gemelo descartado). Tres secciones nuevas horneadas y renderizadas en la Guía — **🚄 Transportes** (obligatorio vs recomendado, enlazada desde la Ruta con un botón), **💴 Precios** (hotel/comida/transporte/bonos + veredicto JR Pass) y **🚫 Lo que dejamos fuera** (Nagano, Nagoya, otro-viaje, descartes de criterio) — más **🗓️ las 20 noches** con fecha/ciudad/estado en Hoteles. Checklist y bases de hotel actualizadas a las noches de la Ruta. Docx regenerado v4; suite +8 checks nuevos. Verificado en navegador real |
 | 12.61 | `(este commit)` | **Ruta v5: revisión adversarial + 3 verificaciones oficiales** (§14) | El reordenar Nikko/Takayama/Kanazawa para pillar el Sannō Matsuri (14-15 abr) se investigó a fondo y se DESCARTA por disponibilidad real de alojamiento en Takayama (agotado/×4-×5 precio a 9 meses vista); documentado como decisión consciente en `SKIPPED` (categoría nueva `considerado`) y en el docx. Shibuya Sky CONFIRMADO: venta exacta 14 días antes a medianoche JST (corregido en checklist/docx, antes decía "semanas"/"~4 semanas"). Mareas de Miyajima verificadas contra el JMA oficial: las horas del docx ya eran correctas (09:05/15:20), las alturas se corrigen (3,35 m/0,17 m). Cumpleaños: Kōko-en añadido como cierre opcional de la parada de Himeji. Docx regenerado (v5, edición quirúrgica del XML, sin generador nuevo); test-12-ruta.js ajustado a la hora de marea verificada |
+| 12.62 | `(este commit)` | **`DAY_EXTRAS` "Si sobra tiempo" + Takayama con webs reales + higiene de wording** (§14, tercera pasada) | Nuevo eje de primera clase `DAY_EXTRAS`: 2-4 sugerencias de bajo desvío por cada uno de los 19 días con contenido de la Ruta (investigadas con 4 agentes en paralelo + autoría propia para Tokio), en `<details>` colapsado por defecto en Ruta y Realidad, reflejadas también en una sección nueva del docx (Versión 5) generada programáticamente desde `index.html`. Takayama re-verificado con permiso para usar webs de reserva reales: WebFetch no pudo atravesar ninguna (limitación de herramienta reconocida explícitamente), pero la evidencia cualitativa convergente de dos sesiones sostiene la misma decisión — se mantiene el orden actual. Higiene de wording: retirada toda referencia a preferencia alimentaria personal de `SKIPPED`/docx/changelog (queda la decisión, no el motivo personal); la preferencia se recuerda en privado (Obsidian `persona:ruben-amenedo`). Tests +5 en `test-12-ruta.js` |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -577,5 +592,52 @@ Tōshōgū/Myōryū-ji/cena de cumpleaños ausentes de `CHECKLIST`), ítem 6 (es
 26-abr en el docx).
 
 Nota de proceso: se pidió expresamente NO guardar en documentación permanente (ni aquí ni en
-Obsidian) la preferencia alimentaria temporal del usuario para la cena de cumpleaños (sin marisco
-ni ostras) — aplicada solo en la conversación de esa sesión, no en ningún archivo del repo.
+Obsidian) una preferencia alimentaria personal del usuario para la cena de cumpleaños — aplicada
+solo en la conversación de esa sesión, no en ningún archivo del repo. *(Corrección 21-jul-2026,
+sesión siguiente: el usuario aclaró que SÍ puede recordarse en privado para futuras recomendaciones
+de restaurantes; solo no debe aparecer en documentos públicos del viaje — título de versión,
+changelog o descripción de ruta. Guardado en Obsidian como preferencia personal, fuera de esta nota
+de proyecto. Ver también el aviso sobre el commit `20a43e9`, cuyo mensaje de git ya publicado
+menciona la preferencia por su nombre y no se ha reescrito.)*
+
+### Tercera pasada (2026-07-21, misma sesión): Takayama con datos reales, extras de primera clase, higiene de wording
+
+**Takayama, con permiso explícito para usar webs de reserva reales (Booking/Agoda/Rakuten/Jalan):**
+se intentó activamente sacar precio/disponibilidad EN VIVO para las noches del 13-14 de abril de
+2027 — más de 15 intentos contra Booking.com, Agoda, Rakuten Travel, Jalan y Trivago a lo largo de
+esta sesión y la anterior. Ninguno devolvió resultados fechados: son SPAs con render en JS o con
+protección anti-bot que `WebFetch` no puede atravesar (páginas vacías, 403, o listados genéricos
+sin fechas). **Limitación de herramienta reconocida explícitamente, no maquillada como
+verificación.** Con esa honestidad por delante, la evidencia CUALITATIVA (múltiples fuentes
+independientes — guías, expertos regionales, un hilo real de viajeros en un foro) es consistente
+en las dos sesiones y no ha aparecido ni una fuente que la contradiga: alojamiento en el centro
+de Takayama para esas fechas exactas agotado 9-12 meses antes, lo que queda a ×4-×5 de precio.
+**Decisión final: se mantiene el orden actual.** La logística del reordenar (Nikko como excursión
+de un día + Takayama antes que Kanazawa) sigue siendo sólida (mismo total de noches del bloque,
+Kanazawa→Kioto vía Tsuruga más rápido que hoy) pero es irrelevante si no hay dónde dormir. Se
+documentó también la alternativa de dormir en Hida-Furukawa/Gero Onsen y desplazarse, y se
+descarta por defecto (mudanza de hotel extra, diluye la noche de ryokan-en-Takayama que era el
+deseo original). Todo esto ampliado en la entrada `considerado` de `SKIPPED` y en el párrafo de
+`Ruta-21-dias.docx` (ahora Versión 5).
+
+**`DAY_EXTRAS` (12.62): "Si sobra tiempo" como concepto de primera clase.** Nuevo eje, ortogonal a
+procedencia/estado/zona — ver arquitectura §3 y modelo de datos §4 para el detalle técnico.
+Investigado con 4 agentes de investigación en paralelo (Nikko/Kanazawa/Takayama · Hiroshima/
+Miyajima/Fukuoka · Kioto · Osaka/Nara) más autoría propia para los 7 días de Tokio, con foco en
+belleza/singularidad/joya escondida/bajo desvío, nunca relleno genérico. Cubre los 19 días con
+contenido de la Ruta (2-4 sitios cada uno), renderizado en `<details>` nativo colapsado por
+defecto tanto en la vista Ruta como en Realidad (solo si el día tiene paradas). Reflejado también
+en `Ruta-21-dias.docx` (sección nueva, generada programáticamente desde el propio `DAY_EXTRAS` de
+`index.html` — primer caso real de generador dev-time para el docx, ver nota de §2). Tests nuevos
+en `test-12-ruta.js` (5 checks).
+
+**Higiene de wording (petición explícita del usuario):** se retiró toda referencia a "por qué"
+alguien del grupo prefiere anago-meshi a las ostras de las superficies públicas — `SKIPPED`
+(`index.html`), la ficha curada y la nota de la parada del día 20, el título de versión y la
+sección de descartes del docx, y la fila de historia 12.60 de este documento. La sustitución de
+plato se mantiene (es una decisión de producto real); solo se retira el marco de preferencia
+personal, sustituido por una razón culinaria neutra (variedad/autenticidad). La preferencia en sí
+se recuerda en privado (Obsidian `persona:ruben-amenedo`, fuera de la nota de proyecto) para
+seguir aplicándola al recomendar restaurantes. **No reescrito** (y no se debe reescribir sin
+decisión explícita del usuario, dado el riesgo de un force-push sobre historia ya compartida): el
+mensaje del commit `20a43e9`, ya en `origin/main`, sigue nombrando la preferencia en su asunto.

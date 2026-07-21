@@ -46,7 +46,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
   ;return { state, RUTA_DAYS, SEED_DAYS, RUTA_DOC_URL, ITIN_RING, TWIN_GROUPS,
             itineraryDays, itineraryPlaceIds, canonicalPid, placeById, placeView,
             provenanceOf, setItinMode, plantFromProposal, groupIdsOf,
-            NIGHTS, SKIPPED, TRANSPORT, PRICES, renderGuia, renderHoteles };`);
+            NIGHTS, SKIPPED, TRANSPORT, PRICES, renderGuia, renderHoteles,
+            DAY_EXTRAS, spareTimeHTML, renderItinerary };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
 
 let fail = 0;
@@ -83,7 +84,7 @@ const OMITTED_TWINS = {
   hiroo: 'zona residencial de cenas: cruzar la ciudad por ella no compensa (Ebisu la sustituye)',
   nihonbashi: 'un puente historico bajo una autopista: 2 min de foto que no sostienen parada',
   jimbocho: 'librerias de viejo en japones: nicho; su hueco lo ganan Tsukiji y Hamarikyu',
-  kakiya: 'ostras: fuera a proposito (a alguien no le gustan); Miyajima se come con anago-meshi',
+  kakiya: 'cambiado por anago-meshi: la otra especialidad de Miyajima, decision de criterio',
 };
 const rutaIds = api.itineraryPlaceIds('ruta');
 const missing = api.TWIN_GROUPS.filter(g =>
@@ -128,6 +129,25 @@ check('render: las noches reservadas se respetan (Louis House 9-12, APA 25-27)',
   R.slice(17, 19).every(d => /APA/.test(d.stay || '')) && /AMPLIAR/.test(R[16].stay || ''));
 check('render: el documento hora a hora se ofrece solo en la Ruta',
   els['#btnRutaDoc'].style.display === '' && api.RUTA_DOC_URL.endsWith('.docx'));
+
+// ================= 5b) DAY_EXTRAS (12.62): "SI SOBRA TIEMPO" =================
+const flightDates = new Set(R.filter(d => d.flight && !(d.stops || []).length).map(d => d.date));
+const contentDates = R.map(d => d.date).filter(d => !flightDates.has(d));
+check('extras: hay entrada para cada día CON contenido de la Ruta, ninguna en los días de vuelo',
+  contentDates.every(d => Array.isArray(api.DAY_EXTRAS[d]) && api.DAY_EXTRAS[d].length > 0) &&
+  [...flightDates].every(d => !api.DAY_EXTRAS[d]));
+check('extras: cada entrada trae nombre, referencia, desvío en minutos y motivo real (no relleno)',
+  Object.values(api.DAY_EXTRAS).every(list => list.length >= 1 && list.length <= 4 &&
+    list.every(x => x.name && x.near && x.why && x.why.length > 15 &&
+      typeof x.mins === 'number' && x.mins >= 0)));
+check('extras: NUNCA son paradas ni cuentan para el linaje de gemelos/coverage de la Ruta',
+  Object.values(api.DAY_EXTRAS).flat().every(x => !('pid' in x)));
+check('spareTimeHTML: colapsado por defecto (<details>, sin open) y sin bloque en días de vuelo',
+  /<details class="m-washi spare-time">/.test(api.spareTimeHTML('2027-04-09')) &&
+  !/<details[^>]*\sopen/.test(api.spareTimeHTML('2027-04-09')) &&
+  api.spareTimeHTML('2027-04-08') === '' && api.spareTimeHTML('2027-04-28') === '');
+check('render: la vista Ruta pinta "si sobra tiempo" con contenido real (Nikko)',
+  html.includes('Si sobra tiempo') && html.includes('Taiyūin-byō'));
 api.setItinMode('ours');
 check('render: al salir de la Ruta el botón del documento se esconde',
   els['#btnRutaDoc'].style.display === 'none');
