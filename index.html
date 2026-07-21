@@ -1822,7 +1822,10 @@ const CHECKLIST = [
   ['Reservar las 13 noches de la Ruta','Nikko (12), Kanazawa (13–15), ryokan de Takayama (15), Kioto (16–19), Hiroshima (19), Fukuoka (20), Osaka (21–24) + ampliar APA al 24. Louis House (9–12) y APA (25–27) ya están. Ver pestaña Hoteles.'],
   ['eSIM de datos','Ubigi, Airalo o Holafly. 10 GB ≈ 15 €. Instalarla antes de salir y activarla al aterrizar.'],
   ['Suica en el móvil','En iPhone/Android se crea en Wallet y se recarga con tarjeta. Si no, Welcome Suica física en Narita.'],
-  ['JR Pass: NO compensa con esta Ruta','Los tramos largos suman ~lo mismo que el pase de 14 días (~¥80.000) pero el pase no cubre Nozomi ni Kagayaki (los rápidos que usáis) ni los buses/Kintetsu/Tobu. Billetes sueltos con smartEX. Ver Guía → Transportes.'],
+  ['JR Pass: NO compensa con esta Ruta','Los 6 tramos largos suman ~¥58.000/persona en billetes sueltos, MENOS que el pase de 14 días (~¥80.000) — y encima el pase no cubre Nozomi ni Kagayaki (los rápidos que usáis) ni los buses/Kintetsu/Tobu. Billetes sueltos con smartEX. Ver Guía → Transportes.'],
+  ['Reservar entrada de Tōshōgū (día 12, Nikko)','Online, con antelación. ~2 semanas antes.'],
+  ['Myōryū-ji "templo ninja" en Kanazawa (día 14, opcional)','Reserva SOLO por teléfono, sin web en inglés: llamad con antelación o dejadlo fuera.'],
+  ['Cena de cumpleaños del 19-abr (si es teppanyaki de wagyū)','Reservar ~2 semanas antes en Hiroshima. El plan Okonomimura no necesita reserva.'],
   ['Reservar Shibuya Sky','Venta EXACTA 14 días antes a medianoche JST (verificado en la web oficial): poned alarma, no "unas semanas antes".'],
   ['Reservar teamLab Biovortex (Kioto)','Entradas con fecha y hora, se agotan.'],
   ['Reservar Jambo Hanare y Kitan Hibiki','Los dos restaurantes estrella de vuestros reels necesitan reserva previa.'],
@@ -1870,17 +1873,22 @@ const PHRASES = [
    Louis House y APA (hechos de Confirmado); el resto son las bases que
    propone la Ruta. Se muestra en Hoteles como referencia; no es un
    nodo persistido (dato horneado). */
+/* Elementos 4-6 (12.63): checkIn/checkOut ISO + nº de noches, SOLO en las filas
+   'res'/'amp' que hay que reservar de verdad — alimentan la sección "Aún por
+   reservar" de Confirmado (antes usaba 3 placeholders fijos hotel_tokyo/kyoto/
+   osaka de la semilla vieja, ya obsoletos con la Ruta). 'ok' no los necesita
+   (ya reservado); 'vuelo' tampoco (no es noche de hotel). */
 const NIGHTS = [
   ['8 abr','A bordo (AY0073)','vuelo','—'],
   ['9–12 abr','Tokio · Louis House Otsuka Nishi','ok','3 noches RESERVADO'],
-  ['12 abr','Nikko · ryokan/onsen','res','zona: Nikko o Kinugawa Onsen'],
-  ['13–15 abr','Kanazawa · centro','res','2 noches · Katamachi/Kōrinbō o estación'],
-  ['15 abr','Takayama · RYOKAN','res','media pensión, onsen + kaiseki (el más urgente)'],
-  ['16–19 abr','Kioto · zona Shijō','res','3 noches · Shijō-Kawaramachi o estación'],
-  ['19 abr','Hiroshima · centro','res','Hondōri/Hatchōbori'],
-  ['20 abr','Fukuoka · Hakata/Nakasu','res','Hakata (estación) o Nakasu/Tenjin'],
-  ['21–24 abr','Osaka · Namba','res','3 noches · Namba/Shinsaibashi'],
-  ['24 abr','Tokio · APA Asakusabashi','amp','AMPLIAR la reserva 25–27 para entrar el 24'],
+  ['12 abr','Nikko · ryokan/onsen','res','zona: Nikko o Kinugawa Onsen','2027-04-12','2027-04-13',1],
+  ['13–15 abr','Kanazawa · centro','res','2 noches · Katamachi/Kōrinbō o estación','2027-04-13','2027-04-15',2],
+  ['15 abr','Takayama · RYOKAN','res','media pensión, onsen + kaiseki (el más urgente)','2027-04-15','2027-04-16',1],
+  ['16–19 abr','Kioto · zona Shijō','res','3 noches · Shijō-Kawaramachi o estación','2027-04-16','2027-04-19',3],
+  ['19 abr','Hiroshima · centro','res','Hondōri/Hatchōbori','2027-04-19','2027-04-20',1],
+  ['20 abr','Fukuoka · Hakata/Nakasu','res','Hakata (estación) o Nakasu/Tenjin','2027-04-20','2027-04-21',1],
+  ['21–24 abr','Osaka · Namba','res','3 noches · Namba/Shinsaibashi','2027-04-21','2027-04-24',3],
+  ['24 abr','Tokio · APA Asakusabashi','amp','AMPLIAR la reserva 25–27 para entrar el 24','2027-04-24','2027-04-25',1],
   ['25–27 abr','Tokio · APA Asakusabashi','ok','2 noches RESERVADO'],
   ['27 abr','A bordo (AY0074, sale 23:05)','vuelo','—'],
 ];
@@ -1898,6 +1906,7 @@ const SKIPPED = [
   ['lejos','Chichi-jima (Ogasawara)','24 h de ferry desde Tokio. El "Galápagos japonés": otro planeta.'],
   ['lejos','Kōya-san','Top real, pero exige dormir en un monasterio y desmontaría el bloque de Osaka. Apuntado para el viaje del sur.'],
   ['lejos','Kamikochi','Su carretera no abre hasta ~17 de abril y aún hay nieve. Esto ya lo sabíamos.'],
+  ['pendiente','Narai-juku','Cabe SOLO como Variante B del día 16 (vía Matsumoto, +2 h de viaje, se pierde la tarde de Gion). Decisión de equipo pendiente, no descartado ni decidido.'],
   ['considerado','Takayama en fechas de festival (Sannō Matsuri, 14–15 abril)','SE CONSIDERÓ reordenar la Ruta (Nikko como excursión de un día desde Tokio, Takayama antes que Kanazawa) para dormir en Takayama esas dos noches y ver el desfile de faroles del 14 a las 18:00, el momento cumbre del festival. DESCARTADO tras comprobar disponibilidad real (21-jul-2026): el alojamiento en el centro de Takayama para esas fechas se agota entre 9 y 12 meses antes y lo poco que queda sube ×4–×5 de precio; a los ~9 meses de antelación de este viaje ya no hay margen razonable. Se mantiene el orden actual (Takayama la noche del 15, después del festival) A PROPÓSITO, no por descuido.'],
   ['criterio','Ginkaku-ji (Pabellón de Plata)','Sin sakura en abril tardío pierde su momento. Disponible como cambio por el castillo de Nijō el día 17 si preferís jardín.'],
   ['criterio','teamLab Borderless (Tokio)','Hacéis teamLab Biovortex en Kioto (día 18): mismo concepto, no se repite.'],
@@ -4364,8 +4373,7 @@ function renderInicio(){
       ${f.note ? `<div style="font-size:12px;color:var(--muted)">⚠️ ${esc(f.note)}</div>` : ''}
     </div>`).join('');
 
-  // Reservas reales (state.places, sincronizadas) + bases sugeridas del catálogo.
-  const BASE_DATES = {hotel_tokyo: '12–16 y 22–25 abril', hotel_kyoto: '16–19 abril (3 noches)', hotel_osaka: '19–22 abril (3 noches)'};
+  // Reservas reales (state.places, sincronizadas) + noches por reservar de la Ruta.
   const bookedCards = bookedHotels().map(p => {
     const nights = daysBetween(p.checkIn, p.checkOut);
     return `<div class="m-foil" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${p.id}">
@@ -4381,18 +4389,26 @@ function renderInicio(){
   // que la certeza no se mezcle con lo que aún no lo es.
   $('#hotelCards').innerHTML = bookedCards.join('');
   bindPlaceOpen('#hotelCards [data-pid]');
-  const baseCards = hotelBasePlaceholders().map(({pid, p}) =>
-    `<div class="m-washi pending-row" style="padding:12px 14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;margin-top:8px" data-pid="${pid}">
+  // 12.63: noches por reservar = filas 'res'/'amp' de NIGHTS (la Ruta), con
+  // ciudad + check-in/check-out reales + nº de noches. Sustituye a los 3
+  // placeholders fijos hotel_tokyo/kyoto/osaka de la semilla, obsoletos desde
+  // que la Ruta manda (12.57+): esas 3 ciudades ni siquiera son ya el reparto.
+  const toReserve = NIGHTS.filter(n => n[2] === 'res' || n[2] === 'amp');
+  const pendingCards = toReserve.map(n => {
+    const [, city, status, note, checkIn, checkOut, nights] = n;
+    const label = status === 'amp' ? 'Ampliar reserva' : 'Por reservar';
+    return `<div class="m-washi pending-row" style="padding:12px 14px;display:flex;gap:12px;align-items:flex-start;margin-top:8px">
       <div class="emoji" style="font-size:22px;opacity:.8">🏨</div>
-      <div style="flex:1;min-width:0"><b style="font-weight:700">${esc(p.name)}</b>
-        <div style="font-size:12.5px;color:var(--muted)">${esc(BASE_DATES[pid] || '')}</div>
+      <div style="flex:1;min-width:0"><b style="font-weight:700">${esc(city)}</b>
+        <div style="font-size:12.5px;color:var(--muted)">${esc(checkIn)} → ${esc(checkOut)} · ${nights} noche${nights === 1 ? '' : 's'}</div>
+        <div style="font-size:11.5px;color:var(--muted)">${esc(note)}</div>
       </div>
-      <span class="pill">Por reservar</span>
-    </div>`);
-  $('#hotelPending').innerHTML = baseCards.length
-    ? `<div class="pending-head">Aún por reservar · planificación</div>${baseCards.join('')}`
+      <span class="pill">${label}</span>
+    </div>`;
+  });
+  $('#hotelPending').innerHTML = pendingCards.length
+    ? `<div class="pending-head">Aún por reservar · planificación</div>${pendingCards.join('')}`
     : '';
-  bindPlaceOpen('#hotelPending [data-pid]');
 }
 
 /* ================================================================
@@ -6037,7 +6053,7 @@ function renderGuia(){
       <div style="flex:1;min-width:0"><b>${esc(pr[1])}</b>
         <small style="display:block;color:var(--muted)">${esc(pr[3])}</small></div>
     </div>`).join('');
-  const skipTag = {zona: 'Zona fuera', lejos: 'Otro viaje', criterio: 'Descarte de criterio', considerado: 'Considerado y descartado'};
+  const skipTag = {zona: 'Zona fuera', lejos: 'Otro viaje', criterio: 'Descarte de criterio', considerado: 'Considerado y descartado', pendiente: 'Decisión pendiente'};
   $('#skippedList').innerHTML = SKIPPED.map(s => `
     <div class="card tip-card">
       <b>${esc(s[1])} <small style="color:var(--muted);font-weight:600">· ${esc(skipTag[s[0]] || s[0])}</small></b>
