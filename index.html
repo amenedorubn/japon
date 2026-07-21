@@ -1519,7 +1519,7 @@ const RUTA_DAYS = [
   S('catalog_harajuku','13:45',60,'Omotesandō y Cat Street, la otra cara de Harajuku.'),
   S('catalog_shibuya','15:15',60,'El cruce, Hachikō y la torre 109 en una pasada (el ángulo bueno: la azotea del Magnet, gratis).'),
   S('daikanyama','16:30',60,'La "Brooklyn de Tokio": T-Site y boutiques, paseando desde el cruce.'),
-  S('shibuya_sky','18:10',90,'RESERVADO con semanas: atardecer sobre el cruce (sol ~18:15). Después, cena en Ebisu Yokochō (2 min en Yamanote): puestos de izakaya bajo un techo.'),
+  S('shibuya_sky','18:10',90,'RESERVADO: la venta abre 14 días antes a medianoche JST y la franja del atardecer (sol ~18:15) se agota en minutos. Después, cena en Ebisu Yokochō (2 min en Yamanote): puestos de izakaya bajo un techo.'),
 ]},
 {date:'2027-04-11', city:'Tokio', icon:'🏮', stay:'Louis House Otsuka Nishi (RESERVADO)',
   note:'Domingo: Tsukiji de desayuno → Hamarikyū → Ueno → Akihabara peatonal → Shinjuku de noche.', stops:[
@@ -1602,16 +1602,16 @@ const RUTA_DAYS = [
   S('vermillion','09:30',30,'Café de cumpleaños con vistas al bosque de Inari.'),
   S('maria_byodo_in_hoodo_kioto_y_nara','11:00',60,'JR a Uji 25 min: Byōdō-in, el templo de la moneda de ¥10.'),
   S('catalog_uji_excursion','12:15',60,'Matcha en Nakamura Tōkichi: comida ligera y tarta de té verde con vela improvisada.'),
-  S('himeji_castle','15:15',105,'La Garza Blanca, el castillo original más bello de Japón (última entrada 16:00: llegáis justos y bien). Regalo de cumpleaños a la vista.'),
+  S('himeji_castle','15:15',105,'La Garza Blanca, el castillo original más bello de Japón (última entrada 16:00: llegáis justos y bien). Si sobra media hora: el jardín Kōko-en (entrada combinada, pegado al castillo) cierra el regalo de cumpleaños; los Nozomi/Sakura a Hiroshima salen cada 10–15 min, así que un tren algo más tarde no rompe el plan.'),
   S('okonomimura','20:00',90,'CENA DE CUMPLEAÑOS: okonomiyaki en la barra con espectáculo de plancha; si apetece más fiesta, teppanyaki de wagyū y bares de Nagarekawa.'),
 ]},
 {date:'2027-04-20', city:'Fukuoka', icon:'⛴️', stay:'Fukuoka, Hakata/Nakasu (por reservar)',
   note:'Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00.', stops:[
   S('peace_museum','08:30',105,'El museo al abrir (8:30): duro e imprescindible. Luego el parque y la llama.'),
   S('atomic_dome','10:30',30,'La cúpula en pie bajo el hipocentro. Silencio y a la estación.'),
-  S('itsukushima','12:30',75,'Mareas del 20-abr 2027: llegáis con el torii AÚN EN EL AGUA (pleamar 09:05, 3,69 m, bajando). JR 25 min + ferry 10.'),
+  S('itsukushima','12:30',75,'Mareas del 20-abr 2027 (verificadas contra el JMA oficial): llegáis con el torii AÚN EN EL AGUA (pleamar 09:05, 3,35 m, bajando). JR 25 min + ferry 10.'),
   S('anago_meshi','13:50',60,'Comida: anago-meshi, la anguila de mar a la brasa sobre arroz. NADA de ostras: dulce, glaseada y crujiente. (Ueno junto al ferry o Fujitaya en la isla.)'),
-  S('daishoin','15:10',60,'A la vuelta, BAJAMAR (15:21, 0,52 m): se camina hasta la base del torii para la foto de cerca. Luego Daishō-in: 500 rakan con gorritos. Con energía: ropeway al Misen (+2 h).'),
+  S('daishoin','15:10',60,'A la vuelta, BAJAMAR (15:20, 0,17 m, verificada JMA): se camina hasta la base del torii para la foto de cerca. Luego Daishō-in: 500 rakan con gorritos. Con energía: ropeway al Misen (+2 h).'),
   S('momiji','16:20',20,'Momiji manjū recién hecho para el ferry de vuelta.'),
   S('nakasu_yatai','20:30',90,'Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.'),
 ]},
@@ -1690,7 +1690,7 @@ const CHECKLIST = [
   ['eSIM de datos','Ubigi, Airalo o Holafly. 10 GB ≈ 15 €. Instalarla antes de salir y activarla al aterrizar.'],
   ['Suica en el móvil','En iPhone/Android se crea en Wallet y se recarga con tarjeta. Si no, Welcome Suica física en Narita.'],
   ['JR Pass: NO compensa con esta Ruta','Los tramos largos suman ~lo mismo que el pase de 14 días (~¥80.000) pero el pase no cubre Nozomi ni Kagayaki (los rápidos que usáis) ni los buses/Kintetsu/Tobu. Billetes sueltos con smartEX. Ver Guía → Transportes.'],
-  ['Reservar Shibuya Sky','Franja del atardecer se agota semanas antes. web oficial.'],
+  ['Reservar Shibuya Sky','Venta EXACTA 14 días antes a medianoche JST (verificado en la web oficial): poned alarma, no "unas semanas antes".'],
   ['Reservar teamLab Biovortex (Kioto)','Entradas con fecha y hora, se agotan.'],
   ['Reservar Jambo Hanare y Kitan Hibiki','Los dos restaurantes estrella de vuestros reels necesitan reserva previa.'],
   ['Bus a Kawaguchiko','Ida y vuelta en highway-buses.jp. La Ruta 21 días lo sitúa el 26 de abril desde Shinjuku.'],
@@ -1765,6 +1765,7 @@ const SKIPPED = [
   ['lejos','Chichi-jima (Ogasawara)','24 h de ferry desde Tokio. El "Galápagos japonés": otro planeta.'],
   ['lejos','Kōya-san','Top real, pero exige dormir en un monasterio y desmontaría el bloque de Osaka. Apuntado para el viaje del sur.'],
   ['lejos','Kamikochi','Su carretera no abre hasta ~17 de abril y aún hay nieve. Esto ya lo sabíamos.'],
+  ['considerado','Takayama en fechas de festival (Sannō Matsuri, 14–15 abril)','SE CONSIDERÓ reordenar la Ruta (Nikko como excursión de un día desde Tokio, Takayama antes que Kanazawa) para dormir en Takayama esas dos noches y ver el desfile de faroles del 14 a las 18:00, el momento cumbre del festival. DESCARTADO tras comprobar disponibilidad real (21-jul-2026): el alojamiento en el centro de Takayama para esas fechas se agota entre 9 y 12 meses antes y lo poco que queda sube ×4–×5 de precio; a los ~9 meses de antelación de este viaje ya no hay margen razonable. Se mantiene el orden actual (Takayama la noche del 15, después del festival) A PROPÓSITO, no por descuido.'],
   ['criterio','Ginkaku-ji (Pabellón de Plata)','Sin sakura en abril tardío pierde su momento. Disponible como cambio por el castillo de Nijō el día 17 si preferís jardín.'],
   ['criterio','teamLab Borderless (Tokio)','Hacéis teamLab Biovortex en Kioto (día 18): mismo concepto, no se repite.'],
   ['criterio','Torre de Tokio / Roppongi Hills','Ya subís a Shibuya Sky, Skytree, Umeda Sky y el Tochō gratis: cuatro miradores bastan.'],
@@ -5882,7 +5883,7 @@ function renderGuia(){
       <div style="flex:1;min-width:0"><b>${esc(pr[1])}</b>
         <small style="display:block;color:var(--muted)">${esc(pr[3])}</small></div>
     </div>`).join('');
-  const skipTag = {zona: 'Zona fuera', lejos: 'Otro viaje', criterio: 'Descarte de criterio'};
+  const skipTag = {zona: 'Zona fuera', lejos: 'Otro viaje', criterio: 'Descarte de criterio', considerado: 'Considerado y descartado'};
   $('#skippedList').innerHTML = SKIPPED.map(s => `
     <div class="card tip-card">
       <b>${esc(s[1])} <small style="color:var(--muted);font-weight:600">· ${esc(skipTag[s[0]] || s[0])}</small></b>

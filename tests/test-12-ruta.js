@@ -155,9 +155,9 @@ check('miyajima: el día 20 NO lleva ostras (kakiya) y SÍ anago-meshi (decisió
   miyajima.date === '2027-04-20' &&
   !miyajima.stops.some(s => s.pid === 'kakiya') &&
   miyajima.stops.some(s => s.pid === 'anago_meshi'));
-check('miyajima: la parada del torii documenta las mareas reales del 20-abr',
-  miyajima.stops.some(s => s.pid === 'itsukushima' && /pleamar|09:05/.test(s.note || '')) &&
-  miyajima.stops.some(s => /bajamar|15:21/.test(s.note || '')));
+check('miyajima: la parada del torii documenta las mareas reales del 20-abr (verificadas JMA 21-jul-2026)',
+  miyajima.stops.some(s => s.pid === 'itsukushima' && /pleamar|09:05/i.test(s.note || '')) &&
+  miyajima.stops.some(s => /bajamar|15:20/i.test(s.note || '')));
 check('catálogo: anago-meshi existe, es de Miyajima y no es marisco crudo',
   !!api.placeById('anago_meshi') && api.placeView(api.placeById('anago_meshi')).zone === 'miyajima');
 

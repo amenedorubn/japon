@@ -36,7 +36,7 @@ modelo v2 y sus nodos en la nube quedaron como archivo de solo lectura.
 | `JAPON-DEFINITIVO-Dani.pdf` | Asset local (811.736 B) que descarga el botón 📄 de la vista Dani (`DANI_PDF_URL`). Si se perdiera: re-extraer decodificando el base64 de `DANI_PDF_BASE64` (línea 7025 de `index-pre-source.html`, comillas simples); debe dar `%PDF-1.7` y 811.736 bytes |
 | `PROJECT.md` `PRODUCT.md` `DIRECTION.md` `DESIGN.md` `design/` `PARITY.md` | Documentación (continuidad → estrategia → dirección creativa → sistema visual y su versión modular → paridad) |
 | `Itinerario.docx` | Fuente de la procedencia `ours` (lista de deseos de los tres); lo lee `tools/docx-import.js` |
-| `Ruta-21-dias.docx` | La Ruta 21 días hora a hora (12.57), descargable desde el botón 📄 del itinerario Ruta; en el SHELL del SW. Se regenera con el script dev-time de la sesión que la creó |
+| `Ruta-21-dias.docx` | La Ruta 21 días hora a hora (12.57), descargable desde el botón 📄 del itinerario Ruta; en el SHELL del SW. **No existe generador versionado**: nace en la sesión 12.57 con un script dev-time no comiteado; las revisiones 12.58-12.61 lo editaron directamente sobre el XML del docx (ZIP), sustituyendo texto dentro de nodos `<w:t>` existentes sin tocar el formato circundante. Si algún día hace falta un cambio estructural grande (no solo texto), vale la pena escribir un generador real en `tools/` en vez de seguir editando XML a mano |
 | `tests/run-all.js` + `tests/test-*.js` | Suite de regresión completa (ver §10) |
 | `.claude/serve.ps1` | Servidor local de desarrollo (`http://localhost:8734/`) |
 
@@ -225,6 +225,7 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.58 | `655a3a8` | **Ruta v2: el criterio manda + el cumpleaños del 19** | La regla de gemelos deja de ser mecánica (decisión del usuario): 56/60 con parada y 4 descartes razonados FIJADOS en test (Shibuya 109, Hiroo, Nihonbashi, Jimbōchō). Entran por mérito **Himeji** (castillo + zona, catálogo v12) y **Tsukiji** (encadena con Hamarikyū el domingo 11). El 19-abr es el CUMPLEAÑOS de amenedorubn: Fushimi al alba + Uji + Himeji + cena de celebración; el Museo de la Paz pasa al 20 A PROPÓSITO (test lo protege). Docx regenerado como Versión 2 con sección "Curaduría v2" |
 | 12.59 | `954b993` | **Ruta v3: contrastada con el canon; el castillo de Osaka vuelve** | Investigado el top de imprescindibles (decisión del usuario: "no perder de ver cosas importantes"): el **castillo de Osaka** VUELVE (mañana del 24; Shitennō-ji pasa al atardecer del 22, pegado a Shinsekai), y entran **Umeda Sky** de noche tras USJ (ficha nueva, catálogo v13) y **Sanjūsangen-dō** (María) el 17. Kōya-san y Ginkaku-ji quedan como descartes/cambios documentados. Test nuevo fija el top v3 |
 | 12.60 | `(este commit)` | **Ruta v4 + Guía documentada** (mareas, sin ostras, transportes, precios, lo que dejamos) | Miyajima (20-abr) con las **mareas reales** (pleamar 09:05 → torii flotando a la llegada; bajamar 15:21 → torii a pie a la vuelta) y **sin ostras**: Kakiya → **anago-meshi** (ficha nueva, catálogo v14; Kakiya pasa a 5º gemelo descartado). Tres secciones nuevas horneadas y renderizadas en la Guía — **🚄 Transportes** (obligatorio vs recomendado, enlazada desde la Ruta con un botón), **💴 Precios** (hotel/comida/transporte/bonos + veredicto JR Pass) y **🚫 Lo que dejamos fuera** (Nagano, Nagoya, otro-viaje, descartes de criterio) — más **🗓️ las 20 noches** con fecha/ciudad/estado en Hoteles. Checklist y bases de hotel actualizadas a las noches de la Ruta. Docx regenerado v4; suite +8 checks nuevos. Verificado en navegador real |
+| 12.61 | `(este commit)` | **Ruta v5: revisión adversarial + 3 verificaciones oficiales** (§14) | El reordenar Nikko/Takayama/Kanazawa para pillar el Sannō Matsuri (14-15 abr) se investigó a fondo y se DESCARTA por disponibilidad real de alojamiento en Takayama (agotado/×4-×5 precio a 9 meses vista); documentado como decisión consciente en `SKIPPED` (categoría nueva `considerado`) y en el docx. Shibuya Sky CONFIRMADO: venta exacta 14 días antes a medianoche JST (corregido en checklist/docx, antes decía "semanas"/"~4 semanas"). Mareas de Miyajima verificadas contra el JMA oficial: las horas del docx ya eran correctas (09:05/15:20), las alturas se corrigen (3,35 m/0,17 m). Cumpleaños: Kōko-en añadido como cierre opcional de la parada de Himeji. Docx regenerado (v5, edición quirúrgica del XML, sin generador nuevo); test-12-ruta.js ajustado a la hora de marea verificada |
 
 ## 8. Descartado a propósito (no re-implementar sin decisión del usuario)
 
@@ -471,3 +472,110 @@ pequeño en oscuro).
   SÓLO para el importador de María (`tools/maria-import.js`); `node_modules/` está
   en `.gitignore` y no se sube. Ejecutar el importador requiere `npm i` +
   `npx playwright install chromium`. No introducir dependencias de runtime.
+
+## 14. Auditoría de la Ruta 21 días (2026-07-21, revisión — sin cambios de código)
+
+**Decisión del usuario tras esta auditoría: la Ruta pasa de "propuesta más" a "mejor candidato
+para Realidad".** El trabajo que sigue es validar/pulir/plantar la Ruta, no rediseñar el viaje.
+Contexto: una revisión crítica externa (deep-research, sesión previa) había propuesto de forma
+independiente casi las mismas correcciones que la Ruta ya implementa (Kanazawa, Takayama/
+Shirakawa-gō, Himeji, veredicto JR Pass, mareas de Miyajima) — el diseño de ruta está
+sustancialmente hecho.
+
+Se leyó `Ruta-21-dias.docx` completo y se contrastó contra `RUTA_DAYS`/`NIGHTS`/`SKIPPED`/
+`TRANSPORT`/`PRICES`/`CHECKLIST` en `index.html`. Hallazgos que solo existen en el docx o son
+inconsistencias/investigación pendiente de verificar (ninguno bloquea, todos son pulido):
+
+1. **Inconsistencia numérica en el veredicto del JR Pass** (dentro del propio docx): la tabla de
+   precios da los 6 tramos largos en ~¥58.000/persona, pero el párrafo de veredicto dice que esos
+   tramos "suman aproximadamente lo que costaría el pase de 14 días (~¥80.000)" — son ¥22.000
+   (38%) de diferencia real. La conclusión (NO comprar el pase) se mantiene e incluso se refuerza,
+   pero el texto necesita corregirse para no ser autocontradictorio.
+2. **Shibuya Sky, ventana de reserva contradictoria**: docx/`CHECKLIST` dicen "se agota semanas
+   antes / ~4 semanas antes"; una investigación externa previa (verificada contra la web oficial
+   de Shibuya Sky) encontró que la venta abre EXACTAMENTE 14 días antes a medianoche JST — no se
+   puede reservar con más antelación. Re-verificar contra la web oficial antes de corregir.
+3. **Takayama Spring Festival (Sannō Matsuri), 14-15 abril fijo cada año** (confirmado para 2027
+   en investigación previa): solapa justo con Kanazawa/llegada a Takayama de la Ruta (13-15 abr)
+   y no se menciona en el docx ni en el código. Llegan a Takayama a las 15:40 del día 15, cuando
+   el programa diurno ya casi termina, habiendo pasado el 14 (noche del desfile de faroles) en
+   Kanazawa. Pendiente: verificar si el festival sube precio/reduce disponibilidad del ryokan
+   aunque no se asista.
+4. **Mareas de Miyajima 20-abr-2027** (pleamar 09:05 3,69 m / bajamar 15:21 0,52 m, usadas para
+   cronometrar el torii flotando vs a pie): el docx no cita fuente oficial. Verificar contra JMA o
+   el operador del ferry antes de fijar reservas en torno a esa fecha.
+5. **Reservas en el docx ausentes de `CHECKLIST`**: entrada online de Tōshōgū (día 12), reserva
+   TELEFÓNICA de Myōryū-ji/templo ninja en Kanazawa (día 14, posible barrera de idioma: sin
+   reserva online en inglés), reserva de la cena de cumpleaños si se elige teppanyaki (día 19).
+6. **Narai-juku sin estado en el código**: el docx lo deja como "Variante B" opcional del día 16
+   (vía Matsumoto, decisión de equipo pendiente) y la nota del día 16 en `RUTA_DAYS` lo referencia
+   ("en el documento"), pero `SKIPPED` no lo lista — un lector de la Guía no ve que es una
+   decisión abierta, no un descarte. Añadirlo a `SKIPPED` con una etiqueta distinta ("pendiente")
+   de los descartes firmes.
+7. **Paradas sin ficha propia**: Katamachi (cena, día 13 Kanazawa) y Ebisu Yokochō (cena, día 10
+   Tokio) son su propia franja horaria en el docx pero en `RUTA_DAYS` solo son texto dentro de la
+   nota de OTRA parada — sin `S()` propio no tienen pin de mapa ni son plantables por separado.
+8. **Día del Fuji (26 abr) y sakura**: el docx dice "abril aún puede dar sakura tardío aquí" en
+   Chūreitō, pero investigación previa sitúa el pico allí a mediados de abril — el 26 de abril casi
+   seguro no habrá sakura ya; suavizar o quitar la frase. El plan B de mal tiempo del docx
+   (teamLab Planets+Odaiba, o mover el bus al día 27) no está en la nota del día 26 de `RUTA_DAYS`,
+   solo referenciado indirectamente vía la entrada Odaiba de `SKIPPED`.
+
+Mejora sugerida (no decisión, ver si aporta): añadir el Museo Nintendo de Uji (lotería ~3 meses
+antes) al día 12 (cumpleaños), que ya pasa por Uji.
+
+Nada de esto bloquea plantar la Ruta en Realidad; son correcciones de detalle y verificaciones
+externas antes de dar la Ruta por cerrada. Full detalle y contexto de la sesión: nota Obsidian
+`proyecto:japon-2027`.
+
+### Segunda pasada (2026-07-21, misma sesión): revisión adversarial + resolución de los ítems 2-4
+
+Petición explícita del usuario: intentar ACTIVAMENTE encontrar una ruta objetivamente mejor,
+no validar la actual. Se auditó día a día, transbordo a transbordo. Único cambio de ruta con
+mérito real encontrado: reordenar Nikko (excursión de un día desde Tokio en vez de noche) +
+Takayama ANTES que Kanazawa, para dormir las noches del 13 y 14 en Takayama y ver el desfile de
+faroles del Sannō Matsuri (18:00 del día 14, el momento cumbre del festival) — verificado que la
+logística cuadra (Tokio→Nagoya→Takayama por Hida ~4h30 puerta a puerta; Kanazawa→Kioto vía
+transbordo en Tsuruga ~2h, más rápido que la ruta actual; mismo total de noches, 10, en el bloque).
+
+**Decisión final (verificada, no solo estimada): SE MANTIENE el orden actual.** Comprobada la
+disponibilidad real de alojamiento en Takayama para las noches del 13-14 de abril (fechas exactas
+del festival): múltiples fuentes independientes coinciden en que el centro de Takayama se agota
+entre 9 y 12 meses antes para estas fechas y lo poco que queda sube ×4-×5 de precio; a los ~9
+meses de antelación de este viaje ya no hay margen razonable. Documentado como decisión CONSCIENTE
+(no descuido) en `SKIPPED` (`index.html`, categoría nueva `considerado`) y en
+`Ruta-21-dias.docx` (nuevo párrafo junto al de Kamikochi). La Ruta sigue durmiendo en Takayama la
+noche del 15 (después del festival), sin cambios de fechas/ciudades/noches en ningún otro punto.
+
+**Ítem 2 (Shibuya Sky) RESUELTO — CONFIRMADO, la venta abre EXACTAMENTE 14 días antes a
+medianoche JST**, verificado hoy contra fuentes que citan la política oficial de Shibuya
+Scramble Square (comunicado del 27-feb-2025: revisión de venta de entradas). Corregido en
+`Ruta-21-dias.docx` (2 apariciones: tabla de reservas + nota del día 3) y en `index.html`
+(`CHECKLIST` + nota del stop `shibuya_sky` en `RUTA_DAYS`, día 10-abr).
+
+**Ítem 4 (mareas de Miyajima) RESUELTO — el docx acertaba, la corrección previa de esta misma
+sesión (basada en tidetime.org) estaba de hecho MENOS afinada.** Verificado hoy contra el pronóstico
+astronómico OFICIAL del JMA (estación Hiroshima/Q8, `data.jma.go.jp/kaiyou/db/tide/suisan/`) para
+el 20-abr-2027: pleamar 09:05 (335 cm) y bajamar 15:20 (17 cm) — las HORAS del docx (09:05 y
+15:21) coinciden casi exactamente con el JMA oficial; solo las ALTURAS estaban descuadradas
+(3,69 m / 0,52 m frente a los 3,35 m / 0,17 m oficiales, probablemente por un plano de referencia
+distinto). Corregidas las alturas y añadida la cita de fuente (JMA) en `Ruta-21-dias.docx` y
+`index.html` (paradas `itsukushima`/`daishoin`, día 20-abr); test `test-12-ruta.js` actualizado
+para no depender del literal `15:21`.
+
+**Mejora de cumpleaños incorporada**: la parada del castillo de Himeji (día 19-abr) menciona ahora
+el jardín Kōko-en (entrada combinada, contiguo al castillo) como cierre opcional si sobra media
+hora — los Nozomi/Sakura a Hiroshima salen cada 10-15 min, así que un tren algo más tarde no rompe
+el resto del día. Aplicado en `Ruta-21-dias.docx` y en el stop `himeji_castle` de `RUTA_DAYS`.
+(La ficha curada del catálogo ya mencionaba Kōko-en en su `tip`; lo que faltaba era la nota
+específica de ESTE día de la Ruta.)
+
+**Deliberadamente NO tocado en esta pasada** (quedan abiertos de la primera auditoría, sin pedido
+explícito esta vez): ítem 1 (inconsistencia numérica del JR Pass en el docx), ítem 5 (reservas de
+Tōshōgū/Myōryū-ji/cena de cumpleaños ausentes de `CHECKLIST`), ítem 6 (estado de Narai-juku en
+`SKIPPED`), ítem 7 (Katamachi/Ebisu Yokochō sin ficha propia), ítem 8 (frase de sakura tardío del
+26-abr en el docx).
+
+Nota de proceso: se pidió expresamente NO guardar en documentación permanente (ni aquí ni en
+Obsidian) la preferencia alimentaria temporal del usuario para la cena de cumpleaños (sin marisco
+ni ostras) — aplicada solo en la conversación de esa sesión, no en ningún archivo del repo.
