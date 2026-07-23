@@ -388,6 +388,11 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .num-icon{background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-weight:800;font-size:12px;font-family:var(--font);box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.3);}
 .poi-icon{border-radius:50%;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.3);opacity:.85;}
+/* 12.64 (Prioridad 4): pin de "Si sobra tiempo" en el mapa, diferenciado a
+   propósito del resto de marcadores (fondo claro + emoji de regalo, nada de
+   círculo de categoría ni número de parada: es opcional, no plan). */
+.extra-icon{background:#fff3d6;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:14px;box-shadow:0 0 0 2px #d9a441,0 2px 6px rgba(0,0,0,.3);}
 .leaflet-popup-content{font-family:var(--font);font-size:13px;}
 .leaflet-popup-content b{font-size:14px;}
 .map-toggles{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;}
@@ -430,6 +435,11 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .seed-day .sd-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
 .seed-day .sd-head small{color:var(--muted);font-size:11.5px;flex:none;}
 .seed-day .sd-flight{font-size:12.5px;color:var(--muted);}
+/* 12.64 (Prioridad 6): transporte del día dentro de la Ruta (dayTransportHTML) */
+.day-transport{display:flex;flex-direction:column;gap:4px;margin:2px 0 8px;}
+.dt-seg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;}
+.dt-seg .dt-route{font-weight:600;}
+.dt-seg small{color:var(--muted);}
 /* Ficha de María (12.52): referencia de solo lectura, sin acciones. */
 .mr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
 .mr-stay{font-size:12.5px;color:var(--muted);margin-bottom:6px;}
@@ -795,7 +805,10 @@ table.phr tr:last-child td{border-bottom:none;}
       <div class="itin-mode-group">
         <button class="fchip active" id="itinModeOurs" title="Lo que el viaje ya afirma: vuelos y noches reservadas · en progreso">🗓️ Realidad</button>
         <button class="fchip" id="itinModeRuta" title="La Ruta 21 días diseñada sobre todo el catálogo: gemelos imprescindibles, trenes y comidas">🧠 Ruta</button>
-        <button class="fchip" id="itinModeSeed" title="Propuesta generada por la IA">✨ Propuesta</button>
+        <!-- 12.63: Propuesta oculta de la UI normal (La Ruta es ahora la referencia
+             principal) pero NO borrada: código, datos (SEED_DAYS) y el modo 'seed'
+             siguen intactos y funcionales. Quitar display:none para restaurarla. -->
+        <button class="fchip" id="itinModeSeed" title="Propuesta generada por la IA" style="display:none">✨ Propuesta</button>
         <button class="fchip" id="itinModeDani" title="Ruta que sugirió Dani">🧭 Dani</button>
         <button class="fchip" id="itinModeMaria" title="El viaje que hizo María en 2024">📋 María</button>
       </div>
@@ -813,6 +826,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="map-toggles">
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
       <button class="fchip src-chip src-dani" id="daniLinesToggle" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo en el itinerario de Dani)">〰️ Líneas Dani</button>
+      <button class="fchip src-chip" id="extrasToggle" title="Mostrar u ocultar en el mapa los extras 'si sobra tiempo' (independiente del itinerario)">🎁 Extras</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
     <div class="map-toggles" id="mapCatChips" aria-label="Filtrar el mapa por categoría"></div>
@@ -1876,11 +1890,12 @@ const PHRASES = [
 /* Elementos 4-6 (12.63): checkIn/checkOut ISO + nº de noches, SOLO en las filas
    'res'/'amp' que hay que reservar de verdad — alimentan la sección "Aún por
    reservar" de Confirmado (antes usaba 3 placeholders fijos hotel_tokyo/kyoto/
-   osaka de la semilla vieja, ya obsoletos con la Ruta). 'ok' no los necesita
-   (ya reservado); 'vuelo' tampoco (no es noche de hotel). */
+   osaka de la semilla vieja, ya obsoletos con la Ruta) y, junto con las filas
+   'ok' (que también los llevan, 12.63b), el resumen de ruta de Inicio
+   (routeOverview). 'vuelo' no los necesita (no es noche de hotel). */
 const NIGHTS = [
   ['8 abr','A bordo (AY0073)','vuelo','—'],
-  ['9–12 abr','Tokio · Louis House Otsuka Nishi','ok','3 noches RESERVADO'],
+  ['9–12 abr','Tokio · Louis House Otsuka Nishi','ok','3 noches RESERVADO','2027-04-09','2027-04-12',3],
   ['12 abr','Nikko · ryokan/onsen','res','zona: Nikko o Kinugawa Onsen','2027-04-12','2027-04-13',1],
   ['13–15 abr','Kanazawa · centro','res','2 noches · Katamachi/Kōrinbō o estación','2027-04-13','2027-04-15',2],
   ['15 abr','Takayama · RYOKAN','res','media pensión, onsen + kaiseki (el más urgente)','2027-04-15','2027-04-16',1],
@@ -1889,7 +1904,7 @@ const NIGHTS = [
   ['20 abr','Fukuoka · Hakata/Nakasu','res','Hakata (estación) o Nakasu/Tenjin','2027-04-20','2027-04-21',1],
   ['21–24 abr','Osaka · Namba','res','3 noches · Namba/Shinsaibashi','2027-04-21','2027-04-24',3],
   ['24 abr','Tokio · APA Asakusabashi','amp','AMPLIAR la reserva 25–27 para entrar el 24','2027-04-24','2027-04-25',1],
-  ['25–27 abr','Tokio · APA Asakusabashi','ok','2 noches RESERVADO'],
+  ['25–27 abr','Tokio · APA Asakusabashi','ok','2 noches RESERVADO','2027-04-25','2027-04-27',2],
   ['27 abr','A bordo (AY0074, sale 23:05)','vuelo','—'],
 ];
 
@@ -4344,16 +4359,24 @@ function seasonDayExtras(d){
   return html;
 }
 function renderInicio(){
-  const legs = [
-    {city: 'Tokio', from: '9 abr', to: '16 abr', n: 7},
-    {city: 'Kioto', from: '16 abr', to: '19 abr', n: 3},
-    {city: 'Osaka', from: '19 abr', to: '22 abr', n: 3},
-    {city: 'Tokio', from: '22 abr', to: '27 abr', n: 5},
-  ];
+  // 12.63: derivado de NIGHTS (la Ruta), no de un array fijo obsoleto de la
+  // semilla vieja (era Tokio→Kioto→Osaka→Tokio, un reparto que ya no es el
+  // de la Ruta). Ciudades consecutivas se funden en un solo tramo.
+  const legs = [];
+  NIGHTS.forEach(n => {
+    if(n[2] === 'vuelo' || !n[4]) return; // sin ISO (checkIn) no hay tramo que pintar
+    const city = n[1].split(' · ')[0];
+    const last = legs[legs.length - 1];
+    if(last && last.city === city && last.to === n[4]){
+      last.to = n[5]; last.n += n[6];
+    } else {
+      legs.push({city, from: n[4], to: n[5], n: n[6]});
+    }
+  });
   $('#routeOverview').innerHTML = legs.map(l =>
-    `<div class="city-block" style="--city:${CITY_COLORS[l.city]}"><span class="nts">${l.n} noches</span><b>${l.city}</b><small>${l.from} → ${l.to}</small></div>`
+    `<div class="city-block" style="--city:${CITY_COLORS[l.city] || ''}"><span class="nts">${l.n} noche${l.n === 1 ? '' : 's'}</span><b>${esc(l.city)}</b><small>${fmtDateShort(l.from)} → ${fmtDateShort(l.to)}</small></div>`
   ).join('<div style="align-self:center;color:var(--muted);font-weight:800">→</div>');
-  $('#routeSummary').textContent = '+ excursiones a Nikkō, Kamakura, Fuji, Nara, Hiroshima y Miyajima';
+  $('#routeSummary').textContent = 'La Ruta 21 días · Nikko, Kanazawa, Takayama, Kioto, Hiroshima, Miyajima, Fukuoka, Osaka';
 
   // Home = Confirmado (Wallet): sin fila de KPIs ni precios (DIRECTION §7).
   // Lo confirmado son los vuelos y los hoteles reservados, directamente.
@@ -4537,7 +4560,8 @@ function renderDaniItinerary(){
       Ruta importada del documento de Dani (viaje de junio 2025). Es solo de consulta:
       con <b>★ Pasar</b> cualquier sitio se convierte en vuestro y aparece en Sitios y en el mapa.
     </div>` +
-    DANI_ROUTE_GROUPS.map((route, idx) => {
+    dayIndices(DANI_ROUTE_GROUPS.length).map(idx => {
+      const route = DANI_ROUTE_GROUPS[idx];
       const rows = route.placeIds.map(id => {
         const p = byId.get(id);
         if(!p) return '';
@@ -4579,7 +4603,8 @@ function renderSeedItinerary(){
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
     ✨ <b>Propuesta de desarrollo</b> · una idea de itinerario generada al construir la app.
     No es el viaje: plantad con ＋ lo que os convenza, día a día.</div>`;
-  html += SEED_DAYS.map((sd, i) => {
+  html += dayIndices(SEED_DAYS.length).map(i => {
+    const sd = SEED_DAYS[i];
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
     const rows = (sd.stops || []).map(s => {
       const pid = canonicalPid(s.pid);
@@ -4629,6 +4654,12 @@ function plantFromProposal(pid, dayIdx){
    de apertura — coherente con "lo frecuente casi no se anima"). Nunca se
    muestra dentro de .timeline ni junto a los .stop: es un material Washi
    aparte, para que se lea de un vistazo como "no es el plan". */
+/* 12.64 · Sincronización mapa↔itinerario (Prioridad 5): seleccionar un día en
+   el mapa (mapDay) filtra el panel de abajo a solo ese día; "Todos" (-1)
+   vuelve a la lista completa. Mismo índice que itineraryDays(mode). */
+function dayIndices(total){
+  return (mapDay >= 0 && mapDay < total) ? [mapDay] : Array.from({length: total}, (_, i) => i);
+}
 function spareTimeHTML(date){
   const extras = DAY_EXTRAS[date];
   if(!extras || !extras.length) return '';
@@ -4642,6 +4673,20 @@ function spareTimeHTML(date){
     </div>
   </details>`;
 }
+// 12.64 (Prioridad 6): transporte del día DENTRO de la Ruta, reutilizando
+// TRANSPORT (Guía) por su etiqueta "Día N" — sin datos nuevos, sin duplicar
+// duración/coste que TRANSPORT no tiene estructurados (solo train quedan en
+// rd.note, ya visible). 'obl' = reserva obligatoria; 'rec' = recomendado.
+function transportForDayNum(dayNum){
+  return TRANSPORT.filter(t => t[1] === `Día ${dayNum}`);
+}
+function dayTransportHTML(dayNum){
+  const segs = transportForDayNum(dayNum);
+  if(!segs.length) return '';
+  return `<div class="day-transport">${segs.map(([kind, , route, mode]) =>
+    `<div class="dt-seg"><span class="pill ${kind === 'obl' ? 'red' : ''}">${kind === 'obl' ? '🎫 reserva obligatoria' : '🚄 recomendado'}</span>
+      <span class="dt-route">${esc(route)}</span><small>${esc(mode)}</small></div>`).join('')}</div>`;
+}
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
@@ -4651,7 +4696,8 @@ function renderRutaItinerary(){
     Trenes, comidas y noches resueltos; el 19-abr es el 🎂 y se celebra.
     No es el viaje: plantad con ＋ lo que os convenza. El documento 📄 la cuenta hora a hora.
     <div style="margin-top:8px"><button class="btn ghost small" id="rutaToTransport">🚄 Trenes y buses a reservar →</button></div></div>`;
-  html += RUTA_DAYS.map((rd, i) => {
+  html += dayIndices(RUTA_DAYS.length).map(i => {
+    const rd = RUTA_DAYS[i];
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
     const rows = (rd.stops || []).map(s => {
       const pid = canonicalPid(s.pid);
@@ -4669,6 +4715,7 @@ function renderRutaItinerary(){
     return `<div class="m-washi seed-day">
       <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b><small>${fmtDateShort(rd.date)}</small></div>
       ${rd.note ? `<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">🚉 ${esc(rd.note)}</div>` : ''}
+      ${dayTransportHTML(i + 1)}
       ${(rd.flight && !rows) ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
       ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
       ${spareTimeHTML(rd.date)}
@@ -4812,6 +4859,8 @@ function renderCord(){
 function zoomToDay(i, fromEl){
   if(i == null || isNaN(i)) return;
   curDay = i; setItinAlt('day'); renderItinerary();
+  // 12.64: el zoom a un día también enfoca ESE día en el mapa de arriba.
+  mapDay = i; if(map) renderMapDay();
   const panel = $('#dayPanel');
   const from = fromEl && fromEl.getBoundingClientRect ? fromEl.getBoundingClientRect() : null;
   if(from && panel) Motion.flip(panel, from, {duration: 260, fade: true});
@@ -4819,6 +4868,7 @@ function zoomToDay(i, fromEl){
 }
 function zoomOut(){
   setItinAlt('trip'); renderCord();
+  mapDay = -1; if(map) renderMapDay();
   const c = $('#cord'); if(c && c.scrollIntoView) c.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderItinerary(){
@@ -5497,7 +5547,18 @@ function renderMapDayChips(days){
       return `<button class="day-chip ${i === mapDay ? 'active' : ''}" data-i="${i}">${label}</button>`;
     }));
   host.innerHTML = chips.join('');
-  $$('#mapDayChips .day-chip').forEach(b => b.addEventListener('click', () => { mapDay = +b.dataset.i; renderMapDay(); }));
+  $$('#mapDayChips .day-chip').forEach(b => b.addEventListener('click', () => {
+    mapDay = +b.dataset.i; renderMapDay();
+    // 12.64 (Prioridad 5): el día elegido en el mapa filtra el itinerario de
+    // abajo. En 'ours' reutiliza la altitud de Día (Cord); el resto de modos
+    // leen mapDay directamente en su propio render.
+    if(itinMode === 'ours'){
+      if(mapDay >= 0){ curDay = mapDay; setItinAlt('day'); } else { setItinAlt('trip'); }
+      renderItinerary();
+    } else {
+      renderItinerary();
+    }
+  }));
 }
 
 /* --- M4 · Capa de vuelos (no persistida, como en la app original) --- */
@@ -5525,6 +5586,28 @@ function syncDaniLinesChip(){
     syncDaniLinesChip(); renderMapDay();
   });
 })();
+
+/* --- 12.64 (Prioridad 4) · Capa "Si sobra tiempo" en el mapa: independiente
+   del itinerario activo (toggle propio, apagada por defecto = sin ruido).
+   DAY_EXTRAS no trae lat/lng a propósito (no son fichas curadas, ver su
+   comentario de cabecera): se ubican en la parada real más cercana por
+   nombre (`near`) y, si no hay coincidencia clara, en la primera parada del
+   día — siempre coordenadas YA existentes en el catálogo, nunca inventadas. */
+let extrasVisible = false;
+function syncExtrasChip(){ const el = $('#extrasToggle'); if(el) el.classList.toggle('active', extrasVisible); }
+(function(){
+  const el = $('#extrasToggle'); if(!el) return;
+  el.addEventListener('click', () => { extrasVisible = !extrasVisible; syncExtrasChip(); renderMapDay(); });
+})();
+function extraLatLng(date, near){
+  const day = RUTA_DAYS.find(d => d.date === date);
+  const stops = ((day && day.stops) || []).map(s => placeById(canonicalPid(s.pid))).filter(p => p && p.lat != null);
+  if(!stops.length) return null;
+  const n = (near || '').toLowerCase();
+  const hit = stops.find(p => n.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(n));
+  const p = hit || stops[0];
+  return [p.lat, p.lng];
+}
 
 /* --- M5 · Filtro del mapa por categoría (no persistido, como el original) --- */
 const activeMapCategories = new Set(Object.keys(CATS));
@@ -5833,6 +5916,20 @@ async function renderMapDay(){
     mk.bindPopup(`<b>${i + 1}. ${esc(x.p.name)}</b><br>${x.s.time ? '🕐 ' + x.s.time + ' · ' : ''}${fmtMin(x.s.dur)}<br><a href="javascript:openPlace('${x.s.pid}')">Ver ficha →</a>`);
     mk.addTo(map); mapLayers.push(mk);
   });
+  // 12.64 (Prioridad 4): "Si sobra tiempo", capa independiente del itinerario
+  // (toggle propio). Con día concreto, solo los extras de ESA fecha; con
+  // "Todos", los de todos los días visibles. Fechas compartidas (M10) con
+  // cualquier itinerario del viaje real; Dani/María no tienen extras propios.
+  if(extrasVisible){
+    const extraDates = day ? [day.date] : days.map(d => d.date).filter(Boolean);
+    extraDates.forEach(date => (DAY_EXTRAS[date] || []).forEach(x => {
+      const ll = extraLatLng(date, x.near);
+      if(!ll) return;
+      const mk = L.marker(ll, {icon: L.divIcon({className: 'extra-icon', html: '🎁', iconSize: [24, 24], iconAnchor: [12, 12]})});
+      mk.bindPopup(`<b>🎁 ${esc(x.name)}</b><br>${x.mins === 0 ? 'en la puerta de' : x.mins + ' min de'} ${esc(x.near)}<br>${esc(x.why)}`);
+      mk.addTo(map); mapLayers.push(mk);
+    }));
+  }
   // Vuelos: solo tienen sentido en los itinerarios del viaje real (Realidad,
   // Ruta y Propuesta); Dani y María no llevan vuelos.
   const showFlights = (itin === 'ours' || itin === 'seed' || itin === 'ruta') && flightsVisible;

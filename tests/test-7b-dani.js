@@ -9,7 +9,7 @@ function extractFn(name) {
   return appJs.slice(start, end + 2);
 }
 
-const src = [extractFn('sourceValueForPlace'), extractFn('renderDaniItinerary'), extractFn('drawDaniRoutes')].join('\n');
+const src = [extractFn('sourceValueForPlace'), extractFn('dayIndices'), extractFn('renderDaniItinerary'), extractFn('drawDaniRoutes')].join('\n');
 
 // ---- stubs ----
 const dom = { innerHTML: '' };
@@ -35,6 +35,7 @@ const sandbox = {
   L: { polyline: fakeLine, marker: fakeMarker, divIcon: o => o },
   map: {},
   mapLayers: [],
+  mapDay: -1, // 12.64: dayIndices() lee mapDay del scope; -1 = "Todos" (sin filtrar)
 };
 
 const fn = new Function(...Object.keys(sandbox), src + `
