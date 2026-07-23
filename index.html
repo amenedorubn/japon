@@ -387,14 +387,27 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .map-legend .sw{width:22px;height:0;border-top:3px solid;border-radius:2px;}
 .map-legend .sw.dash{border-top-style:dashed;}
 .map-note{font-size:11.5px;color:var(--muted);margin-top:6px;}
-.num-icon{background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-weight:800;font-size:12px;font-family:var(--font);box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.3);}
-.poi-icon{border-radius:50%;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.3);opacity:.85;}
-/* 12.64 (Prioridad 4): pin de "Si sobra tiempo" en el mapa, diferenciado a
-   propósito del resto de marcadores (fondo claro + emoji de regalo, nada de
-   círculo de categoría ni número de parada: es opcional, no plan). */
-.extra-icon{background:#fff3d6;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:14px;box-shadow:0 0 0 2px #d9a441,0 2px 6px rgba(0,0,0,.3);}
+/* Muestras de la leyenda (marcador, no línea): reproducen en miniatura el aro
+   real de .jp-pin para que la leyenda y el mapa hablen el mismo idioma. */
+.jp-key{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:50%;background:var(--ink);color:#fff;font-size:9px;font-weight:800;margin-right:2px;}
+.jp-key-primary{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--ink);}
+.jp-key-optional{background:transparent;color:var(--ink);border:2px dashed var(--muted);}
+/* Prioridad 1 (fase de viaje) · UN solo lenguaje visual de marcador: antes
+   cada tipo se pintaba a mano con su propio criterio (número plano en rojo
+   fijo, punto SVG sin icono, círculo de aeropuerto sin clase compartida,
+   avión suelto sin círculo) — cuatro lenguajes distintos en la misma vista.
+   Ahora todo pasa por pinIcon(): un círculo con contenido (número o emoji) y
+   3 variantes de aro que comunican SIN texto qué es cada marcador:
+   .jp-pin-primary = parada real del plan o sitio del itinerario (aro blanco
+   sólido, color de fondo = categoría); .jp-pin-optional = extra "si sobra
+   tiempo" (aro discontinuo, más pequeño: opcional, no plan);
+   .jp-pin-structural = aeropuerto/vuelo (aro reforzado, color fijo). */
+.jp-pin > div{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;
+  font-weight:800;font-family:var(--font);box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.3);}
+.jp-pin-optional > div{box-shadow:none;border:2px dashed rgba(255,255,255,.95);
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.32));}
+.jp-pin-structural > div{box-shadow:0 0 0 2.5px #fff,0 3px 8px rgba(0,0,0,.35);}
 .leaflet-popup-content{font-family:var(--font);font-size:13px;}
 .leaflet-popup-content b{font-size:14px;}
 .map-toggles{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;}
@@ -6042,6 +6055,24 @@ function offsetLatLng(anchor, seed){
   const R = 0.0025; // ~250 m: se distingue del pin real sin desligarse del sitio
   return [anchor[0] + Math.sin(angle) * R, anchor[1] + Math.cos(angle) * R];
 }
+/* Prioridad 1: fábrica ÚNICA de icono de marcador (ver CSS .jp-pin arriba).
+   `tag` es solo para introspección/tests (identifica el USO concreto:
+   poi/stop/extra/airport/flight); `kind` decide la variante visual
+   (primary/optional/structural). El color de fondo es dinámico (categoría
+   real del sitio), así que va inline en el div interior, igual que ya hacía
+   el resto del mapa (aeropuertos, zonas) — nada de tokens CSS nuevos para
+   algo que varía por marcador. */
+function pinIcon(tag, kind, content, color, size, ring){
+  const cls = kind === 'optional' ? 'jp-pin-optional' : kind === 'structural' ? 'jp-pin-structural' : 'jp-pin-primary';
+  // El aro blanco por defecto vive en la CSS; solo se pisa inline cuando el
+  // itinerario tiene su PROPIO color de aro (ITIN_RING) — así "de quién es
+  // este pin" se sigue leyendo sin usurpar el rojo (invariante ya existente).
+  const ringCss = (kind === 'primary' && ring && ring !== '#fff')
+    ? `box-shadow:0 0 0 3px ${ring},0 2px 6px rgba(0,0,0,.3);` : '';
+  return L.divIcon({className: `jp-pin ${cls} jp-${tag}`, html:
+    `<div style="background:${color};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.46)}px;${ringCss}">${content}</div>`,
+    iconSize: [size, size], iconAnchor: [size / 2, size / 2]});
+}
 
 /* --- M5 · Filtro del mapa por categoría (no persistido, como el original) --- */
 const activeMapCategories = new Set(Object.keys(CATS));
@@ -6281,8 +6312,7 @@ function drawFlights(day){
     const arc = L.polyline(gc, {color: '#a97b12', weight: 3, dashArray: '2 9', opacity: .9, lineCap: 'round'});
     arc.addTo(map); mapLayers.push(arc);
     const mid = gc[Math.floor(gc.length / 2)];
-    const plane = L.marker(mid, {icon: L.divIcon({className: '', html:
-      '<div style="font-size:18px;filter:drop-shadow(0 1px 2px rgba(34,32,28,.35))">✈️</div>', iconSize: [22, 22], iconAnchor: [11, 11]})});
+    const plane = L.marker(mid, {icon: pinIcon('flight', 'structural', '✈️', '#a97b12', 24)});
     plane.bindPopup(`✈️ <b>${f.flight}</b> · ${esc(f.airline)}<br>${esc(f.from)} → ${esc(f.to)}<br>🕐 Sale ${f.dep} · llega ${f.arr}<br>${esc(f.terminal)}${f.note ? '<br>⚠️ ' + esc(f.note) : ''}`);
     plane.addTo(map); mapLayers.push(plane);
     used.add(f.from); used.add(f.to);
@@ -6291,9 +6321,7 @@ function drawFlights(day){
   used.forEach(s => {
     const a = airportOf(s);
     if(!a) return;
-    const m = L.marker([a.lat, a.lng], {icon: L.divIcon({className: '', html:
-      `<div style="background:#2b4a7a;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;box-shadow:0 3px 8px rgba(34,32,28,.35);border:2.5px solid #fff">${a.emoji}</div>`,
-      iconSize: [30, 30], iconAnchor: [15, 15]})});
+    const m = L.marker([a.lat, a.lng], {icon: pinIcon('airport', 'structural', a.emoji, '#2b4a7a', 30)});
     m.bindTooltip(a.name, {direction: 'top', offset: [0, -16]});
     m.addTo(map); mapLayers.push(m);
   });
@@ -6332,18 +6360,22 @@ async function renderMapDay(){
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
     poiPts.push([p.lat, p.lng]);
     const c = catOf(p);
-    const circle = L.circleMarker([p.lat, p.lng], {radius: p.userPlace ? 6 : 5, color: ring,
-      weight: ring === '#fff' ? 1.5 : 2, fillColor: c.color, fillOpacity: p.userPlace ? .95 : .8});
-    circle.bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.region)}<br><a href="javascript:openPlace('${sp.id}')">Ver ficha →</a>`);
-    circle.addTo(map); mapLayers.push(circle);
+    // Prioridad 1: el emoji de categoría vale de "de un vistazo, qué es esto"
+    // en vez de un punto de color plano; mismo color que la parada numerada
+    // de más abajo, para que "Todos" y un día concreto lean el mismo idioma.
+    const size = p.userPlace ? 26 : 22;
+    const mk = L.marker([p.lat, p.lng], {icon: pinIcon('poi', 'primary', c.emoji, c.color, size, ring)});
+    mk.bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.region)}<br><a href="javascript:openPlace('${sp.id}')">Ver ficha →</a>`);
+    mk.addTo(map); mapLayers.push(mk);
   });
   // 12.56: las líneas de la ruta Dani solo en el itinerario de Dani y con su
   // toggle encendido (antes dependían de la capa de fuente 'd').
   if(itin === 'dani' && daniLinesVisible) drawDaniRoutes();
 
   stops.forEach((x, i) => {
+    const c = catOf(x.p);
     const mk = L.marker([x.p.lat, x.p.lng], {
-      icon: L.divIcon({className: 'num-icon', html: String(i + 1), iconSize: [28, 28]}),
+      icon: pinIcon('stop', 'primary', i + 1, c.color, 28, ring),
       zIndexOffset: 1000
     });
     mk.bindPopup(`<b>${i + 1}. ${esc(x.p.name)}</b><br>${x.s.time ? '🕐 ' + x.s.time + ' · ' : ''}${fmtMin(x.s.dur)}<br><a href="javascript:openPlace('${x.s.pid}')">Ver ficha →</a>`);
@@ -6367,8 +6399,7 @@ async function renderMapDay(){
         const branch = L.polyline([anchor, ll], {color: '#8a8577', weight: 2, opacity: .7, dashArray: '2,6'});
         branch.addTo(map); mapLayers.push(branch);
       }
-      const mk = L.marker(ll, {icon: L.divIcon({className: 'extra-icon', html: '🎁',
-        iconSize: day ? [20, 20] : [24, 24], iconAnchor: day ? [10, 10] : [12, 12]})});
+      const mk = L.marker(ll, {icon: pinIcon('extra', 'optional', '🎁', '#8a8577', day ? 20 : 24)});
       mk.bindPopup(`<b>🎁 ${esc(x.name)}</b><br>${x.mins === 0 ? 'en la puerta de' : x.mins + ' min de'} ${esc(x.near)}<br>${esc(x.why)}`);
       mk.addTo(map); mapLayers.push(mk);
     }));
@@ -6445,10 +6476,18 @@ async function renderMapDay(){
     }
   }
   if(pending === 0) statusEl.style.display = 'none';
-  $('#mapLegend').innerHTML = Array.from(usedModes).map(m => {
+  // Prioridad 1: con un día concreto, la leyenda también explica el lenguaje
+  // de marcador (aro sólido = parada del plan, discontinuo = opcional) antes
+  // de los tramos de transporte — así el mapa se lee sin abrir ninguna ficha.
+  const markerKey = day
+    ? ['<span class="li"><b class="jp-key jp-key-primary">①</b> Parada del día</span>']
+      .concat(extrasVisible && (DAY_EXTRAS[day.date] || []).length
+        ? ['<span class="li"><b class="jp-key jp-key-optional">🎁</b> Opcional (si sobra tiempo)</span>'] : [])
+    : [];
+  $('#mapLegend').innerHTML = markerKey.concat(Array.from(usedModes).map(m => {
     const md = modeOf(m);
     return `<span class="li"><span class="sw ${md.dash ? 'dash' : ''}" style="border-color:${md.color}"></span>${md.emoji} ${md.label}</span>`;
-  }).join('');
+  })).join('');
 }
 
 /* ================================================================

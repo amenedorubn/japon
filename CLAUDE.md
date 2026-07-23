@@ -84,7 +84,10 @@ Antes de proceder, pregunta si:
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
   planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
-  Última materialización **12.68** (5 prioridades de esa fase): "〰️ Líneas Dani" solo se ve en el
+  Última materialización **12.69** (mapa: un solo lenguaje visual de marcador — `pinIcon()`
+  unifica paradas numeradas, POIs de "Todos" (ahora con emoji de categoría, no un punto plano),
+  extras opcionales y aeropuertos/vuelos en 3 variantes de aro que se leen sin texto). Antes,
+  **12.68** (5 prioridades de esa fase): "〰️ Líneas Dani" solo se ve en el
   itinerario de Dani; los extras "si sobra tiempo" se leen inlineados DENTRO del recorrido de un
   día concreto (panel y mapa, con rama punteada hacia un pin propio) en vez de aparte, salvo en
   "Todos los días" que conserva el `<details>` colapsado; Realidad gana horas inferidas en cada

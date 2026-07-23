@@ -88,6 +88,11 @@ let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };
 const layersOfType = t => [...api.getMap()._layers].filter(l => l._type === t);
 const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type === t);
+// Prioridad 1 (fase de viaje): un solo lenguaje de marcador (pinIcon), así
+// que TODOS los tipos (POI, parada numerada, extra, aeropuerto, avión) son
+// ahora capa 'marker' — se distinguen por el tag de className (jp-poi,
+// jp-stop, jp-extra, jp-airport, jp-flight), no por el tipo de capa Leaflet.
+const markersByTag = tag => layersOfType('marker').filter(l => l._icon && l._icon.className && l._icon.className.includes('jp-' + tag));
 
 (async () => {
   // Boot sanity: app evaluated, merged seed built (2 airports + 38 catalog +
@@ -112,7 +117,7 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   await sleep(400); // deja disparar callbacks async rezagados (el token debe bloquearlos)
   check('Realidad/Todos: cero polilíneas de ruta', Lstats.polyline === polyBefore);
   check('Realidad/Todos: cero fetches OSRM/rail', fetchCount === fetchBefore);
-  const oursPois = layersOfType('circleMarker').length;
+  const oursPois = markersByTag('poi').length;
   check('Realidad/Todos: dibuja los POIs de Realidad (procedencia ours)', oursPois > 10);
   check('P6: day chips include Todos', els['#mapDayChips'].innerHTML.includes('Todos'));
 
@@ -122,11 +127,11 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   api.renderMapDay();
   await sleep(400);
   check('Realidad/día: dibuja los marcadores numerados de las paradas (>=4)',
-    layersOfType('marker').length >= 4);
-  // 12.65: con un día concreto seleccionado, CERO círculos de otros días —
+    markersByTag('stop').length >= 4);
+  // 12.65: con un día concreto seleccionado, CERO POIs de otros días —
   // antes el mapa seguía pintando los POIs de TODO el itinerario alrededor.
   check('12.65: día concreto = cero POIs de otros días (solo las paradas numeradas de ESE día)',
-    layersOfType('circleMarker').length === 0);
+    markersByTag('poi').length === 0);
   api.setMapDay(-1);
   api.renderMapDay();
 
@@ -137,21 +142,33 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   api.setMapDay(-1);
   api.setExtrasVisible(false);
   api.renderMapDay();
-  const giftsOff = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  const giftsOff = markersByTag('extra').length;
   check('extras: con el toggle OFF no hay pines de regalo', giftsOff === 0);
   api.setExtrasVisible(true);
   api.renderMapDay();
   const totalExtras = Object.values(api.DAY_EXTRAS).reduce((n, arr) => n + arr.length, 0);
-  const giftsAllDays = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  const giftsAllDays = markersByTag('extra').length;
   check(`extras: con el toggle ON y "Todos" aparecen pines de TODOS los días (${giftsAllDays} de ${totalExtras})`,
     giftsAllDays > 0 && giftsAllDays <= totalExtras);
   const rutaDayIdx = api.RUTA_DAYS.findIndex(d => (api.DAY_EXTRAS[d.date] || []).length > 0);
   api.setMapDay(rutaDayIdx);
   api.renderMapDay();
-  const giftsOneDay = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  const giftsOneDay = markersByTag('extra').length;
   const expectedOneDay = (api.DAY_EXTRAS[api.RUTA_DAYS[rutaDayIdx].date] || []).length;
   check(`extras: con un día concreto solo salen los extras de ESE día (${giftsOneDay} == ${expectedOneDay})`,
     giftsOneDay === expectedOneDay && giftsOneDay < giftsAllDays);
+
+  // ============ Prioridad 1 (fase de viaje) · UN lenguaje visual de marcador ============
+  // Aro discontinuo (jp-pin-optional) para los extras, distinto del aro sólido
+  // (jp-pin-primary) de las paradas numeradas — se lee sin abrir ninguna ficha.
+  const extraMk = markersByTag('extra')[0];
+  check('marcador: un extra usa el aro discontinuo (jp-pin-optional)',
+    !!extraMk && extraMk._icon.className.includes('jp-pin-optional'));
+  const stopMk = markersByTag('stop')[0];
+  check('marcador: una parada numerada usa el aro sólido (jp-pin-primary)',
+    !!stopMk && stopMk._icon.className.includes('jp-pin-primary'));
+  check('leyenda: con un día concreto y extras activados, la leyenda explica el lenguaje de marcador',
+    els['#mapLegend'].innerHTML.includes('jp-key-primary') && els['#mapLegend'].innerHTML.includes('jp-key-optional'));
   api.setExtrasVisible(false);
   api.setMapDay(-1);
   api.setItinMode('ours');
@@ -174,14 +191,19 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   api.setFlights(true);
   api.renderMapDay();
   check('M4: 4 arcos de círculo máximo (Realidad, Todos)', Lstats.polyline - p0 === 4);
-  check('M4: 4 aviones + 3 aeropuertos en el mapa', layersOfType('marker').length === 7);
+  check('M4: 4 aviones + 3 aeropuertos en el mapa', markersByTag('flight').length + markersByTag('airport').length === 7);
 
   // M4: día de vuelo (día 0, legs 1+2, sin paradas) = 2 arcos + 2 aviones + 3 aeropuertos
   api.setMapDay(0);
   const p1 = Lstats.polyline;
   api.renderMapDay();
   check('M4: el día de vuelo dibuja sus 2 tramos', Lstats.polyline - p1 === 2);
-  check('M4: el día de vuelo dibuja 2 aviones + 3 aeropuertos', layersOfType('marker').length === 5);
+  check('M4: el día de vuelo dibuja 2 aviones + 3 aeropuertos', markersByTag('flight').length + markersByTag('airport').length === 5);
+  // Aeropuertos/aviones: aro reforzado y color fijo (jp-pin-structural), distinto
+  // del aro de categoría de POIs/paradas — comunican "infraestructura", no "sitio".
+  const airportMk = markersByTag('airport')[0];
+  check('marcador: un aeropuerto usa el aro reforzado (jp-pin-structural)',
+    !!airportMk && airportMk._icon.className.includes('jp-pin-structural'));
   api.setFlights(false);
   api.setMapDay(-1);
 
@@ -217,7 +239,7 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   api.setItinMode('dani');
   api.setDaniLines(false);
   api.renderMapDay();
-  const daniPois = layersOfType('circleMarker').length;
+  const daniPois = markersByTag('poi').length;
   check('Dani: el mapa pinta los puntos de la ruta de Dani', daniPois > 30);
   const pn = Lstats.polyline;
   api.setDaniLines(true);
@@ -231,21 +253,21 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   // María: su mapa pinta sus sitios (procedencia maria), no los de otros.
   api.setItinMode('maria');
   api.renderMapDay();
-  const mariaPois = layersOfType('circleMarker').length;
+  const mariaPois = markersByTag('poi').length;
   check('María: el mapa pinta los sitios de María', mariaPois > 100);
 
   // Propuesta: su mapa pinta sus lugares (y ninguno es un aeropuerto/base).
   api.setItinMode('seed');
   api.renderMapDay();
-  check('Propuesta: el mapa pinta los lugares de la Propuesta', layersOfType('circleMarker').length > 10);
+  check('Propuesta: el mapa pinta los lugares de la Propuesta', markersByTag('poi').length > 10);
 
   // M5: el filtro de categoría reduce POIs (en María, con muchos sitios diversos)
   api.setItinMode('maria');
   api.renderMapDay();
-  const allPois = layersOfType('circleMarker').length;
+  const allPois = markersByTag('poi').length;
   ['templo', 'comida', 'compras'].forEach(c => api.activeMapCategories.delete(c));
   api.renderMapDay();
-  const filteredPois = layersOfType('circleMarker').length;
+  const filteredPois = markersByTag('poi').length;
   check(`M5: filtrar categorías reduce POIs (${allPois} -> ${filteredPois})`, filteredPois < allPois && filteredPois > 0);
   ['templo', 'comida', 'compras'].forEach(c => api.activeMapCategories.add(c));
   api.setItinMode('ours');
