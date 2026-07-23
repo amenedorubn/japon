@@ -159,6 +159,21 @@ if(dayWithGap){
   const reserveT = { sel: 0, opts: [{ id: 'x2', m: 'shinkansen', d: 30, n: 'Reservad asiento con antelación' }] };
   const reserveHTML = api.transferHTML(reserveT, a, b, dayIdx, 0, '');
   check('P3: una nota que dice "reservad" activa el aviso 🎫 reserva', reserveHTML.includes('🎫 reserva'));
+
+  // Agenda 2.0: origen → destino visible como texto, y aviso "(estimado)"
+  // cuando el hueco es el colchón de pre/post o el medio es un paseo
+  // auto-inferido sin confirmar (opt.auto), no cuando el usuario ya lo fijó.
+  check('P2.0: el bloque nombra origen → destino como texto (no solo en el enlace)',
+    plainHTML.includes(`class="t-route">${a.name} <span aria-hidden="true">→</span> ${b.name}`));
+  const preWin = api.realGapWindow(dayWithGap, 'pre');
+  check('P2.0: el colchón antes de la primera parada se marca "estimado"', !!preWin && preWin.estimated === true);
+  check('P2.0: el hueco entre dos paradas reales NO se marca "estimado" (las horas son del usuario)',
+    !!win && win.estimated === false);
+  const autoT = { sel: 0, opts: [{ id: 'x3', m: 'walk', d: 12, auto: true }] };
+  const autoHTML = api.transferHTML(autoT, a, b, dayIdx, 0, '');
+  check('P2.0: una opción auto-inferida (opt.auto) sin confirmar se marca "(estimado)"',
+    autoHTML.includes('(estimado)'));
+  check('P2.0: una opción confirmada por el usuario NO se marca "(estimado)"', !plainHTML.includes('(estimado)'));
 }
 
 // ============ Prioridad 4 · export .ics de Realidad (misma fuente que Realidad) ============
@@ -167,6 +182,12 @@ check('P4: el .ics de Realidad es un VCALENDAR válido', ics1.startsWith('BEGIN:
 check('P4: incluye eventos con UID "real-" (distintos de los de la Ruta)', ics1.includes('@japon2027') && /UID:real-/.test(ics1));
 const flightDay = api.state.days.find(d => d.flight);
 check('P4: los días de vuelo generan su VEVENT desde FLIGHTS', !!flightDay && ics1.includes('UID:real-' + flightDay.date));
+if(dayWithGap){
+  const entries = api.realDayTimelineEntries(dayWithGap);
+  const transit = entries.find(e => e.kind === 'transit' && e.from && e.to);
+  check('P2.0: las entradas de transporte del .ics llevan origen/destino y el flag "estimated"',
+    !!transit && typeof transit.estimated === 'boolean');
+}
 // Editar Realidad (renombrar una nota) cambia el .ics: sigue el plan REAL, no una referencia fija.
 if(dayWithGap){
   const before = dayWithGap.stops[0].note;

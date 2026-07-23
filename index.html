@@ -346,6 +346,10 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
   background:color-mix(in srgb,var(--card2) 70%,var(--bg));border:1px solid var(--line);}
 /* Prioridad 3: hora del hueco de transporte, derivada de las paradas vecinas. */
 .transfer .t-time{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.transfer .t-time small{font-weight:600;text-transform:none;color:var(--muted);opacity:.8;}
+/* Prioridad 2 (agenda 2.0): origen → destino, siempre visible como texto (antes
+   solo vivía dentro del enlace de Google Maps). */
+.transfer .t-route{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:2px;}
 .transfer .t-opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .t-opt{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;font-size:12px;
   font-weight:600;background:var(--card);border:1.5px solid var(--line);color:var(--muted);
@@ -4537,16 +4541,20 @@ function realGapWindow(day, gapIdx){
   if(!day || !day.stops || !day.stops.length) return null;
   if(gapIdx === 'pre'){
     const first = day.stops[0];
-    return {start: minToTime(stopWindow(first).start - 20), end: first.time};
+    // El colchón de 20 min de antes de la primera parada es una convención,
+    // no un dato: se marca "estimado" (mismo criterio que dayTimeline, 12.65).
+    return {start: minToTime(stopWindow(first).start - 20), end: first.time, estimated: true};
   }
   if(gapIdx === 'post'){
     const last = day.stops[day.stops.length - 1];
     const end = stopWindow(last).end;
-    return {start: minToTime(end), end: minToTime(end + 20)};
+    return {start: minToTime(end), end: minToTime(end + 20), estimated: true};
   }
   const a = day.stops[gapIdx], b = day.stops[gapIdx + 1];
   if(!a || !b) return null;
-  return {start: minToTime(stopWindow(a).end), end: b.time};
+  // Entre dos paradas, las DOS horas del hueco son las que ya escribió el
+  // usuario en sus paradas: el hueco en sí no es una estimación.
+  return {start: minToTime(stopWindow(a).end), end: b.time, estimated: false};
 }
 function transferHTML(t, a, b, dayIdx, gapIdx, label){
   const sel = t.opts[t.sel] || t.opts[0];
@@ -4554,13 +4562,20 @@ function transferHTML(t, a, b, dayIdx, gapIdx, label){
   // Reserva obligatoria: se resalta lo que YA estaba escrito en el trayecto
   // (texto/nota), no un dato nuevo.
   const needsReserve = !!(sel && /reserv/i.test((sel.t || '') + ' ' + (sel.n || '')));
+  // Prioridad 2 (agenda 2.0): el trayecto SIEMPRE nombra origen → destino (antes
+  // solo vivían escondidos en el enlace de Google Maps) y avisa cuando el propio
+  // medio es una estimación sin confirmar (`auto`, 12.x: opción de paseo
+  // auto-generada por fixTransfers, nunca editada) o cuando el hueco horario lo es.
+  const route = (a && b) ? `<div class="t-route">${esc(a.name)} <span aria-hidden="true">→</span> ${esc(b.name)}</div>` : '';
+  const isEstimate = !!(win && win.estimated) || !!(sel && sel.auto);
   const links = (a && b) ? `<span class="t-links">
       <a href="${gmapsLink(a, b, 'transit')}" target="_blank" rel="noopener">🚇 Google Maps</a>
       <a href="${gmapsLink(a, b, 'walking')}" target="_blank" rel="noopener">🚶 a pie</a></span>` : '';
   return `<div class="transfer" data-day="${dayIdx}" data-gap="${gapIdx}">
     ${label ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">${label}</div>` : ''}
     <button class="mini edit-t" title="Editar opciones de transporte">✎</button>
-    ${win ? `<div class="t-time u-tabular">${win.start} → ${win.end}</div>` : ''}
+    ${route}
+    ${win ? `<div class="t-time u-tabular">${win.start} → ${win.end}${isEstimate ? ' <small>(estimado)</small>' : ''}</div>` : ''}
     <div class="t-opts">${t.opts.map((o, i) => transferOptionChip(o, i === t.sel)).join('')}</div>
     <div class="t-detail">
       ${sel ? `${sel.t && sel.t !== modeOf(sel.m).label ? `<b>${esc(sel.t)}</b>` : ''}
@@ -5045,21 +5060,25 @@ function downloadRutaICS(){
 function realDayTimelineEntries(d){
   if(!d || d.flight || !d.stops || !d.stops.length) return [];
   const entries = [];
-  const pushGap = (t, gapIdx) => {
+  const nameOf = pid => { const p = placeById(pid); return p ? p.name : '(sitio eliminado)'; };
+  const pushGap = (t, gapIdx, from, to) => {
     if(!t) return;
     const win = realGapWindow(d, gapIdx);
     const opt = t.opts && t.opts[t.sel];
     if(!win || !opt) return;
-    entries.push({kind: 'transit', start: win.start, end: win.end, opt});
+    // "Estimado" viaja con la entrada (no solo con la vista): el hueco de
+    // pre/post es un colchón, no un dato, y un paseo auto-inferido (opt.auto)
+    // no está confirmado por el usuario — mismo criterio que transferHTML.
+    entries.push({kind: 'transit', start: win.start, end: win.end, opt, from, to,
+      estimated: !!win.estimated || !!opt.auto});
   };
-  pushGap(d.pre, 'pre');
+  pushGap(d.pre, 'pre', 'alojamiento', nameOf(d.stops[0].pid));
   d.stops.forEach((s, i) => {
-    const p = placeById(s.pid);
     entries.push({kind: 'activity', start: s.time, end: minToTime(timeToMin(s.time) + (s.dur || 30)),
-      name: p ? p.name : '(sitio eliminado)', notes: s.note || ''});
-    if(i < d.stops.length - 1) pushGap(d.trans[i], i);
+      name: nameOf(s.pid), notes: s.note || ''});
+    if(i < d.stops.length - 1) pushGap(d.trans[i], i, nameOf(s.pid), nameOf(d.stops[i + 1].pid));
   });
-  pushGap(d.post, 'post');
+  pushGap(d.post, 'post', nameOf(d.stops[d.stops.length - 1].pid), 'alojamiento');
   return entries;
 }
 function realidadICS(){
@@ -5082,9 +5101,10 @@ function realidadICS(){
       const mode = e.kind === 'transit' ? modeOf(e.opt.m) : null;
       const hasNote = e.kind === 'transit' && !!(e.opt.n || (e.opt.t && e.opt.t !== mode.label));
       if(e.kind === 'transit' && e.opt.m === 'walk' && !hasNote) return; // paseo trivial, ya visible en la app
-      const summary = e.kind === 'activity' ? e.name : `${mode.emoji} ${e.opt.t || mode.label}`;
+      const summary = e.kind === 'activity' ? e.name : `${mode.emoji} ${e.from} → ${e.to}`;
       const desc = e.kind === 'activity' ? e.notes
-        : [e.opt.l ? '🔀 ' + e.opt.l : '', e.opt.n, e.opt.y ? '💴 ' + fmtYen(e.opt.y) : ''].filter(Boolean).join(' · ');
+        : [e.opt.t && e.opt.t !== mode.label ? e.opt.t : '', e.opt.l ? '🔀 ' + e.opt.l : '', e.opt.n,
+           e.opt.y ? '💴 ' + fmtYen(e.opt.y) : '', e.estimated ? '(estimado)' : ''].filter(Boolean).join(' · ');
       lines.push('BEGIN:VEVENT', 'UID:real-' + d.date + '-' + i + '@japon2027',
         'DTSTART;TZID=Asia/Tokyo:' + icsDT(d.date, e.start), 'DTEND;TZID=Asia/Tokyo:' + icsDT(d.date, e.end),
         'SUMMARY:' + icsEscape(summary));
