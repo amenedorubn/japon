@@ -133,6 +133,26 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15p
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   padding-bottom:calc(74px + env(safe-area-inset-bottom));}
 @media(min-width:900px){body{padding-bottom:30px;}}
+/* Prioridad 4 (fase de viaje) · puerta de acceso privado (Firebase Auth).
+   Pantalla completa, por encima de todo (z-index alto): visible por
+   defecto en el HTML, initAuth() la oculta en cuanto hay sesión. */
+.auth-gate{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:24px;}
+.auth-card{width:100%;max-width:360px;padding:28px 26px;border-radius:var(--radius);
+  border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-lg);text-align:center;}
+.auth-logo{font-family:var(--serif);font-size:32px;color:var(--accent);margin-bottom:6px;}
+.auth-card h1{font-size:20px;margin-bottom:2px;}
+.auth-sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
+.auth-card form{display:flex;flex-direction:column;gap:4px;text-align:left;}
+.auth-card label{font-size:12px;font-weight:700;color:var(--muted);margin-top:10px;}
+.auth-card input{padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit;}
+.auth-card input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.auth-card .btn{margin-top:18px;width:100%;justify-content:center;background:var(--accent);color:#fff;
+  padding:11px;border-radius:999px;font-weight:700;}
+.auth-error{margin-top:12px;font-size:12.5px;color:var(--muted);}
+.auth-error.is-error{color:var(--accent);}
+.auth-forgot{display:block;margin:14px auto 0;font-size:12.5px;color:var(--muted);text-decoration:underline;}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
 /* Todo lo pulsable responde al tacto: la interfaz escucha (Emil: scale .97) */
 button,.btn,a.icon-btn{transition:transform var(--dur-1) var(--ease),background-color var(--dur-2) var(--ease),
@@ -809,6 +829,30 @@ table.phr tr:last-child td{border-bottom:none;}
 </head>
 <body>
 
+<!-- Prioridad 4 (fase de viaje): acceso privado, Firebase Authentication
+     (Email/Password), solo Rubén/Belén/Carol. Sin registro público: las
+     cuentas se crean/eliminan en la consola de Firebase, nunca desde la
+     app — añadir o quitar viajeros no toca código. Visible por defecto
+     (antes de que cargue el JS) para que nunca haya un parpadeo del
+     contenido privado; initAuth() la oculta en cuanto hay sesión. -->
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo">日本</div>
+    <h1>Japón 2027</h1>
+    <p class="auth-sub">Acceso privado del viaje</p>
+    <form id="authForm" autocomplete="on">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" autocomplete="username" required>
+      <label for="authPassword">Contraseña</label>
+      <input type="password" id="authPassword" autocomplete="current-password" required>
+      <button type="submit" class="btn" id="authLoginBtn">Iniciar sesión</button>
+      <div id="authError" class="auth-error" style="display:none"></div>
+    </form>
+    <button class="auth-forgot" id="authForgot" type="button">¿Olvidaste tu contraseña?</button>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none">
 <header class="topbar">
   <div class="topbar-in">
     <div class="logo">
@@ -832,6 +876,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="icon-btn" id="btnExport" title="Exportar copia de seguridad">⬇️</button>
       <button class="icon-btn" id="btnImport" title="Importar copia">⬆️</button>
       <button class="icon-btn" id="btnMoreActions" title="Más acciones" aria-label="Más acciones">•••</button>
+      <button class="icon-btn" id="btnLogout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
     </div>
   </div>
 </header>
@@ -1007,6 +1052,7 @@ table.phr tr:last-child td{border-bottom:none;}
 </div>
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
+</div><!-- /#appRoot -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -3344,6 +3390,91 @@ function fixTransfers(day){
 }
 
 /* ================================================================
+   AUTENTICACIÓN (Prioridad 4, fase de viaje) — acceso privado
+   ----------------------------------------------------------------
+   Firebase Authentication (Email/Password), SOLO Rubén/Belén/Carol. Sin
+   registro público en la app: las cuentas se crean/eliminan en la consola
+   de Firebase (Authentication → Users) — añadir o quitar viajeros no toca
+   código, solo gestión de usuarios de Firebase. Sesión persistente
+   (browserLocalPersistence): logueado una vez, el dispositivo sigue
+   dentro hasta "Cerrar sesión". La app ENTERA (no solo la sincronización
+   opcional de más abajo) queda detrás de esta puerta.
+
+   IMPORTANTE — esto SOLO protege de verdad si las reglas de seguridad de
+   Firebase RTDB exigen auth != null (ver instrucciones de configuración
+   manual al pie de este bloque / PROJECT.md §16). Sin esas reglas, la
+   puerta es solo de la app: los datos seguirían siendo legibles
+   directamente en la URL pública de la base de datos.
+================================================================ */
+let auth = null, currentUser = null, appStarted = false;
+function currentUserEmail(){ return currentUser ? currentUser.email : null; }
+function setAuthError(msg){
+  const el = $('#authError'); if(!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? '' : 'none';
+  el.classList.toggle('is-error', !!msg);
+}
+function authErrorMessage(e){
+  const map = {
+    'auth/invalid-email': 'Ese email no es válido.',
+    'auth/user-not-found': 'No existe ninguna cuenta con ese email.',
+    'auth/wrong-password': 'Contraseña incorrecta.',
+    'auth/invalid-credential': 'Email o contraseña incorrectos.',
+    'auth/too-many-requests': 'Demasiados intentos: esperad un momento.',
+    'auth/network-request-failed': 'Sin conexión: revisad la red.',
+  };
+  return map[e && e.code] || 'No se pudo iniciar sesión.';
+}
+// Pura(ish): decide qué se ve (puerta o app) según haya o no sesión, y
+// arranca startApp() la PRIMERA vez que aparece un usuario. Separada de
+// onAuthStateChanged para poder probarla sin una sesión real de Firebase.
+function applyAuthUIState(user){
+  currentUser = user;
+  const gate = $('#authGate'), root = $('#appRoot');
+  if(user){
+    if(gate) gate.style.display = 'none';
+    if(root) root.style.display = '';
+    if(!appStarted){ appStarted = true; startApp(); }
+  } else {
+    if(root) root.style.display = 'none';
+    if(gate) gate.style.display = 'flex';
+  }
+}
+async function initAuth(){
+  // Defensivo (mismo patrón que initFirebase): sin red, o en un entorno sin
+  // Firebase real (tests), esto no debe tumbar el resto del arranque.
+  try{
+    const appM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    const authM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+    fbApp = appM.initializeApp(FIREBASE_CONFIG);
+    auth = authM.getAuth(fbApp);
+    try{ await authM.setPersistence(auth, authM.browserLocalPersistence); }catch(e){}
+    authM.onAuthStateChanged(auth, applyAuthUIState);
+    const form = $('#authForm');
+    if(form) form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const email = $('#authEmail').value.trim(), pass = $('#authPassword').value;
+      setAuthError('');
+      const btn = $('#authLoginBtn'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Entrando…';
+      try{ await authM.signInWithEmailAndPassword(auth, email, pass); }
+      catch(e){ setAuthError(authErrorMessage(e)); }
+      finally{ btn.disabled = false; btn.textContent = label; }
+    });
+    onClick('#btnLogout', () => authM.signOut(auth));
+    // Sin registro público (§ arriba): esto SOLO deja restablecer la
+    // contraseña de una cuenta que YA existe, nunca crear una nueva.
+    onClick('#authForgot', async () => {
+      const email = $('#authEmail').value.trim();
+      if(!email){ setAuthError('Escribe tu email arriba y vuelve a tocar el enlace.'); return; }
+      try{ await authM.sendPasswordResetEmail(auth, email); setAuthError('Te hemos enviado un email para restablecer la contraseña.'); }
+      catch(e){ setAuthError(authErrorMessage(e)); }
+    });
+  }catch(e){
+    setAuthError('No se pudo conectar con el inicio de sesión. Comprueba tu conexión y recarga.');
+  }
+}
+
+/* ================================================================
    FIREBASE (sincronización opcional entre viajeros)
    Ruta compartida con la app original: proyectos/viaje-japon
    (o #hash de la URL, igual que la app original).
@@ -3362,8 +3493,10 @@ const FB_PROJECT_PATH = 'proyectos/' + ((_hashProj && !_hashProj.startsWith('/')
 function updateSyncBtn(){
   const b = $('#btnSync');
   b.classList.toggle('on', !!(syncOn && fbReady));
+  // Prioridad 4: quién hizo el último cambio, si se conoce (informativo).
+  const editedBy = state.lastEditedBy ? ` · última edición: ${state.lastEditedBy}` : '';
   b.title = !syncOn ? 'Nube desactivada (solo este dispositivo). Toca para activar.' :
-            fbReady ? 'Sincronizado en la nube con el resto de viajeros' : 'Conectando con la nube…';
+            fbReady ? `Sincronizado en la nube con el resto de viajeros${editedBy}` : 'Conectando con la nube…';
 }
 let lastLocalSaveAt = 0, seenFirstSnapshot = false;
 function pushRemote(){
@@ -3378,7 +3511,8 @@ function pushRemote(){
     check: state.check || {},
     migratedOrig: state.migratedOrig || null, // marca de consolidación 10b
     seedRetired: state.seedRetired || null,   // marca de retirada de la propuesta (12.49)
-    updatedAt: state.updatedAt || 0
+    updatedAt: state.updatedAt || 0,
+    lastEditedBy: currentUserEmail() || null  // Prioridad 4: quién hizo el último cambio
   }).catch(() => {});
 }
 /* Vuelca un snapshot remoto {tripTitle, state} en el estado local.
@@ -3428,6 +3562,10 @@ function adoptRemote(payload){
         // La marca de retirada pertenece al LINAJE de los días adoptados: un
         // linaje sin marca es pre-retirada y se limpiará más abajo (12.49).
         state.seedRetired = v2.seedRetired || null;
+        // Prioridad 4: quién hizo el último cambio (dato informativo, no
+        // persistido en localStorage aparte del resto de state; viaja con
+        // el mismo payload v2 que ya se guarda entero).
+        state.lastEditedBy = v2.lastEditedBy || null;
         res.changed = true;
         toast('☁️ Plan actualizado desde la nube');
       } else if((state.updatedAt || 0) > (v2.updatedAt || 0)){
@@ -3455,21 +3593,26 @@ function adoptRemote(payload){
   persistLocal();
   return res;
 }
+// Config única de Firebase (Prioridad 4): la comparten initAuth() (que crea
+// fbApp) e initFirebase() (que lo reutiliza) — initializeApp() solo puede
+// llamarse una vez por app, y auth debe existir ANTES que la base de datos.
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyA9v7VTciCVzHxcT13oP3Jm4El8lDn7o90',
+  authDomain: 'viaje-japon-8748a.firebaseapp.com',
+  databaseURL: 'https://viaje-japon-8748a-default-rtdb.europe-west1.firebasedatabase.app/',
+  projectId: 'viaje-japon-8748a',
+  storageBucket: 'viaje-japon-8748a.firebasestorage.app',
+  messagingSenderId: '680255020648', appId: '1:680255020648:web:065af7c30fbb2e78c9a5dd'
+};
+let fbApp = null;
 async function initFirebase(){
   updateSyncBtn();
   if(!syncOn) return;
   try{
     const appM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
     const dbM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    const app = appM.initializeApp({
-      apiKey: 'AIzaSyA9v7VTciCVzHxcT13oP3Jm4El8lDn7o90',
-      authDomain: 'viaje-japon-8748a.firebaseapp.com',
-      databaseURL: 'https://viaje-japon-8748a-default-rtdb.europe-west1.firebasedatabase.app/',
-      projectId: 'viaje-japon-8748a',
-      storageBucket: 'viaje-japon-8748a.firebasestorage.app',
-      messagingSenderId: '680255020648', appId: '1:680255020648:web:065af7c30fbb2e78c9a5dd'
-    });
-    const db = dbM.getDatabase(app);
+    if(!fbApp) fbApp = appM.initializeApp(FIREBASE_CONFIG);
+    const db = dbM.getDatabase(fbApp);
     fb = {
       set: dbM.set,
       rootNode: dbM.ref(db, FB_PROJECT_PATH),             // lectura: payload completo
@@ -6974,36 +7117,43 @@ const _legacyTransfers = state.transfers;
 if('transfers' in state){ delete state.transfers; persistLocal(); }
 maybeMigrateOriginal(_legacyTransfers);
 
-buildNav();
-$('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
-onClick('#itinModeRuta', () => setItinMode('ruta'));
-$('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
-$('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
-onClick('#itinModeMaria', () => setItinMode('maria'));
-onClick('#cordBack', () => zoomOut());
-onClick('#btnRealidadIcs', downloadRealidadICS);
-onClick('#bookingTeaser', () => {
-  showTab('guia');
-  const t = $('#bookingTimeline');
-  if(t && t.scrollIntoView) t.scrollIntoView({behavior: 'smooth', block: 'start'});
-});
-$('#btnDaniPdf').href = DANI_PDF_URL;
-const rutaDocBtn = $('#btnRutaDoc'); if(rutaDocBtn) rutaDocBtn.href = RUTA_DOC_URL;
-renderAll();
-applyTripTitle();
-updateNotifyButton();
-tickCountdown();
-setInterval(tickCountdown, 1000);
-const hashTab = (location.hash.replace('#/', '') || 'inicio');
-showTab(TABS.some(t => t[0] === hashTab) ? hashTab : 'inicio');
-initFirebase();
-// Fase 10c: service worker offline (cache-first + refresco en segundo
-// plano, ver sw.js). La app queda usable sin conexión por Japón; las
-// novedades se estrenan al volver a abrir. Sin soporte (o en file://),
-// simplemente no hace nada.
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+/* Prioridad 4 (fase de viaje): todo lo interactivo/de red queda detrás de
+   la puerta de acceso — initAuth() llama startApp() UNA vez que Firebase
+   confirma una sesión. Antes de esto, la única inicialización que corre es
+   la migración local de arriba (sin red, sin DOM privado). */
+function startApp(){
+  buildNav();
+  $('#itinModeOurs').addEventListener('click', () => setItinMode('ours'));
+  onClick('#itinModeRuta', () => setItinMode('ruta'));
+  $('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
+  $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
+  onClick('#itinModeMaria', () => setItinMode('maria'));
+  onClick('#cordBack', () => zoomOut());
+  onClick('#btnRealidadIcs', downloadRealidadICS);
+  onClick('#bookingTeaser', () => {
+    showTab('guia');
+    const t = $('#bookingTimeline');
+    if(t && t.scrollIntoView) t.scrollIntoView({behavior: 'smooth', block: 'start'});
+  });
+  $('#btnDaniPdf').href = DANI_PDF_URL;
+  const rutaDocBtn = $('#btnRutaDoc'); if(rutaDocBtn) rutaDocBtn.href = RUTA_DOC_URL;
+  renderAll();
+  applyTripTitle();
+  updateNotifyButton();
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
+  const hashTab = (location.hash.replace('#/', '') || 'inicio');
+  showTab(TABS.some(t => t[0] === hashTab) ? hashTab : 'inicio');
+  initFirebase();
+  // Fase 10c: service worker offline (cache-first + refresco en segundo
+  // plano, ver sw.js). La app queda usable sin conexión por Japón; las
+  // novedades se estrenan al volver a abrir. Sin soporte (o en file://),
+  // simplemente no hace nada.
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 }
+initAuth();
 </script>
 </body>
 </html>

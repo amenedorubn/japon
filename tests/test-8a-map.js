@@ -66,7 +66,7 @@ const fetchStub = () => { fetchCount++; return Promise.resolve({ ok: true, json:
 // ---------- boot the real app ----------
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return {
+  ;return { startApp,
     showTab, initMapView, renderMapDay, renderZones, setTheme, state,
     getMap: () => map, getMapLayers: () => mapLayers, getZonesLayer: () => zonesLayer,
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay,
@@ -82,6 +82,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
   };`);
 const api = boot(documentStub, windowStub, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let fail = 0;

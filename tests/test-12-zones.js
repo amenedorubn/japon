@@ -42,12 +42,13 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, ZONES, ZONE_NONE, zoneOf, zoneLabel, pointInPolygon, placeView, listablePlaces,
+  ;return { startApp, state, ZONES, ZONE_NONE, zoneOf, zoneLabel, pointInPolygon, placeView, listablePlaces,
             TOKYO_CITY_POLYGON, provenanceOf, placeProvenances, bookedHotels, isConfirmed,
             TWIN_GROUPS, isTwinMember, renderSitios, renderZones, activeMapCategories,
             setPlaceZone: v => { placeZone = v; },
             getPlaceZone: () => placeZone };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };

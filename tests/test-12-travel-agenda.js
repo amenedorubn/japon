@@ -46,7 +46,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => ({ code: '
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return {
+  ;return { startApp,
     state, RUTA_DAYS, DAY_EXTRAS,
     setItinMode, getItinMode: () => itinMode, renderItinerary,
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay, renderMapDay, getMapLayers: () => mapLayers,
@@ -62,6 +62,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
   };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };

@@ -42,12 +42,13 @@ const fetchStub = url => { fetchedUrls.push(String(url)); return Promise.resolve
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { setTheme, nominatimSearch, parseTimeToMinutes, formatMinutes, inferTimeForInsert,
+  ;return { startApp, setTheme, nominatimSearch, parseTimeToMinutes, formatMinutes, inferTimeForInsert,
     reorderStop, moveStop, moveStopToDay, addPlaceToDay, setItinMode, renderItinerary, state,
     _reseedDays: () => { // fixture: días con las paradas de la propuesta (el plan real nace vacío, 12.49)
       const fresh = buildSeedState();
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); } };`);
 const api = boot(documentStub, windowStub, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };

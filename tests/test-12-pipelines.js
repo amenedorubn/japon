@@ -121,9 +121,10 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, AI_PLACES, INSTA_PLACES, ensureAiPlaces, ensureInstaPlaces, provenanceOf,
+  ;return { startApp, state, AI_PLACES, INSTA_PLACES, ensureAiPlaces, ensureInstaPlaces, provenanceOf,
     listablePlaces, sourceMatchesFilter, isTwinMember, placeProvenances, twinGroupOf };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 // ---- 4) real committed arrays are still empty; boot didn't break ----
 check('real build: AI_PLACES is empty (no real data curated yet)', Array.isArray(api.AI_PLACES) && api.AI_PLACES.length === 0);

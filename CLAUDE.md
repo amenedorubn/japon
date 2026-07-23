@@ -84,7 +84,11 @@ Antes de proceder, pregunta si:
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
   planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
-  Última materialización **12.73** (feed de calendario suscribible: `tools/ics-export.js` genera
+  Última materialización **12.74** (acceso privado: Firebase Authentication Email/Password,
+  puerta delante de toda la app, sin registro público — ver PROJECT.md §16, incluye los 3 PASOS
+  MANUALES pendientes que solo el usuario puede completar: habilitar el proveedor, crear las 3
+  cuentas, pegar las reglas de RTDB). Antes, **12.73** (feed de calendario suscribible:
+  `tools/ics-export.js` genera
   `ruta-japon-2027.ics`/`realidad-japon-2027.ics` como assets estáticos publicados por GitHub
   Pages, con enlace `webcal://` en Guía — "se actualiza" significa regenerar + commit + push,
   igual que el docx de la Ruta; sin servidor que lo haga solo). Antes, **12.72** (arquitectura

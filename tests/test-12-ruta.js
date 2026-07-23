@@ -43,12 +43,13 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, RUTA_DAYS, SEED_DAYS, RUTA_DOC_URL, ITIN_RING, TWIN_GROUPS,
+  ;return { startApp, state, RUTA_DAYS, SEED_DAYS, RUTA_DOC_URL, ITIN_RING, TWIN_GROUPS,
             itineraryDays, itineraryPlaceIds, canonicalPid, placeById, placeView,
             provenanceOf, setItinMode, plantFromProposal, groupIdsOf,
             NIGHTS, SKIPPED, TRANSPORT, PRICES, renderGuia, renderHoteles,
             DAY_EXTRAS, spareTimeHTML, renderItinerary };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };

@@ -246,6 +246,7 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.64 | `41e75f6` | **La Ruta como referencia principal + mapa↔itinerario + transporte del día** | `routeOverview`/`routeSummary` de Inicio, antes un array fijo Tokio/Kioto/Osaka/Tokio obsoleto, ahora derivados de `NIGHTS` (la Ruta real). Chip **Propuesta** oculto de la UI (`display:none`); código, `SEED_DAYS` y el modo `seed` intactos para restaurarla si hace falta. **Sincronización mapa↔itinerario**: elegir un día en los chips del mapa (`mapDay`) filtra el panel de abajo a ese día vía `dayIndices()` (Ruta/Propuesta/Dani); en Realidad reutiliza el zoom del Cord, y el zoom del Cord ahora también mueve el mapa. "Todos" mantiene la lista completa. **Capa "Si sobra tiempo" en el mapa**: toggle propio (`extrasVisible`), independiente del itinerario activo, pin 🎁 diferenciado; como `DAY_EXTRAS` no trae coordenadas a propósito (no son fichas curadas), se ubican en la parada real del día más cercana por nombre — nunca coordenadas inventadas. **Transporte del día en la Ruta**: cada día muestra ahora reserva obligatoria/recomendada y modo, reutilizando `TRANSPORT` (antes solo visible en la Guía) sin datos nuevos |
 | 12.65 | `a5744b7` | **Fix: un día seleccionado en el mapa ya no pinta el resto del itinerario** | El bucle de POIs de color se dibujaba siempre (con o solo excluía las paradas del propio día); con un día elegido el usuario veía sus paradas numeradas Y los círculos de los otros 20 días alrededor. Ahora ese bucle solo corre en "Todos" — con un día concreto el mapa muestra ÚNICAMENTE sus paradas + extras si están activados. Tests nuevos en `test-8a-map.js` contra el pipeline real del mapa (no solo la lógica aislada), incluida cobertura end-to-end del toggle 🎁 Extras (OFF/ON, "Todos" vs. un día) |
 | 12.66–12.67 | `f0d396d`+`52cb7a5` | **`dayTimeline()`: agenda cronológica del día, fuente única** | Cada día de la Ruta se lee como una agenda tipo Google Calendar (actividades + tramos de transporte intercalados por hora) en vez de una lista de paradas con una nota suelta arriba. `dayTimeline(rd)` deriva TODO de `RUTA_DAYS` (horas/duraciones ya en cada `S()`) + `TRANSPORT`: tramos entre paradas inferidos por distancia real (a pie ≤1,2 km, si no tren/metro, marcados "estimado"); la nota real de la Ruta (con la reserva obligatoria/recomendada) se coloca en el hueco que de verdad describe — no siempre el de antes de la primera parada, localizado por el salto de distancia >20 km entre paradas consecutivas (cubre días de llegada y de doble ciudad en la misma jornada). Verificado sin solapes en las 213 entradas de los 21 días. Export **.ics** nuevo (botón "📅 Exportar a calendario") que recorre la MISMA `dayTimeline()` — vuelos con offset UTC real por aeropuerto (Madrid/Helsinki/Tokio cruzan 3 husos; el resto del viaje es Japón, un huso fijo sin DST) |
+| 12.74 | `(este commit)` | **Acceso privado: Firebase Authentication (Prioridad 4, fase de viaje)** | Puerta de acceso (`#authGate`) delante de TODA la app (`#appRoot`), Email/Password sin registro público (las 3 cuentas se gestionan solo en la consola de Firebase). `initAuth()`/`applyAuthUIState()`/`startApp()` (ver §16 para el detalle completo y los 3 pasos manuales pendientes: habilitar el proveedor, crear las 3 cuentas, pegar las reglas de RTDB `auth != null`). `pushRemote()` etiqueta cada cambio con `lastEditedBy` (aditivo, sigue habiendo exactamente 3 `fb.set`). Sesión persistente, logout, "olvidé mi contraseña". Verificado con Playwright real (no solo stubs): puerta visible por defecto, sesión simulada arranca la app completa, logout la vuelve a esconder, intento de login real confirma el circuito formulario→Firebase→error de punta a punta. Los 20 tests que arrancan la app completa ahora exponen `startApp` y lo llaman a mano (una sesión real de Firebase no se puede completar en Node). Test nuevo `test-12-auth.js` (18 checks) |
 | — | (sin commit) | **Docx (`Ruta-21-dias.docx`) como tercer consumidor de `dayTimeline()`: DESCARTADO por ahora** | Investigada la regeneración automática de sus tablas hora-a-hora (XML real de Word, `word/document.xml`, 445 KB). Hallazgo: el docx YA es más rico que lo que `dayTimeline()` deriva hoy — sus filas incluyen narrativa curada a mano sin equivalente en `RUTA_DAYS` (p.ej. día 5: "07:00 Check-out + Asakusa — Con las maletas a Asakusa…", sin parada `S()` que lo respalde). Regenerarlo desde `dayTimeline()` ahora sería una REGRESIÓN (perdería esa narrativa), no una mejora. Sin generador de escritura ZIP nuevo ni tocado el docx. Camino documentado para si se retoma: enriquecer `dayTimeline()` con esos huecos narrativos primero, o aceptar la pérdida de detalle a cambio de la fuente única |
 | 12.73 | `(este commit)` | **Feed de calendario suscribible (Prioridad 5, fase de viaje)** | `tools/ics-export.js` (nuevo generador, patrón import→bake existente): extrae el JS de `index.html`, arranca la app en Node y escribe `ruta-japon-2027.ics`/`realidad-japon-2027.ics` en la raíz del repo — assets ESTÁTICOS versionados, mismo patrón que `Ruta-21-dias.docx`/`JAPON-DEFINITIVO-Dani.pdf`, publicados por GitHub Pages con URL estable. Nueva sección "📅 Calendario" en Guía con enlace `webcal://` para suscribirse desde Google/Apple Calendar en vez de solo descargar. **Limitación reconocida, no maquillada**: GitHub Pages es estático — no hay servidor que regenere el fichero en cada petición; "se actualiza" significa que alguien re-ejecuta el generador y hace commit+push (exactamente como ya pasa con el docx). `ruta-japon-2027.ics` sale ÍNTEGRO de datos horneados (`RUTA_DAYS`/`TRANSPORT`/`FLIGHTS`), sin dependencia externa. `realidad-japon-2027.ics` es distinto: el plan real vive sincronizado en Firebase (no en el repo, M10/12.49 "el plan real nace vacío"); sin un volcado en vivo como argumento, el generador solo produce los 2 días de vuelo horneados en la semilla — el generador acepta opcionalmente la ruta a un volcado de Firebase (mismo patrón que `test-8c-gate.js`) para producir el .ics real completo bajo demanda. Automatizar la regeneración de verdad (GitHub Action programada que lea Firebase en vivo) es una decisión de arquitectura aparte, sin implementar sin decisión explícita del usuario |
 | 12.72 | `(este commit)` | **Arquitectura preparada para un futuro modo en vivo (Prioridad 6, SIN UI)** | `nowStatus(entries, nowMin)`, función pura sobre las entradas ya derivadas por `realDayTimelineEntries` (mismos datos que el render editable de Realidad y su `.ics`): devuelve la entrada en curso, la siguiente y la próxima reserva pendiente, con minutos restantes. Las entradas ganan `pid` (actividades) y `reservation` (tramos), datos DERIVADOS, no persistidos. Sin UI, sin timer, sin retrasos en vivo (exigirían una fuente externa fuera del patrón "sin dependencias de runtime"): documentado en detalle en §15, deliberadamente sin resolver hasta que haya una decisión explícita del usuario. Tests en `test-12-travel-agenda.js` (6 checks) |
@@ -695,3 +696,91 @@ Camino para cuando se decida implementar la UI: una pantalla o banner que llame 
 `tickCountdown` para la cuenta atrás del viaje), mostrando `current`/`next`/`upcomingReservation`.
 El hueco de retrasos en vivo quedaría vacío hasta que exista una decisión explícita sobre una
 fuente de datos externa.
+
+## 16. Acceso privado (Prioridad 4, fase de viaje) — Firebase Authentication
+
+Decisión del usuario (no negociable, ver conversación): acceso privado real con Firebase
+Authentication (Email/Password, SIN Google Sign-In), sesiones persistentes, login/logout, y cada
+edición futura asociada al usuario autenticado. Sin registro público en la app: las 3 cuentas
+(Rubén/Belén/Carol) se crean y se gestionan ÚNICAMENTE desde la consola de Firebase — añadir o
+quitar viajeros no toca código nunca, solo gestión de usuarios de Firebase.
+
+### 16.1 Qué existe ya en el código (12.74)
+
+- **Puerta de acceso** (`#authGate`, visible por defecto en el HTML — nunca hay un parpadeo del
+  contenido privado antes de que JS decida) envuelve TODO el contenido real de la app en
+  `#appRoot` (antes vivía suelto bajo `<body>`; el wrapper es puramente estructural, ningún id
+  interno cambió). Formulario de email + contraseña, sin enlace de "crear cuenta". Enlace
+  "¿Olvidaste tu contraseña?" que SOLO permite restablecer una cuenta ya existente
+  (`sendPasswordResetEmail`), nunca crear una.
+- **`initAuth()`**: crea la app de Firebase (`fbApp`, compartida con `initFirebase()` — no se
+  puede llamar `initializeApp()` dos veces), `getAuth()`, `setPersistence(..., browserLocalPersistence)`
+  (sesión persistente entre aperturas) y `onAuthStateChanged` → `applyAuthUIState(user)`.
+- **`applyAuthUIState(user)`**: función separada y testeable — sin sesión, muestra la puerta y
+  oculta `#appRoot`; con sesión, oculta la puerta, muestra `#appRoot` y llama `startApp()` la
+  PRIMERA vez (con `appStarted` como guarda contra doble arranque).
+- **`startApp()`**: todo lo que antes se ejecutaba sin condiciones al final del script
+  (`buildNav`, `renderAll`, `initFirebase`, registro del service worker…) ahora vive aquí y solo
+  corre tras confirmar sesión. La migración local (10b) y la construcción de `state` desde
+  localStorage siguen ejecutándose sin gatekeeping: no tocan red ni DOM privado.
+- **`currentUserEmail()`**: lee `currentUser?.email`. `pushRemote()` (el único write-site de
+  `state/v2`) etiqueta el payload con `lastEditedBy: currentUserEmail() || null` — aditivo, no
+  rompe la política v2-only (§5, invariante nº1: siguen siendo exactamente 3 `fb.set`).
+  `adoptRemote` lee `v2.lastEditedBy` de vuelta a `state.lastEditedBy`; se muestra como tooltip
+  del botón de sincronización (`updateSyncBtn`).
+- **Botón "🚪 Cerrar sesión"** (`#btnLogout`) en la cabecera, junto a los demás `icon-btn`.
+- Tests: `test-12-auth.js` (18 checks: mapeo de errores de login, `currentUserEmail`,
+  `applyAuthUIState` con y sin sesión, doble-arranque protegido, `pushRemote` etiquetando el
+  payload). Los 20 archivos de test que arrancan la app completa ahora exponen `startApp` y lo
+  llaman a mano tras `boot()` (una sesión real de Firebase no se puede completar en Node: el
+  `import()` remoto del SDK no resuelve ahí).
+- **Verificado con Playwright real** (no solo stubs de Node): la puerta se muestra por defecto,
+  el formulario existe, una sesión simulada (`applyAuthUIState({email})`) hace aparecer la app
+  completa (nav, hero, countdown, vuelos) sin errores de consola, y el logout la vuelve a
+  esconder. Un intento de login real (credenciales inventadas) confirmó el circuito
+  formulario→Firebase→mensaje de error de punta a punta.
+
+### 16.2 ADVERTENCIA — sin esto, la puerta NO protege nada de verdad
+
+La puerta de la app es solo UI. Si la base de datos de Firebase sigue con las reglas por
+defecto (o completamente abiertas), cualquiera que conozca la URL pública de la base de datos
+puede leer/escribir los datos directamente, sin pasar por `index.html` en absoluto. **El acceso
+privado real depende de los dos pasos manuales de abajo, que solo el usuario puede hacer.**
+
+### 16.3 Pasos manuales pendientes (SOLO el usuario puede hacerlos)
+
+1. **Habilitar el proveedor Email/Password** — Firebase Console → proyecto `viaje-japon-8748a` →
+   **Authentication** → pestaña **Sign-in method** → **Email/Password** → Habilitar (el primer
+   interruptor, "Email/Password"; NO "Email link (passwordless sign-in)"). Guardar.
+2. **Crear las 3 cuentas** — Firebase Console → **Authentication** → pestaña **Users** → **Add
+   user** → un email + una contraseña provisional por cada viajero (Rubén, Belén, Carol). No
+   hace falta comunicar la contraseña si se usa el enlace "¿Olvidaste tu contraseña?" de la app
+   una vez creada la cuenta (Firebase envía un email de restablecimiento).
+3. **Pegar las reglas de seguridad de Realtime Database** — Firebase Console → **Realtime
+   Database** → pestaña **Rules** → sustituir el contenido por exactamente esto → **Publish**:
+   ```json
+   {
+     "rules": {
+       "proyectos": {
+         "$proyecto": {
+           ".read": "auth != null",
+           ".write": "auth != null"
+         }
+       }
+     }
+   }
+   ```
+   Esto exige sesión (cualquiera de las 3 cuentas) para leer o escribir bajo `proyectos/*`
+   (cubre tanto `proyectos/viaje-japon` como el nodo hermano legado `proyectos/japon27-app-v2`,
+   §5) y deniega todo lo demás por defecto (comportamiento estándar de Firebase RTDB: lo no
+   permitido explícitamente queda denegado).
+
+**Añadir o quitar viajeros en el futuro**: solo el paso 2 (Authentication → Users), nunca tocar
+`index.html` — exactamente el requisito pedido ("solo gestión de usuarios de Firebase, no cambios
+de código").
+
+**Mientras estos 3 pasos no estén hechos**: la app funciona (la puerta se ve, el formulario
+existe) pero ningún login real puede completarse (el proveedor no está habilitado) y los datos
+siguen siendo leíbles sin autenticar (las reglas siguen abiertas). Ninguno de los dos estados a
+medias expone MÁS de lo que ya estaba expuesto antes de esta sesión — no hay regresión de
+seguridad, solo trabajo pendiente.

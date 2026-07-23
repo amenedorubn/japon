@@ -42,13 +42,14 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, PLACES, LEGACY_PID_MAP, CATALOG_VERSION,
+  ;return { startApp, state, PLACES, LEGACY_PID_MAP, CATALOG_VERSION,
     placeById, placeView, listablePlaces, canonicalizeDayPids, applyCatalogUpdate,
     renderSitios, renderHoteles, openAddStop, hotelBasePlaceholders,
     setSrc: v => { placeSrc = v; }, setHotelSrc: v => { hotelSrc = v; },
     setZone: v => { placeZone = v; }, zoneOf,
     _seedDays: () => buildSeedState().days };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };

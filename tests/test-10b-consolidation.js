@@ -42,7 +42,7 @@ const fetchStub = () => Promise.resolve({ ok: true, json: async () => [] });
 
 const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
   '"use strict";' + appJs + `
-  ;return { state, adoptRemote, pushRemote, maybeMigrateOriginal,
+  ;return { startApp, state, adoptRemote, pushRemote, maybeMigrateOriginal,
     parseLegacyMinutes, parseLegacyYen, legacyMode, legacyOptionToV2,
     _setFb: (f, on) => { fb = f; syncOn = on; },
     _clearFlag: () => { state.migratedOrig = null; },
@@ -51,6 +51,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; });
       state.seedRetired = null; } };`);
 const api = boot(documentStub, { scrollTo(){} }, localStorageStub, { hash: '' }, { replaceState(){} }, L, fetchStub, () => 0, () => true);
+api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo disparan a mano.
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };
@@ -146,8 +147,10 @@ const dayByDate = date => api.state.days.find(d => d.date === date);
     v2Node: 'NODE:state/v2', titleNode: 'NODE:tripTitle', placesNode: 'NODE:state/places', rootNode: 'NODE:root' }, true);
   api.pushRemote();
   const keys = Object.keys(writes[0].payload).sort();
-  check('policy: v2 payload = {check,days,migratedOrig,rate,seedRetired,updatedAt,v} exactly',
-    JSON.stringify(keys) === JSON.stringify(['check', 'days', 'migratedOrig', 'rate', 'seedRetired', 'updatedAt', 'v']));
+  // Prioridad 4 (fase de viaje): lastEditedBy se suma al payload (quién hizo
+  // el último cambio), aditivo, sin tocar el resto de la política v2-only.
+  check('policy: v2 payload = {check,days,lastEditedBy,migratedOrig,rate,seedRetired,updatedAt,v} exactly',
+    JSON.stringify(keys) === JSON.stringify(['check', 'days', 'lastEditedBy', 'migratedOrig', 'rate', 'seedRetired', 'updatedAt', 'v']));
   check('policy: still no places/transfers/tripTitle in the v2 payload',
     !('places' in writes[0].payload) && !('transfers' in writes[0].payload) && !('tripTitle' in writes[0].payload));
 
