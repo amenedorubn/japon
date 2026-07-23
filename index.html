@@ -450,6 +450,22 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .seed-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;
   border-top:1px solid var(--hairline);}
 .seed-row:first-of-type{border-top:none;}
+/* 12.65 (Prioridad 2, ronda 2): agenda cronológica de un día (dayTimeline).
+   .tl-activity = parada real (misma info que antes, ahora con hora de fin
+   implícita en la siguiente fila); .tl-transit = tramo inferido entre dos
+   paradas, tipografía más pequeña y muda para no competir con el plan. */
+.tl-ruta{display:flex;flex-direction:column;}
+.tl-row{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-top:1px solid var(--hairline);}
+.tl-row:first-child{border-top:none;}
+.tl-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);min-width:38px;padding-top:1px;}
+.tl-ico{flex:none;font-size:14px;line-height:1.4;}
+.tl-body{flex:1;min-width:0;font-size:13.5px;}
+.tl-activity{cursor:pointer;}
+.tl-activity .tl-body{font-weight:600;}
+.tl-activity .tl-body small{display:block;color:var(--muted);font-weight:400;}
+.tl-transit{padding:3px 0;}
+.tl-transit .tl-body{color:var(--muted);font-size:12px;}
+.tl-transit .tl-body small{display:block;}
 .seed-row .sr-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);min-width:38px;}
 .seed-row .sr-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 12.62 · "Si sobra tiempo": <details> nativo, capa opcional aparte del
@@ -4701,6 +4717,110 @@ function dayTransportHTML(date){
     `<div class="dt-seg"><span class="pill ${kind === 'obl' ? 'red' : ''}">${kind === 'obl' ? '🎫 reserva obligatoria' : '🚄 recomendado'}</span>
       <span class="dt-route">${esc(route)}</span><small>${esc(mode)}</small></div>`).join('')}</div>`;
 }
+/* ================================================================
+   AGENDA DEL DÍA (12.65, Prioridad 2 ronda 2) · dayTimeline()
+   ----------------------------------------------------------------
+   Fuente ÚNICA de la agenda cronológica de un día de la Ruta: la usan el
+   render de la app (renderRutaItinerary), el export .ics (icsForDay) y,
+   más adelante, el generador del docx. Cambiar RUTA_DAYS/TRANSPORT se
+   refleja en los tres sin tocar nada más — CERO datos nuevos, solo
+   derivación: horas/duraciones ya viven en cada S() de RUTA_DAYS, la
+   reserva obligatoria/recomendada en TRANSPORT (por día del mes).
+   Entradas: {kind:'activity', start,end, pid,name,cat,notes} |
+             {kind:'transit',  start,end, mode,from,to,notes,
+              reservation, segs, estimated}
+   Los huecos SIN hora fija en los datos (transición entre paradas, o el
+   tramo de salida del alojamiento cuando no hay rd.note) se estiman con
+   el hueco real entre horas ya escritas o un mínimo de 20 min — nunca se
+   inventan línea/tarifa exactas que no estén en el proyecto. ================================================================ */
+const timeToMin = t => { const [h, m] = (t || '00:00').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const minToTime = n => {
+  n = ((Math.round(n) % 1440) + 1440) % 1440;
+  return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+};
+function inferTransitMode(a, b){
+  if(!a || !b || a.lat == null || b.lat == null) return 'A pie';
+  return haversine(a, b) <= 1.2 ? 'A pie' : 'Tren/Metro';
+}
+// El tramo "de verdad" del día (el que describe rd.note/TRANSPORT) no
+// siempre es el de antes de la primera parada: días de llegada (parada 0 =
+// el aeropuerto) o de ciudad doble (mañana en una, tarde en otra, p.ej.
+// Takayama→Kioto) lo llevan a mitad de la jornada. Se localiza por
+// DISTANCIA real: el hueco entre paradas consecutivas más largo, si supera
+// el umbral de un salto entre ciudades (20 km, muy por encima de cualquier
+// paseo o metro intraurbano); si ninguno lo supera, es un día de una sola
+// ciudad y el hueco real es el de ANTES de la primera parada.
+const INTERCITY_GAP_KM = 20;
+function headlineGapIndex(stops){
+  let best = -1, bestKm = 0;
+  for(let i = 0; i < stops.length - 1; i++){
+    const km = haversine(stops[i].p, stops[i + 1].p);
+    if(km > bestKm){ bestKm = km; best = i; }
+  }
+  return bestKm > INTERCITY_GAP_KM ? best : -1; // -1 = va antes de la primera parada
+}
+function dayTimeline(rd){
+  if(!rd || rd.flight || !(rd.stops && rd.stops.length)) return [];
+  const stops = rd.stops.map(s => ({s, p: placeById(canonicalPid(s.pid))})).filter(x => x.p);
+  if(!stops.length) return [];
+  const entries = [];
+  const headline = transportForDate(rd.date);
+  const headlineGap = rd.note ? headlineGapIndex(stops) : -2; // -2 = sin nota que colocar
+  const firstStart = timeToMin(stops[0].s.time);
+  if(headlineGap === -1){
+    entries.push({kind: 'transit', start: minToTime(firstStart - 20), end: stops[0].s.time,
+      mode: '', from: '', to: stops[0].p.name, notes: rd.note,
+      reservation: headline.some(t => t[0] === 'obl'), segs: headline, estimated: false});
+  } else if(headlineGap === -2 && rd.stay){
+    entries.push({kind: 'transit', start: minToTime(firstStart - 20), end: stops[0].s.time,
+      mode: 'estimado', from: 'alojamiento', to: stops[0].p.name, notes: '',
+      reservation: false, segs: [], estimated: true});
+  }
+  stops.forEach((x, i) => {
+    const start = timeToMin(x.s.time), end = start + (x.s.dur || 30);
+    entries.push({kind: 'activity', start: minToTime(start), end: minToTime(end),
+      pid: x.s.pid, name: x.p.name, cat: x.p.cat, notes: x.s.note || ''});
+    const next = stops[i + 1];
+    // Sin hueco real entre horas ya escritas (paradas contiguas/agrupadas):
+    // no se fabrica un tramo de transporte que solaparía con la siguiente.
+    const rawGap = next ? timeToMin(next.s.time) - end : 0;
+    if(next && rawGap > 0){
+      const gap = rawGap;
+      if(i === headlineGap){
+        entries.push({kind: 'transit', start: minToTime(end), end: minToTime(end + gap),
+          mode: '', from: x.p.name, to: next.p.name, notes: rd.note,
+          reservation: headline.some(t => t[0] === 'obl'), segs: headline, estimated: false});
+      } else entries.push({kind: 'transit', start: minToTime(end), end: minToTime(end + gap),
+        mode: inferTransitMode(x.p, next.p), from: x.p.name, to: next.p.name, notes: '',
+        reservation: false, segs: [], estimated: true});
+    }
+  });
+  return entries;
+}
+function timelineEntryHTML(e, extra){
+  if(e.kind === 'activity'){
+    const c = catOf({cat: e.cat});
+    return `<div class="tl-row tl-activity" data-pid="${esc(e.pid)}">
+      <span class="tl-time u-tabular">${e.start}</span>
+      <span class="tl-ico" style="color:${c.color}">${c.emoji}</span>
+      <span class="tl-body"><b>${esc(e.name)}</b>${e.notes ? `<small>${esc(e.notes)}</small>` : ''}</span>
+      ${extra || ''}
+    </div>`;
+  }
+  const modeLabel = e.mode ? `${e.mode} · ` : '';
+  const route = (e.from && e.to) ? `${esc(e.from)} → ${esc(e.to)}` : '';
+  return `<div class="tl-row tl-transit">
+    <span class="tl-time u-tabular">${e.start}</span>
+    <span class="tl-ico">${e.reservation ? '🎫' : '🚉'}</span>
+    <span class="tl-body">
+      <span>${modeLabel}${route}${e.estimated ? ' <small>(estimado)</small>' : ''}</span>
+      ${e.notes ? `<small>${esc(e.notes)}</small>` : ''}
+      ${e.segs && e.segs.length ? `<div class="day-transport">${e.segs.map(([kind, , r, m]) =>
+        `<div class="dt-seg"><span class="pill ${kind === 'obl' ? 'red' : ''}">${kind === 'obl' ? '🎫 reserva obligatoria' : '🚄 recomendado'}</span>
+          <span class="dt-route">${esc(r)}</span><small>${esc(m)}</small></div>`).join('')}</div>` : ''}
+    </span>
+  </div>`;
+}
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
@@ -4713,24 +4833,19 @@ function renderRutaItinerary(){
   html += dayIndices(RUTA_DAYS.length).map(i => {
     const rd = RUTA_DAYS[i];
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
-    const rows = (rd.stops || []).map(s => {
-      const pid = canonicalPid(s.pid);
-      const p = placeById(pid);
-      if(!p) return '';
+    const timeline = dayTimeline(rd);
+    const rows = timeline.map(e => {
+      if(e.kind !== 'activity') return timelineEntryHTML(e);
+      const pid = canonicalPid(e.pid);
       const inPlan = planned.has(pid);
-      return `<div class="seed-row" data-pid="${esc(pid)}">
-        <span class="sr-time u-tabular">${esc(s.time || '')}</span>
-        <span class="sr-name">${esc(p.name)}${s.note ? `<small style="display:block;color:var(--muted);font-weight:400">${esc(s.note)}</small>` : ''}</span>
-        ${inPlan ? '<span class="pill green" style="flex:none">✓ en el plan</span>'
-                 : `<button class="btn small ghost b-plant" data-pid="${esc(pid)}" data-day="${i}" title="Plantar en nuestro viaje" style="flex:none">＋</button>`}
-      </div>`;
+      const extra = inPlan ? '<span class="pill green" style="flex:none">✓ en el plan</span>'
+        : `<button class="btn small ghost b-plant" data-pid="${esc(pid)}" data-day="${i}" title="Plantar en nuestro viaje" style="flex:none">＋</button>`;
+      return timelineEntryHTML(e, extra);
     }).join('');
     if(!rows && !rd.flight && !rd.note) return '';
     return `<div class="m-washi seed-day">
       <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b><small>${fmtDateShort(rd.date)}</small></div>
-      ${rd.note ? `<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">🚉 ${esc(rd.note)}</div>` : ''}
-      ${dayTransportHTML(rd.date)}
-      ${(rd.flight && !rows) ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
+      ${rd.flight && !rows ? '<div class="sd-flight">✈ Día de vuelos</div>' : `<div class="tl-ruta">${rows}</div>`}
       ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
       ${spareTimeHTML(rd.date)}
     </div>`;
@@ -4745,7 +4860,7 @@ function renderRutaItinerary(){
     const t = $('#transportList');
     if(t && t.scrollIntoView) t.scrollIntoView({behavior: 'smooth', block: 'start'});
   });
-  bindPlaceOpen('#dayPanel .seed-row');
+  bindPlaceOpen('#dayPanel .tl-activity');
 }
 /* --- Vista "María" (12.52) · el viaje que ella HIZO en 2024, como referencia
    de solo lectura (Washi). No es el nuestro y no se planta nada: es para mirar
