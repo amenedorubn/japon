@@ -5132,17 +5132,54 @@ function realDayTimelineEntries(d){
     // "Estimado" viaja con la entrada (no solo con la vista): el hueco de
     // pre/post es un colchón, no un dato, y un paseo auto-inferido (opt.auto)
     // no está confirmado por el usuario — mismo criterio que transferHTML.
+    // `reservation` (mismo criterio que transferHTML/needsReserve) viaja
+    // también con la entrada: Prioridad 6 (modo en vivo futuro, sin UI aún)
+    // necesitará "próxima reserva" sin re-derivar el texto cada vez.
     entries.push({kind: 'transit', start: win.start, end: win.end, opt, from, to,
-      estimated: !!win.estimated || !!opt.auto});
+      estimated: !!win.estimated || !!opt.auto,
+      reservation: !!(opt.n || opt.t) && /reserv/i.test((opt.t || '') + ' ' + (opt.n || ''))});
   };
   pushGap(d.pre, 'pre', 'alojamiento', nameOf(d.stops[0].pid));
   d.stops.forEach((s, i) => {
+    // `pid` viaja en la entrada (no solo el nombre): Prioridad 6 necesitará
+    // abrir la ficha del sitio "de lo que toca ahora" sin buscarlo de nuevo.
     entries.push({kind: 'activity', start: s.time, end: minToTime(timeToMin(s.time) + (s.dur || 30)),
-      name: nameOf(s.pid), notes: s.note || ''});
+      pid: s.pid, name: nameOf(s.pid), notes: s.note || ''});
     if(i < d.stops.length - 1) pushGap(d.trans[i], i, nameOf(s.pid), nameOf(d.stops[i + 1].pid));
   });
   pushGap(d.post, 'post', nameOf(d.stops[d.stops.length - 1].pid), 'alojamiento');
   return entries;
+}
+/* ================================================================
+   Prioridad 6 (fase de viaje) · ARQUITECTURA para un futuro "modo en
+   vivo" (Dynamic Island / Live Alerts) — SOLO preparación, sin UI.
+   ----------------------------------------------------------------
+   nowStatus() es una función PURA: recibe las entradas YA derivadas de
+   realDayTimelineEntries() (los mismos datos que alimentan el render
+   editable y el .ics — ninguna fuente nueva) más la hora actual en
+   minutos, y devuelve un snapshot de "qué toca ahora": la entrada en
+   curso, la siguiente y la próxima reserva pendiente por delante. No
+   pinta nada ni engancha ningún timer: eso es la UI futura, deliberadamente
+   NO implementada (petición explícita del usuario). La futura UI solo
+   tendría que llamar nowStatus() cada minuto con la hora real y leer los
+   campos ya calculados — nada que inventar en el modelo persistido:
+   state.days/RUTA_DAYS no cambian.
+   Fuera de alcance a propósito (documentado, no resuelto — ver PROJECT.md
+   §15): retrasos en vivo (exigiría una fuente externa de tránsito en
+   tiempo real, fuera del patrón "sin dependencias de runtime" de este
+   proyecto) y notificaciones push (exigirían el Service Worker despierto
+   en segundo plano; hoy `sw.js` solo cachea assets). */
+function nowStatus(entries, nowMin){
+  if(!entries || !entries.length) return {current: null, next: null, upcomingReservation: null};
+  const withMin = entries.map(e => ({e, s: timeToMin(e.start), en: timeToMin(e.end)}));
+  const current = withMin.find(x => nowMin >= x.s && nowMin < x.en);
+  const next = withMin.find(x => x.s > nowMin);
+  const upcoming = withMin.find(x => x.s >= nowMin && x.e.kind === 'transit' && x.e.reservation);
+  return {
+    current: current ? {...current.e, remainingMin: current.en - nowMin} : null,
+    next: next ? {...next.e, startsInMin: next.s - nowMin} : null,
+    upcomingReservation: upcoming ? {...upcoming.e, startsInMin: upcoming.s - nowMin} : null,
+  };
 }
 function realidadICS(){
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Japon 2027//Realidad//ES', 'CALSCALE:GREGORIAN',

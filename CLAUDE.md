@@ -84,7 +84,9 @@ Antes de proceder, pregunta si:
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
   planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
-  Última materialización **12.71** (Booking Timeline: nueva sección en Guía + teaser en Inicio
+  Última materialización **12.72** (arquitectura preparada para un futuro modo en vivo, SIN UI:
+  `nowStatus()` sobre las entradas ya derivadas de la agenda de Realidad — ver PROJECT.md §15).
+  Antes, **12.71** (Booking Timeline: nueva sección en Guía + teaser en Inicio
   que responden "¿qué toca reservar a continuación?" combinando `BOOKINGS` — 10 reservas con
   ventana de venta real cuando se conoce — con las noches `res`/`amp` de `NIGHTS`, sin fechas
   inventadas). Antes, **12.70** (agenda 2.0: origen/destino visibles en cada tramo de Realidad +

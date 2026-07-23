@@ -56,7 +56,7 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     realDayTimelineEntries, realidadICS, intensityScore, intensityFromScore,
     rutaDayIntensity, realDayIntensity,
     BOOKINGS, NIGHTS, bookingWindow, bookingRows, bookingTimelineHTML, bookingTeaserHTML,
-    renderGuia, renderInicio,
+    renderGuia, renderInicio, nowStatus, timeToMin,
     _reseedDays: () => { // fixture: días con paradas (el plan real nace vacío, 12.49)
       const fresh = buildSeedState();
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
@@ -258,6 +258,45 @@ const dayEmpty = api.state.days.find(d => !d.flight && (!d.stops || !d.stops.len
 check('P5 (Realidad): un día sin paradas no tiene intensidad', !dayEmpty || api.realDayIntensity(dayEmpty) === null);
 if(dayWithGap) check('P5 (Realidad): un día con paradas SÍ trae intensidad (emoji + etiqueta)',
   !!api.realDayIntensity(dayWithGap) && /^[🟢🟡🟠🔴]$/u.test(api.realDayIntensity(dayWithGap).emoji));
+
+// ============ Prioridad 6 · arquitectura para el futuro modo en vivo (SIN UI) ============
+// nowStatus() es pura: mismas entradas que ya alimentan el render editable y
+// el .ics (realDayTimelineEntries), más la hora en minutos — nada nuevo que
+// mantener en el modelo persistido.
+if(dayWithGap){
+  const entries = api.realDayTimelineEntries(dayWithGap);
+  const firstAct = entries.find(e => e.kind === 'activity');
+  check('P6: las entradas de actividad llevan pid (para abrir su ficha desde el modo en vivo)',
+    !!firstAct && !!firstAct.pid);
+  const midOfFirst = api.timeToMin(firstAct.start) + 1; // 1 min dentro de la primera actividad
+  const st = api.nowStatus(entries, midOfFirst);
+  check('P6: nowStatus reconoce la entrada EN CURSO cuando "ahora" cae dentro de su ventana',
+    !!st.current && st.current.pid === firstAct.pid && st.current.remainingMin > 0);
+  const beforeDay = api.timeToMin(entries[0].start) - 60;
+  const stBefore = api.nowStatus(entries, beforeDay);
+  check('P6: nowStatus no inventa una entrada EN CURSO antes de que empiece el día',
+    stBefore.current === null && !!stBefore.next && stBefore.next.startsInMin > 0);
+  const afterDay = api.timeToMin(entries[entries.length - 1].end) + 60;
+  const stAfter = api.nowStatus(entries, afterDay);
+  check('P6: nowStatus no inventa una entrada EN CURSO ni "próxima" tras acabar el día',
+    stAfter.current === null && stAfter.next === null);
+  // Entradas sintéticas (mismo shape que realDayTimelineEntries) para probar
+  // "próxima reserva" sin depender de que el día real de la fixture tenga una.
+  const synthetic = [
+    {kind: 'activity', start: '09:00', end: '10:00', pid: 'x', name: 'Parada A'},
+    {kind: 'transit', start: '10:00', end: '10:20', reservation: false},
+    {kind: 'activity', start: '10:20', end: '11:00', pid: 'y', name: 'Parada B'},
+    {kind: 'transit', start: '11:00', end: '12:00', reservation: true},
+    {kind: 'activity', start: '12:00', end: '13:00', pid: 'z', name: 'Parada C'},
+  ];
+  const stReserve = api.nowStatus(synthetic, api.timeToMin('09:30'));
+  check('P6: nowStatus encuentra la PRÓXIMA reserva pendiente por delante (ignora el tramo sin reserva)',
+    !!stReserve.upcomingReservation && stReserve.upcomingReservation.reservation === true &&
+    stReserve.upcomingReservation.startsInMin === api.timeToMin('11:00') - api.timeToMin('09:30'));
+  const stPastReserve = api.nowStatus(synthetic, api.timeToMin('11:30'));
+  check('P6: pasada la reserva, ya no aparece como "próxima" (no queda ninguna reserva por delante)',
+    stPastReserve.upcomingReservation === null);
+}
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
