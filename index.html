@@ -143,16 +143,28 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15p
 .auth-logo{font-family:var(--serif);font-size:32px;color:var(--accent);margin-bottom:6px;}
 .auth-card h1{font-size:20px;margin-bottom:2px;}
 .auth-sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
-.auth-card form{display:flex;flex-direction:column;gap:4px;text-align:left;}
-.auth-card label{font-size:12px;font-weight:700;color:var(--muted);margin-top:10px;}
-.auth-card input{padding:10px 12px;border-radius:10px;border:1px solid var(--line);
-  background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit;}
-.auth-card input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-.auth-card .btn{margin-top:18px;width:100%;justify-content:center;background:var(--accent);color:#fff;
-  padding:11px;border-radius:999px;font-weight:700;}
+.auth-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:11px;border-radius:999px;border:1px solid var(--line);background:var(--card2);
+  color:var(--ink);font-weight:700;font-size:14px;}
+.auth-google svg{flex:none;width:18px;height:18px;}
 .auth-error{margin-top:12px;font-size:12.5px;color:var(--muted);}
 .auth-error.is-error{color:var(--accent);}
-.auth-forgot{display:block;margin:14px auto 0;font-size:12.5px;color:var(--muted);text-decoration:underline;}
+.auth-avatar{width:56px;height:56px;border-radius:50%;margin:0 auto 12px;display:block;object-fit:cover;}
+.auth-avatar.placeholder{display:flex;align-items:center;justify-content:center;background:var(--card2);
+  font-size:22px;}
+.auth-avatar.small{width:32px;height:32px;margin:0;}
+.auth-status-msg{font-size:13.5px;color:var(--muted);line-height:1.5;}
+.auth-status-msg.is-error{color:var(--accent);}
+.auth-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+.auth-actions .btn{width:100%;justify-content:center;}
+/* Panel de administración de acceso (Prioridad 4): reutiliza .booking-head/
+   .booking-empty/.pill del resto de la app, no clases nuevas para lo mismo. */
+.admin-group{margin-bottom:16px;}
+.admin-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);}
+.admin-row:last-child{border-bottom:none;}
+.admin-row .ar-body{flex:1;min-width:0;font-size:13.5px;}
+.admin-row .ar-body small{display:block;color:var(--muted);font-size:12px;}
+.admin-row .ar-actions{flex:none;display:flex;gap:6px;}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
 /* Todo lo pulsable responde al tacto: la interfaz escucha (Emil: scale .97) */
 button,.btn,a.icon-btn{transition:transform var(--dur-1) var(--ease),background-color var(--dur-2) var(--ease),
@@ -840,15 +852,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="auth-logo">日本</div>
     <h1>Japón 2027</h1>
     <p class="auth-sub">Acceso privado del viaje</p>
-    <form id="authForm" autocomplete="on">
-      <label for="authEmail">Email</label>
-      <input type="email" id="authEmail" autocomplete="username" required>
-      <label for="authPassword">Contraseña</label>
-      <input type="password" id="authPassword" autocomplete="current-password" required>
-      <button type="submit" class="btn" id="authLoginBtn">Iniciar sesión</button>
-      <div id="authError" class="auth-error" style="display:none"></div>
-    </form>
-    <button class="auth-forgot" id="authForgot" type="button">¿Olvidaste tu contraseña?</button>
+    <div id="authBody"></div>
   </div>
 </div>
 
@@ -876,6 +880,7 @@ table.phr tr:last-child td{border-bottom:none;}
       <button class="icon-btn" id="btnExport" title="Exportar copia de seguridad">⬇️</button>
       <button class="icon-btn" id="btnImport" title="Importar copia">⬆️</button>
       <button class="icon-btn" id="btnMoreActions" title="Más acciones" aria-label="Más acciones">•••</button>
+      <button class="icon-btn" id="btnAdmin" title="Acceso al viaje" aria-label="Gestionar acceso" style="display:none">👥</button>
       <button class="icon-btn" id="btnLogout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
     </div>
   </div>
@@ -3390,24 +3395,37 @@ function fixTransfers(day){
 }
 
 /* ================================================================
-   AUTENTICACIÓN (Prioridad 4, fase de viaje) — acceso privado
+   AUTENTICACIÓN + APROBACIÓN (Prioridad 4, fase de viaje) — acceso privado
    ----------------------------------------------------------------
-   Firebase Authentication (Email/Password), SOLO Rubén/Belén/Carol. Sin
-   registro público en la app: las cuentas se crean/eliminan en la consola
-   de Firebase (Authentication → Users) — añadir o quitar viajeros no toca
-   código, solo gestión de usuarios de Firebase. Sesión persistente
-   (browserLocalPersistence): logueado una vez, el dispositivo sigue
-   dentro hasta "Cerrar sesión". La app ENTERA (no solo la sincronización
-   opcional de más abajo) queda detrás de esta puerta.
+   Firebase Authentication con Google Sign-In: CUALQUIER cuenta de Google
+   puede autenticarse (eso es "quién eres"), pero solo entra a los datos
+   del viaje quien esté APROBADO (eso es "qué puedes ver" — un eje aparte,
+   igual que procedencia/estado/zona en el resto del modelo de datos).
+
+   Flujo: (1) el usuario entra con Google → (2) si su email ya está
+   aprobado, entra normal; (3) si no, se guarda una solicitud pendiente
+   en Firebase (email, nombre, uid, foto, createdAt) y se le muestra
+   "pendiente de aprobación" — sin acceso a los datos del viaje. Un
+   administrador (una cuenta de Google fija, `access/adminEmail` en la
+   base de datos) aprueba o rechaza desde el panel 👥 de la cabecera.
+
+   Sin registro "de verdad" en el sentido de crear cuentas nuevas de la
+   app: Google ya gestiona la identidad. Lo único que este proyecto
+   gestiona es la APROBACIÓN, y vive en `access/users/{uid}` — añadir o
+   quitar viajeros nunca toca código, solo esa lista (o la consola).
 
    IMPORTANTE — esto SOLO protege de verdad si las reglas de seguridad de
-   Firebase RTDB exigen auth != null (ver instrucciones de configuración
-   manual al pie de este bloque / PROJECT.md §16). Sin esas reglas, la
-   puerta es solo de la app: los datos seguirían siendo legibles
-   directamente en la URL pública de la base de datos.
+   Firebase RTDB exigen auth != null Y status=='approved' para los datos
+   del viaje (ver instrucciones de configuración manual / PROJECT.md §16).
+   Sin esas reglas, la puerta es solo de la app: los datos seguirían
+   siendo legibles directamente en la URL pública de la base de datos.
 ================================================================ */
-let auth = null, currentUser = null, appStarted = false;
+let auth = null, authM = null, accessDb = null;
+let currentUser = null, currentAccessRecord = null, appStarted = false;
 function currentUserEmail(){ return currentUser ? currentUser.email : null; }
+function accessUsersPath(){ return FB_PROJECT_PATH + '/access/users'; }
+function accessUserPath(uid){ return accessUsersPath() + '/' + uid; }
+function accessAdminEmailPath(){ return FB_PROJECT_PATH + '/access/adminEmail'; }
 function setAuthError(msg){
   const el = $('#authError'); if(!el) return;
   el.textContent = msg || '';
@@ -3416,28 +3434,182 @@ function setAuthError(msg){
 }
 function authErrorMessage(e){
   const map = {
-    'auth/invalid-email': 'Ese email no es válido.',
-    'auth/user-not-found': 'No existe ninguna cuenta con ese email.',
-    'auth/wrong-password': 'Contraseña incorrecta.',
-    'auth/invalid-credential': 'Email o contraseña incorrectos.',
-    'auth/too-many-requests': 'Demasiados intentos: esperad un momento.',
+    'auth/popup-closed-by-user': 'Ventana cerrada antes de terminar. Inténtalo de nuevo.',
+    'auth/cancelled-popup-request': 'Inténtalo de nuevo.',
+    'auth/popup-blocked': 'El navegador bloqueó la ventana de Google: permite ventanas emergentes e inténtalo de nuevo.',
     'auth/network-request-failed': 'Sin conexión: revisad la red.',
+    'auth/unauthorized-domain': 'Este dominio no está autorizado para iniciar sesión (configuración pendiente en Firebase).',
+    'auth/operation-not-allowed': 'El inicio de sesión con Google no está activado todavía (configuración pendiente en Firebase).',
+    'auth/too-many-requests': 'Demasiados intentos: esperad un momento.',
   };
-  return map[e && e.code] || 'No se pudo iniciar sesión.';
+  return map[e && e.code] || 'No se pudo iniciar sesión con Google.';
 }
-// Pura(ish): decide qué se ve (puerta o app) según haya o no sesión, y
-// arranca startApp() la PRIMERA vez que aparece un usuario. Separada de
-// onAuthStateChanged para poder probarla sin una sesión real de Firebase.
-function applyAuthUIState(user){
+// ---- Funciones puras (testeables sin una sesión real de Firebase) ----
+// El registro inicial de una solicitud de acceso: exactamente los campos
+// pedidos (email, nombre, uid, foto, fecha), estado 'pending' por defecto.
+function buildAccessRequest(user){
+  return {
+    uid: user.uid, email: user.email || null, displayName: user.displayName || null,
+    photoURL: user.photoURL || null, status: 'pending', role: 'traveler', createdAt: Date.now(),
+  };
+}
+// El administrador es UNA cuenta de Google fija (su email vive en
+// access/adminEmail, dato de arranque que solo se edita a mano en la
+// consola — la app nunca escribe ahí, ver §16). Si coincide, se auto-
+// promueve la primera vez: rompe el problema del huevo y la gallina
+// (nadie puede aprobar al primer administrador si no hay ninguno aún).
+function isDesignatedAdmin(email, adminEmail){
+  return !!email && !!adminEmail && email === adminEmail;
+}
+// Qué pantalla toca ver, dado el usuario de Firebase Auth y su registro
+// de acceso (o su ausencia). Separada de cualquier lectura/escritura real
+// para poder probarla con datos de mentira.
+function computeGateView(user, record){
+  if(!user) return 'signin';
+  if(record && record.status === 'approved') return 'approved';
+  if(record && record.status === 'rejected') return 'rejected';
+  return 'pending';
+}
+function authGateHTML(view, user){
+  if(view === 'connecting') return '<p class="auth-status-msg">Conectando…</p>';
+  if(view === 'signin') return `
+    <button class="btn auth-google" id="authGoogleBtn" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.6H24v9.1h12.6c-.5 3-2.2 5.5-4.7 7.2l7.3 5.6c4.3-4 6.8-9.8 6.8-17.3z"/><path fill="#FBBC05" d="M10.5 19.3a14.5 14.5 0 0 0 0 9.4l-7.9 6.1a24 24 0 0 1 0-21.6l7.9 6.1z"/><path fill="#34A853" d="M24 48c6.4 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.9 2.3-8.6 2.3-6.3 0-11.6-3.5-13.5-9.7l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      <span>Iniciar sesión con Google</span>
+    </button>
+    <div id="authError" class="auth-error" style="display:none"></div>`;
+  if(view === 'pending') return `
+    ${user && user.photoURL ? `<img class="auth-avatar" src="${esc(user.photoURL)}" alt="">` : ''}
+    <p class="auth-status-msg">Hola${user && user.displayName ? ', ' + esc(user.displayName) : ''}. Tu acceso está
+      pendiente de aprobación del administrador del viaje. Te avisaremos en cuanto puedas entrar.</p>
+    <div class="auth-actions">
+      <button class="btn ghost small" id="authRetry" type="button">🔄 Comprobar de nuevo</button>
+      <button class="btn ghost small" id="authSignOut" type="button">Salir</button>
+    </div>`;
+  if(view === 'rejected') return `
+    <p class="auth-status-msg is-error">Tu acceso a este viaje no ha sido aprobado.</p>
+    <button class="btn ghost small" id="authSignOut" type="button">Salir</button>`;
+  return '';
+}
+function renderAuthGate(view, user){
+  const gate = $('#authGate'); if(gate) gate.style.display = 'flex';
+  const root = $('#appRoot'); if(root) root.style.display = 'none';
+  const body = $('#authBody'); if(!body) return;
+  body.innerHTML = authGateHTML(view, user);
+  onClick('#authGoogleBtn', doGoogleSignIn);
+  onClick('#authSignOut', () => authM && auth && authM.signOut(auth));
+  onClick('#authRetry', () => settleAccess(currentUser));
+}
+async function doGoogleSignIn(){
+  const btn = $('#authGoogleBtn');
+  setAuthError('');
+  if(btn) btn.disabled = true;
+  try{ await authM.signInWithPopup(auth, new authM.GoogleAuthProvider()); }
+  catch(e){ setAuthError(authErrorMessage(e)); }
+  finally{ if(btn) btn.disabled = false; }
+}
+// Lee (o crea) la solicitud de acceso del usuario, y auto-promueve al
+// administrador designado si aún no lo está. Única función con I/O real
+// de este bloque; el resto son funciones puras de arriba.
+async function resolveAccess(user){
+  const adminSnap = await authDbGet(accessAdminEmailPath());
+  const adminEmail = adminSnap;
+  const userRef = accessUserPath(user.uid);
+  let record = await authDbGet(userRef);
+  if(!record){
+    record = buildAccessRequest(user);
+    await authDbSet(userRef, record).catch(() => {});
+  }
+  if(isDesignatedAdmin(user.email, adminEmail) && !(record.status === 'approved' && record.role === 'admin')){
+    record = {...record, status: 'approved', role: 'admin'};
+    await authDbSet(userRef, record).catch(() => {});
+  }
+  return record;
+}
+// Helpers finos sobre el SDK modular (evitan repetir dbM.ref/dbM.get en
+// cada sitio; devuelven directamente el valor, no el snapshot).
+async function authDbGet(path){
+  const snap = await authM.dbGet(authM.dbRef(accessDb, path));
+  return snap.val();
+}
+function authDbSet(path, value){ return authM.dbSet(authM.dbRef(accessDb, path), value); }
+function updateAdminButton(){
+  const btn = $('#btnAdmin'); if(!btn) return;
+  btn.style.display = (currentAccessRecord && currentAccessRecord.role === 'admin') ? '' : 'none';
+}
+// Orquesta: resuelve el acceso y decide qué mostrar. La llaman tanto
+// onAuthStateChanged (login/logout reales) como "Comprobar de nuevo"
+// (re-chequeo manual sin cerrar sesión, para no exigir un F5 después de
+// que el administrador apruebe a alguien).
+async function settleAccess(user){
   currentUser = user;
-  const gate = $('#authGate'), root = $('#appRoot');
-  if(user){
-    if(gate) gate.style.display = 'none';
-    if(root) root.style.display = '';
+  if(!user){ currentAccessRecord = null; renderAuthGate('signin', null); return; }
+  renderAuthGate('connecting', user);
+  const record = await resolveAccess(user).catch(() => null);
+  currentAccessRecord = record;
+  const view = computeGateView(user, record);
+  if(view === 'approved'){
+    const gate = $('#authGate'); if(gate) gate.style.display = 'none';
+    const root = $('#appRoot'); if(root) root.style.display = '';
+    updateAdminButton();
     if(!appStarted){ appStarted = true; startApp(); }
   } else {
-    if(root) root.style.display = 'none';
-    if(gate) gate.style.display = 'flex';
+    renderAuthGate(view, user);
+  }
+}
+// ---- Panel de administración (👥, solo visible si role === 'admin') ----
+function adminRowHTML(u, actionsHTML){
+  const photo = u.photoURL ? `<img class="auth-avatar small" src="${esc(u.photoURL)}" alt="">`
+    : '<span class="auth-avatar small placeholder">👤</span>';
+  return `<div class="admin-row">${photo}
+    <div class="ar-body"><b>${esc(u.displayName || u.email || u.uid)}</b><small>${esc(u.email || '')}</small></div>
+    <div class="ar-actions">${actionsHTML}</div>
+  </div>`;
+}
+function adminPanelHTML(users){
+  const pending = users.filter(u => u.status === 'pending');
+  const approved = users.filter(u => u.status === 'approved');
+  const rejected = users.filter(u => u.status === 'rejected');
+  return `
+    <div class="admin-group"><div class="booking-head">Pendientes <span class="pill red">${pending.length}</span></div>
+      ${pending.length ? pending.map(u => adminRowHTML(u,
+        `<button class="btn small" data-approve="${esc(u.uid)}">✅ Aprobar</button>
+         <button class="btn small ghost" data-reject="${esc(u.uid)}">❌ Rechazar</button>`)).join('')
+        : '<p class="booking-empty">Nadie esperando.</p>'}
+    </div>
+    <div class="admin-group"><div class="booking-head">Con acceso <span class="pill green">${approved.length}</span></div>
+      ${approved.length ? approved.map(u => adminRowHTML(u,
+        u.role === 'admin' ? '<span class="pill">Admin</span>'
+          : `<button class="btn small ghost" data-revoke="${esc(u.uid)}">🚫 Revocar</button>`)).join('')
+        : '<p class="booking-empty">Nadie con acceso todavía.</p>'}
+    </div>
+    ${rejected.length ? `<div class="admin-group"><div class="booking-head">Rechazados <span class="pill">${rejected.length}</span></div>
+      ${rejected.map(u => adminRowHTML(u, `<button class="btn small" data-approve="${esc(u.uid)}">✅ Aprobar</button>`)).join('')}
+    </div>` : ''}`;
+}
+async function setAccessStatus(uid, status){
+  try{
+    const path = accessUserPath(uid);
+    const record = await authDbGet(path);
+    if(!record) return;
+    await authDbSet(path, {...record, status});
+    renderAdminPanel();
+  }catch(e){ toast('No se pudo actualizar el acceso'); }
+}
+function bindAdminPanelActions(){
+  $$('#adminPanelBody [data-approve]').forEach(b => b.addEventListener('click', () => setAccessStatus(b.dataset.approve, 'approved')));
+  $$('#adminPanelBody [data-reject]').forEach(b => b.addEventListener('click', () => setAccessStatus(b.dataset.reject, 'rejected')));
+  $$('#adminPanelBody [data-revoke]').forEach(b => b.addEventListener('click', () => setAccessStatus(b.dataset.revoke, 'rejected')));
+}
+async function renderAdminPanel(){
+  openModal('<h3 style="margin:0 0 12px">👥 Acceso al viaje</h3><div id="adminPanelBody">Cargando…</div>');
+  try{
+    const all = await authDbGet(accessUsersPath()) || {};
+    const users = Object.keys(all).map(uid => ({uid, ...all[uid]}));
+    const body = $('#adminPanelBody'); if(body) body.innerHTML = adminPanelHTML(users);
+    bindAdminPanelActions();
+  }catch(e){
+    const body = $('#adminPanelBody'); if(body) body.innerHTML = '<p style="color:var(--muted);font-size:13px">No se pudo cargar la lista.</p>';
   }
 }
 async function initAuth(){
@@ -3445,30 +3617,18 @@ async function initAuth(){
   // Firebase real (tests), esto no debe tumbar el resto del arranque.
   try{
     const appM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-    const authM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+    const authMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+    const dbMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
     fbApp = appM.initializeApp(FIREBASE_CONFIG);
-    auth = authM.getAuth(fbApp);
+    auth = authMod.getAuth(fbApp);
+    accessDb = dbMod.getDatabase(fbApp);
+    // authM agrupa lo del SDK de auth + los 2 helpers de base de datos que
+    // necesita este bloque (dbGet/dbSet), para no importar dbMod dos veces.
+    authM = {...authMod, dbRef: dbMod.ref, dbGet: dbMod.get, dbSet: dbMod.set};
     try{ await authM.setPersistence(auth, authM.browserLocalPersistence); }catch(e){}
-    authM.onAuthStateChanged(auth, applyAuthUIState);
-    const form = $('#authForm');
-    if(form) form.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      const email = $('#authEmail').value.trim(), pass = $('#authPassword').value;
-      setAuthError('');
-      const btn = $('#authLoginBtn'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Entrando…';
-      try{ await authM.signInWithEmailAndPassword(auth, email, pass); }
-      catch(e){ setAuthError(authErrorMessage(e)); }
-      finally{ btn.disabled = false; btn.textContent = label; }
-    });
+    authM.onAuthStateChanged(auth, settleAccess);
     onClick('#btnLogout', () => authM.signOut(auth));
-    // Sin registro público (§ arriba): esto SOLO deja restablecer la
-    // contraseña de una cuenta que YA existe, nunca crear una nueva.
-    onClick('#authForgot', async () => {
-      const email = $('#authEmail').value.trim();
-      if(!email){ setAuthError('Escribe tu email arriba y vuelve a tocar el enlace.'); return; }
-      try{ await authM.sendPasswordResetEmail(auth, email); setAuthError('Te hemos enviado un email para restablecer la contraseña.'); }
-      catch(e){ setAuthError(authErrorMessage(e)); }
-    });
+    onClick('#btnAdmin', renderAdminPanel);
   }catch(e){
     setAuthError('No se pudo conectar con el inicio de sesión. Comprueba tu conexión y recarga.');
   }

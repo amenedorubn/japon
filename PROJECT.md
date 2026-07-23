@@ -246,6 +246,7 @@ viaja con el array y la fusión v10 se re-aplica si hace falta.
 | 12.64 | `41e75f6` | **La Ruta como referencia principal + mapa↔itinerario + transporte del día** | `routeOverview`/`routeSummary` de Inicio, antes un array fijo Tokio/Kioto/Osaka/Tokio obsoleto, ahora derivados de `NIGHTS` (la Ruta real). Chip **Propuesta** oculto de la UI (`display:none`); código, `SEED_DAYS` y el modo `seed` intactos para restaurarla si hace falta. **Sincronización mapa↔itinerario**: elegir un día en los chips del mapa (`mapDay`) filtra el panel de abajo a ese día vía `dayIndices()` (Ruta/Propuesta/Dani); en Realidad reutiliza el zoom del Cord, y el zoom del Cord ahora también mueve el mapa. "Todos" mantiene la lista completa. **Capa "Si sobra tiempo" en el mapa**: toggle propio (`extrasVisible`), independiente del itinerario activo, pin 🎁 diferenciado; como `DAY_EXTRAS` no trae coordenadas a propósito (no son fichas curadas), se ubican en la parada real del día más cercana por nombre — nunca coordenadas inventadas. **Transporte del día en la Ruta**: cada día muestra ahora reserva obligatoria/recomendada y modo, reutilizando `TRANSPORT` (antes solo visible en la Guía) sin datos nuevos |
 | 12.65 | `a5744b7` | **Fix: un día seleccionado en el mapa ya no pinta el resto del itinerario** | El bucle de POIs de color se dibujaba siempre (con o solo excluía las paradas del propio día); con un día elegido el usuario veía sus paradas numeradas Y los círculos de los otros 20 días alrededor. Ahora ese bucle solo corre en "Todos" — con un día concreto el mapa muestra ÚNICAMENTE sus paradas + extras si están activados. Tests nuevos en `test-8a-map.js` contra el pipeline real del mapa (no solo la lógica aislada), incluida cobertura end-to-end del toggle 🎁 Extras (OFF/ON, "Todos" vs. un día) |
 | 12.66–12.67 | `f0d396d`+`52cb7a5` | **`dayTimeline()`: agenda cronológica del día, fuente única** | Cada día de la Ruta se lee como una agenda tipo Google Calendar (actividades + tramos de transporte intercalados por hora) en vez de una lista de paradas con una nota suelta arriba. `dayTimeline(rd)` deriva TODO de `RUTA_DAYS` (horas/duraciones ya en cada `S()`) + `TRANSPORT`: tramos entre paradas inferidos por distancia real (a pie ≤1,2 km, si no tren/metro, marcados "estimado"); la nota real de la Ruta (con la reserva obligatoria/recomendada) se coloca en el hueco que de verdad describe — no siempre el de antes de la primera parada, localizado por el salto de distancia >20 km entre paradas consecutivas (cubre días de llegada y de doble ciudad en la misma jornada). Verificado sin solapes en las 213 entradas de los 21 días. Export **.ics** nuevo (botón "📅 Exportar a calendario") que recorre la MISMA `dayTimeline()` — vuelos con offset UTC real por aeropuerto (Madrid/Helsinki/Tokio cruzan 3 husos; el resto del viaje es Japón, un huso fijo sin DST) |
+| 12.75 | `(este commit)` | **Revisión de acceso: Google Sign-In + flujo de aprobación** | Sustituye la lista fija de Email/Password de 12.74 (petición explícita del usuario). Cualquier cuenta de Google puede autenticarse (`signInWithPopup`); el acceso a los datos exige `access/users/{uid}.status === 'approved'`, un eje de datos propio del proyecto, no de Firebase Auth. Solicitud pendiente automática con exactamente los campos pedidos (email/nombre/uid/foto/fecha). Administrador = una cuenta de Google fija (`access/adminEmail`, dato de arranque editado a mano en consola, `.write:false` desde la app) que se auto-promueve la primera vez que coincide (rompe el huevo-y-la-gallina de "quién aprueba al primer admin"); panel 👥 en la cabecera para aprobar/rechazar/revocar. Ver §16 para el diseño completo, los 3 pasos manuales (habilitar Google, fijar `adminEmail`, pegar las reglas actualizadas) y la nota de privacidad aceptada conscientemente sobre `adminEmail` siendo legible por cualquier cuenta autenticada. Test `test-12-auth.js` reescrito (39 checks: funciones puras + I/O contra una base de datos falsa en memoria). Verificado con Playwright real en claro y oscuro |
 | 12.74 | `(este commit)` | **Acceso privado: Firebase Authentication (Prioridad 4, fase de viaje)** | Puerta de acceso (`#authGate`) delante de TODA la app (`#appRoot`), Email/Password sin registro público (las 3 cuentas se gestionan solo en la consola de Firebase). `initAuth()`/`applyAuthUIState()`/`startApp()` (ver §16 para el detalle completo y los 3 pasos manuales pendientes: habilitar el proveedor, crear las 3 cuentas, pegar las reglas de RTDB `auth != null`). `pushRemote()` etiqueta cada cambio con `lastEditedBy` (aditivo, sigue habiendo exactamente 3 `fb.set`). Sesión persistente, logout, "olvidé mi contraseña". Verificado con Playwright real (no solo stubs): puerta visible por defecto, sesión simulada arranca la app completa, logout la vuelve a esconder, intento de login real confirma el circuito formulario→Firebase→error de punta a punta. Los 20 tests que arrancan la app completa ahora exponen `startApp` y lo llaman a mano (una sesión real de Firebase no se puede completar en Node). Test nuevo `test-12-auth.js` (18 checks) |
 | — | (sin commit) | **Docx (`Ruta-21-dias.docx`) como tercer consumidor de `dayTimeline()`: DESCARTADO por ahora** | Investigada la regeneración automática de sus tablas hora-a-hora (XML real de Word, `word/document.xml`, 445 KB). Hallazgo: el docx YA es más rico que lo que `dayTimeline()` deriva hoy — sus filas incluyen narrativa curada a mano sin equivalente en `RUTA_DAYS` (p.ej. día 5: "07:00 Check-out + Asakusa — Con las maletas a Asakusa…", sin parada `S()` que lo respalde). Regenerarlo desde `dayTimeline()` ahora sería una REGRESIÓN (perdería esa narrativa), no una mejora. Sin generador de escritura ZIP nuevo ni tocado el docx. Camino documentado para si se retoma: enriquecer `dayTimeline()` con esos huecos narrativos primero, o aceptar la pérdida de detalle a cambio de la fuente única |
 | 12.73 | `(este commit)` | **Feed de calendario suscribible (Prioridad 5, fase de viaje)** | `tools/ics-export.js` (nuevo generador, patrón import→bake existente): extrae el JS de `index.html`, arranca la app en Node y escribe `ruta-japon-2027.ics`/`realidad-japon-2027.ics` en la raíz del repo — assets ESTÁTICOS versionados, mismo patrón que `Ruta-21-dias.docx`/`JAPON-DEFINITIVO-Dani.pdf`, publicados por GitHub Pages con URL estable. Nueva sección "📅 Calendario" en Guía con enlace `webcal://` para suscribirse desde Google/Apple Calendar en vez de solo descargar. **Limitación reconocida, no maquillada**: GitHub Pages es estático — no hay servidor que regenere el fichero en cada petición; "se actualiza" significa que alguien re-ejecuta el generador y hace commit+push (exactamente como ya pasa con el docx). `ruta-japon-2027.ics` sale ÍNTEGRO de datos horneados (`RUTA_DAYS`/`TRANSPORT`/`FLIGHTS`), sin dependencia externa. `realidad-japon-2027.ics` es distinto: el plan real vive sincronizado en Firebase (no en el repo, M10/12.49 "el plan real nace vacío"); sin un volcado en vivo como argumento, el generador solo produce los 2 días de vuelo horneados en la semilla — el generador acepta opcionalmente la ruta a un volcado de Firebase (mismo patrón que `test-8c-gate.js`) para producir el .ics real completo bajo demanda. Automatizar la regeneración de verdad (GitHub Action programada que lea Firebase en vivo) es una decisión de arquitectura aparte, sin implementar sin decisión explícita del usuario |
@@ -697,65 +698,94 @@ Camino para cuando se decida implementar la UI: una pantalla o banner que llame 
 El hueco de retrasos en vivo quedaría vacío hasta que exista una decisión explícita sobre una
 fuente de datos externa.
 
-## 16. Acceso privado (Prioridad 4, fase de viaje) — Firebase Authentication
+## 16. Acceso privado (Prioridad 4, fase de viaje) — Google Sign-In + aprobación
 
-Decisión del usuario (no negociable, ver conversación): acceso privado real con Firebase
-Authentication (Email/Password, SIN Google Sign-In), sesiones persistentes, login/logout, y cada
-edición futura asociada al usuario autenticado. Sin registro público en la app: las 3 cuentas
-(Rubén/Belén/Carol) se crean y se gestionan ÚNICAMENTE desde la consola de Firebase — añadir o
-quitar viajeros no toca código nunca, solo gestión de usuarios de Firebase.
+**Revisión del diseño original (12.74 usaba Email/Password + lista fija de 3 cuentas). Decisión
+del usuario en esta sesión: Google Sign-In como método principal, CUALQUIER cuenta de Google
+puede autenticarse, pero el acceso a los datos del viaje exige APROBACIÓN explícita de un
+administrador.** Esto separa dos ejes que antes eran uno solo: **autenticación** (quién eres —
+ahora la resuelve Google, no una lista de cuentas de Firebase) y **autorización** (qué puedes
+ver — ahora vive en un registro de aprobación propio de este proyecto, `access/users/{uid}`,
+un eje más de datos igual que procedencia/estado/zona en el resto del modelo).
 
-### 16.1 Qué existe ya en el código (12.74)
+### 16.1 Flujo
 
-- **Puerta de acceso** (`#authGate`, visible por defecto en el HTML — nunca hay un parpadeo del
-  contenido privado antes de que JS decida) envuelve TODO el contenido real de la app en
-  `#appRoot` (antes vivía suelto bajo `<body>`; el wrapper es puramente estructural, ningún id
-  interno cambió). Formulario de email + contraseña, sin enlace de "crear cuenta". Enlace
-  "¿Olvidaste tu contraseña?" que SOLO permite restablecer una cuenta ya existente
-  (`sendPasswordResetEmail`), nunca crear una.
-- **`initAuth()`**: crea la app de Firebase (`fbApp`, compartida con `initFirebase()` — no se
-  puede llamar `initializeApp()` dos veces), `getAuth()`, `setPersistence(..., browserLocalPersistence)`
-  (sesión persistente entre aperturas) y `onAuthStateChanged` → `applyAuthUIState(user)`.
-- **`applyAuthUIState(user)`**: función separada y testeable — sin sesión, muestra la puerta y
-  oculta `#appRoot`; con sesión, oculta la puerta, muestra `#appRoot` y llama `startApp()` la
-  PRIMERA vez (con `appStarted` como guarda contra doble arranque).
-- **`startApp()`**: todo lo que antes se ejecutaba sin condiciones al final del script
-  (`buildNav`, `renderAll`, `initFirebase`, registro del service worker…) ahora vive aquí y solo
-  corre tras confirmar sesión. La migración local (10b) y la construcción de `state` desde
-  localStorage siguen ejecutándose sin gatekeeping: no tocan red ni DOM privado.
-- **`currentUserEmail()`**: lee `currentUser?.email`. `pushRemote()` (el único write-site de
-  `state/v2`) etiqueta el payload con `lastEditedBy: currentUserEmail() || null` — aditivo, no
-  rompe la política v2-only (§5, invariante nº1: siguen siendo exactamente 3 `fb.set`).
-  `adoptRemote` lee `v2.lastEditedBy` de vuelta a `state.lastEditedBy`; se muestra como tooltip
-  del botón de sincronización (`updateSyncBtn`).
-- **Botón "🚪 Cerrar sesión"** (`#btnLogout`) en la cabecera, junto a los demás `icon-btn`.
-- Tests: `test-12-auth.js` (18 checks: mapeo de errores de login, `currentUserEmail`,
-  `applyAuthUIState` con y sin sesión, doble-arranque protegido, `pushRemote` etiquetando el
-  payload). Los 20 archivos de test que arrancan la app completa ahora exponen `startApp` y lo
-  llaman a mano tras `boot()` (una sesión real de Firebase no se puede completar en Node: el
-  `import()` remoto del SDK no resuelve ahí).
-- **Verificado con Playwright real** (no solo stubs de Node): la puerta se muestra por defecto,
-  el formulario existe, una sesión simulada (`applyAuthUIState({email})`) hace aparecer la app
-  completa (nav, hero, countdown, vuelos) sin errores de consola, y el logout la vuelve a
-  esconder. Un intento de login real (credenciales inventadas) confirmó el circuito
-  formulario→Firebase→mensaje de error de punta a punta.
+1. El usuario entra con **Iniciar sesión con Google** (`signInWithPopup` + `GoogleAuthProvider`).
+2. Si su `access/users/{uid}` ya existe con `status: 'approved'` → entra normal (`startApp()`).
+3. Si no existe, o existe con otro estado → se crea (la primera vez) una solicitud pendiente con
+   exactamente los campos pedidos: `{email, displayName, uid, photoURL, createdAt, status:
+   'pending', role: 'traveler'}`, y se muestra la pantalla "pendiente de aprobación" — **sin
+   acceso a ningún dato del viaje** (no se llama a `startApp()`, `initFirebase()` no corre).
+4. Un botón "🔄 Comprobar de nuevo" en esa pantalla re-lanza el chequeo sin tener que recargar,
+   para el caso "el administrador ya me aprobó, ¿ya puedo entrar?".
 
-### 16.2 ADVERTENCIA — sin esto, la puerta NO protege nada de verdad
+### 16.2 El administrador
+
+Una única cuenta de Google fija. Para resolver el problema del huevo y la gallina (nadie puede
+aprobar al primer administrador si todavía no hay ninguno), su email vive en un dato de arranque
+`access/adminEmail` que **solo se edita a mano en la consola de Firebase** (la app nunca escribe
+ahí: `.write: false` en las reglas). Cuando esa cuenta inicia sesión, `resolveAccess()` la
+auto-promueve a `status: 'approved', role: 'admin'` la primera vez que coincide — ninguna otra
+cuenta se auto-promueve nunca, coincida o no con nada.
+
+El administrador ve un botón **👥** en la cabecera (oculto para todo el mundo salvo `role ===
+'admin'`) que abre un panel (reutiliza el modal genérico `openModal`/`closeModal` ya existente)
+con tres listas — **Pendientes** (✅ Aprobar / ❌ Rechazar), **Con acceso** (🚫 Revocar, salvo el
+propio admin) y **Rechazados** (✅ Aprobar de nuevo) — leyendo y escribiendo directamente
+`access/users/*`. "Revocar" reutiliza el estado `rejected` (no hay un cuarto estado "revocado":
+el modelo se mantiene mínimo, igual que en el resto del proyecto — ver §8, "modelo mínimo").
+
+**"Ready for future roles"**: cada registro ya trae un campo `role` (`'admin'` | `'traveler'`)
+aunque hoy solo existan esos dos; añadir un tercero (p. ej. `'editor'`) no exige tocar el modelo,
+solo lo que cada rol puede hacer en la UI/reglas.
+
+### 16.3 Qué existe ya en el código (12.75)
+
+- **Puerta de acceso** (`#authGate`, envuelve `#appRoot`, visible por defecto para que nunca haya
+  parpadeo de contenido privado). Un único contenedor `#authBody` cuyo contenido cambia según la
+  vista (`authGateHTML(view, user)`): `signin` (botón "Iniciar sesión con Google" con el logo
+  oficial en SVG inline, mismo patrón que los iconos de Drive/Spotify de la cabecera) ·
+  `connecting` · `pending` (saluda por nombre/foto, "Comprobar de nuevo" + "Salir") · `rejected`
+  ("Salir", sin reintentar).
+- **Funciones puras y testeables** (sin ningún Firebase real): `buildAccessRequest(user)`,
+  `isDesignatedAdmin(email, adminEmail)`, `computeGateView(user, record)`, `authGateHTML`,
+  `adminPanelHTML`, `authErrorMessage` (ahora con códigos de Google: popup cerrado/bloqueado,
+  proveedor no activado, dominio no autorizado…).
+- **`resolveAccess(user)`**: única función con I/O real de este bloque — lee `access/adminEmail`,
+  lee (o crea) `access/users/{uid}`, auto-promueve si coincide con el admin designado.
+- **`settleAccess(user)`**: orquesta `resolveAccess` + `computeGateView` + qué se muestra; la
+  llaman tanto `onAuthStateChanged` (login/logout reales) como "Comprobar de nuevo" (re-chequeo
+  manual). Arranca `startApp()` la PRIMERA vez que el resultado es `approved` (`appStarted` como
+  guarda).
+- **`currentUserEmail()`**: sigue igual que en 12.74 — `pushRemote()` etiqueta el payload de
+  `state/v2` con `lastEditedBy` (aditivo, sigue habiendo exactamente 3 `fb.set`, invariante nº1).
+- Tests: `test-12-auth.js` reescrito (39 checks): funciones puras, `resolveAccess`/`settleAccess`
+  contra una base de datos FALSA en memoria (inyectada vía `_setAuthM`/`_setAccessDb`, mismo
+  patrón que los demás setters de test), panel de administración, `pushRemote`.
+- **Verificado con Playwright real** (claro y oscuro): la puerta se muestra por defecto con el
+  botón de Google (sin campos de email/contraseña residuales), el logo SVG se renderiza, el
+  botón de admin permanece oculto por defecto. Las funciones puras se probaron también dentro
+  del navegador real. Deliberadamente NO se simuló un login completo de Google contra producción
+  (no hay forma de completar el OAuth real sin una cuenta de verdad, y una sesión de mentira
+  habría escrito una solicitud de prueba en la base de datos compartida).
+
+### 16.4 ADVERTENCIA — sin las reglas de abajo, la puerta NO protege nada de verdad
 
 La puerta de la app es solo UI. Si la base de datos de Firebase sigue con las reglas por
 defecto (o completamente abiertas), cualquiera que conozca la URL pública de la base de datos
 puede leer/escribir los datos directamente, sin pasar por `index.html` en absoluto. **El acceso
-privado real depende de los dos pasos manuales de abajo, que solo el usuario puede hacer.**
+privado real depende de los pasos manuales de abajo, que solo el usuario puede hacer.**
 
-### 16.3 Pasos manuales pendientes (SOLO el usuario puede hacerlos)
+### 16.5 Pasos manuales pendientes (SOLO el usuario puede hacerlos)
 
-1. **Habilitar el proveedor Email/Password** — Firebase Console → proyecto `viaje-japon-8748a` →
-   **Authentication** → pestaña **Sign-in method** → **Email/Password** → Habilitar (el primer
-   interruptor, "Email/Password"; NO "Email link (passwordless sign-in)"). Guardar.
-2. **Crear las 3 cuentas** — Firebase Console → **Authentication** → pestaña **Users** → **Add
-   user** → un email + una contraseña provisional por cada viajero (Rubén, Belén, Carol). No
-   hace falta comunicar la contraseña si se usa el enlace "¿Olvidaste tu contraseña?" de la app
-   una vez creada la cuenta (Firebase envía un email de restablecimiento).
+1. **Habilitar el proveedor Google** — Firebase Console → proyecto `viaje-japon-8748a` →
+   **Authentication** → pestaña **Sign-in method** → **Google** → Habilitar → elegir un email de
+   soporte del proyecto (el tuyo sirve) → Guardar.
+2. **Fijar el administrador** — Firebase Console → **Realtime Database** → pestaña **Data** →
+   dentro de `proyectos/viaje-japon/access/`, crear manualmente el hijo `adminEmail` con tu
+   dirección de Gmail EXACTA (la misma con la que vas a entrar) como valor de texto. Es la ÚNICA
+   vez que hace falta tocar esto a mano: en cuanto inicies sesión con esa cuenta, la app te
+   auto-aprueba como administrador.
 3. **Pegar las reglas de seguridad de Realtime Database** — Firebase Console → **Realtime
    Database** → pestaña **Rules** → sustituir el contenido por exactamente esto → **Publish**:
    ```json
@@ -763,24 +793,55 @@ privado real depende de los dos pasos manuales de abajo, que solo el usuario pue
      "rules": {
        "proyectos": {
          "$proyecto": {
-           ".read": "auth != null",
-           ".write": "auth != null"
+           "access": {
+             "adminEmail": {
+               ".read": "auth != null",
+               ".write": false
+             },
+             "users": {
+               ".read": "auth != null && root.child('proyectos').child($proyecto).child('access/users').child(auth.uid).child('role').val() === 'admin'",
+               "$uid": {
+                 ".read": "auth != null && auth.uid === $uid",
+                 ".write": "auth != null && ((auth.uid === $uid && !data.exists()) || root.child('proyectos').child($proyecto).child('access/adminEmail').val() === auth.token.email || root.child('proyectos').child($proyecto).child('access/users').child(auth.uid).child('role').val() === 'admin')",
+                 ".validate": "newData.hasChildren(['uid','status','createdAt'])"
+               }
+             }
+           },
+           ".read": "auth != null && root.child('proyectos').child($proyecto).child('access/users').child(auth.uid).child('status').val() === 'approved'",
+           ".write": "auth != null && root.child('proyectos').child($proyecto).child('access/users').child(auth.uid).child('status').val() === 'approved'"
          }
        }
      }
    }
    ```
-   Esto exige sesión (cualquiera de las 3 cuentas) para leer o escribir bajo `proyectos/*`
-   (cubre tanto `proyectos/viaje-japon` como el nodo hermano legado `proyectos/japon27-app-v2`,
-   §5) y deniega todo lo demás por defecto (comportamiento estándar de Firebase RTDB: lo no
-   permitido explícitamente queda denegado).
+   Qué hace cada parte (Firebase evalúa reglas desde la raíz hacia la ruta exacta: si CUALQUIER
+   antepasado-o-la-propia-ruta da `true`, se permite — una regla más profunda puede CONCEDER lo
+   que una más superficial niega, nunca al revés):
+   - `access/adminEmail`: cualquiera autenticado puede LEERLO (la app lo necesita para saber si
+     TÚ eres el admin), nadie puede escribirlo nunca desde la app (`.write: false` — nunca se
+     toca desde código, solo a mano, paso 2).
+   - `access/users/{uid}`: cada uno puede leer y CREAR (solo si no existe ya) su propia solicitud
+     pendiente, aunque el resto de la base de datos le esté vedado por no estar aprobado todavía
+     — es la excepción deliberada que hace posible el flujo de aprobación. Solo el administrador
+     (por `adminEmail` o por `role=='admin'` ya asignado) puede modificar un registro existente
+     (aprobar/rechazar/revocar a otra persona, o auto-promoverse la primera vez).
+   - `access/users` (sin `$uid`): el administrador puede LISTAR toda la colección (para ver quién
+     está pendiente); nadie más.
+   - El resto de `proyectos/$proyecto` (el itinerario, el catálogo, los hoteles…): exige sesión Y
+     `status === 'approved'` — nunca visible para alguien sin aprobar, sea cual sea su cuenta de
+     Google.
+   
+   **Nota de privacidad aceptada conscientemente**: `access/adminEmail` es legible por CUALQUIER
+   cuenta de Google autenticada (aunque no esté aprobada), porque la comprobación de auto-
+   promoción corre en el cliente (no hay backend/Cloud Function en este proyecto — sitio
+   estático). Expone tu email a quien inicie sesión sin aprobación, nunca ningún dato del viaje.
 
-**Añadir o quitar viajeros en el futuro**: solo el paso 2 (Authentication → Users), nunca tocar
-`index.html` — exactamente el requisito pedido ("solo gestión de usuarios de Firebase, no cambios
-de código").
+**Añadir o quitar viajeros en el futuro**: nada de código. El administrador aprueba/rechaza/
+revoca desde el panel 👥 dentro de la propia app — el único paso de consola (2) es un bootstrap
+que solo hace falta UNA vez, para el primer administrador.
 
-**Mientras estos 3 pasos no estén hechos**: la app funciona (la puerta se ve, el formulario
-existe) pero ningún login real puede completarse (el proveedor no está habilitado) y los datos
-siguen siendo leíbles sin autenticar (las reglas siguen abiertas). Ninguno de los dos estados a
-medias expone MÁS de lo que ya estaba expuesto antes de esta sesión — no hay regresión de
-seguridad, solo trabajo pendiente.
+**Mientras estos 3 pasos no estén hechos**: la puerta se ve y el botón de Google existe, pero
+ningún login real puede completarse (el proveedor no está habilitado) y los datos siguen siendo
+legibles sin autenticar (las reglas siguen abiertas). Ninguno de los dos estados a medias expone
+MÁS de lo que ya estaba expuesto antes de esta fase — no hay regresión de seguridad, solo trabajo
+pendiente.
