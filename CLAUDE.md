@@ -83,10 +83,11 @@ Antes de proceder, pregunta si:
 ## 🚀 Estado actual
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.60** (Ruta v4: mareas de Miyajima y sin ostras; Guía con secciones nuevas
-  de Transportes, Precios, Lo que dejamos fuera, y las 20 noches en Hoteles).
-- Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Propuesta · Dani · María) ·
-  Confirmado · Hoteles · Guía.
+  materialización **12.64** (La Ruta es la referencia principal — Propuesta oculta de la UI pero
+  intacta en código/datos; mapa↔itinerario sincronizados por día; capa de mapa propia para "Si
+  sobra tiempo"; transporte del día visible dentro de la Ruta).
+- Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Dani · María; Propuesta oculta pero
+  restaurable) · Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
   del 12 al 25 de abril está SIN DECIDIR (ver PROJECT.md §9).
 
@@ -94,7 +95,7 @@ Historia completa de fases, invariantes y supuestos: `PROJECT.md` §7, §12 y §
 
 ---
 
-**Última actualización:** 19 de julio de 2026
+**Última actualización:** 23 de julio de 2026
 **Mantenedor:** amenedorubn
 **Sincronización:** Archivado en Git. Actualizar cuando cambien decisiones arquitectónicas.
 
