@@ -51,7 +51,7 @@ const L = {
   map: () => mkLMap(),
   tileLayer: url => { tileUrls.push(url); return mkLayer('tileLayer'); },
   polyline: () => mkLayer('polyline'),
-  marker: () => mkLayer('marker'),
+  marker: (ll, opts) => { const l = mkLayer('marker'); l._icon = opts && opts.icon; return l; },
   circleMarker: () => mkLayer('circleMarker'),
   polygon: () => mkLayer('polygon'),
   geoJSON: () => mkLayer('geoJSON'),
@@ -72,6 +72,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     setMapDay: v => { mapDay = v; }, getMapDay: () => mapDay,
     setFlights: v => { flightsVisible = v; },
     setDaniLines: v => { daniLinesVisible = v; },
+    setExtrasVisible: v => { extrasVisible = v; }, getExtrasVisible: () => extrasVisible,
+    RUTA_DAYS, DAY_EXTRAS,
     setItinMode, getItinMode: () => itinMode,
     itineraryPlaceIds, itineraryDays, provenanceOf, canonicalPid,
     activeMapCategories, CATS, FLIGHTS,
@@ -121,7 +123,38 @@ const zoneChildren = t => [...api.getZonesLayer()._children].filter(l => l._type
   await sleep(400);
   check('Realidad/día: dibuja los marcadores numerados de las paradas (>=4)',
     layersOfType('marker').length >= 4);
+  // 12.65: con un día concreto seleccionado, CERO círculos de otros días —
+  // antes el mapa seguía pintando los POIs de TODO el itinerario alrededor.
+  check('12.65: día concreto = cero POIs de otros días (solo las paradas numeradas de ESE día)',
+    layersOfType('circleMarker').length === 0);
   api.setMapDay(-1);
+  api.renderMapDay();
+
+  // ============ 12.65 · CAPA "SI SOBRA TIEMPO" (extras) ============
+  // Toggle propio, independiente del itinerario; filtrado por día igual que
+  // el resto del mapa; "Todos" = extras de todos los días con contenido.
+  api.setItinMode('ruta');
+  api.setMapDay(-1);
+  api.setExtrasVisible(false);
+  api.renderMapDay();
+  const giftsOff = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  check('extras: con el toggle OFF no hay pines de regalo', giftsOff === 0);
+  api.setExtrasVisible(true);
+  api.renderMapDay();
+  const totalExtras = Object.values(api.DAY_EXTRAS).reduce((n, arr) => n + arr.length, 0);
+  const giftsAllDays = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  check(`extras: con el toggle ON y "Todos" aparecen pines de TODOS los días (${giftsAllDays} de ${totalExtras})`,
+    giftsAllDays > 0 && giftsAllDays <= totalExtras);
+  const rutaDayIdx = api.RUTA_DAYS.findIndex(d => (api.DAY_EXTRAS[d.date] || []).length > 0);
+  api.setMapDay(rutaDayIdx);
+  api.renderMapDay();
+  const giftsOneDay = layersOfType('marker').filter(l => l._icon && l._icon.html === '🎁').length;
+  const expectedOneDay = (api.DAY_EXTRAS[api.RUTA_DAYS[rutaDayIdx].date] || []).length;
+  check(`extras: con un día concreto solo salen los extras de ESE día (${giftsOneDay} == ${expectedOneDay})`,
+    giftsOneDay === expectedOneDay && giftsOneDay < giftsAllDays);
+  api.setExtrasVisible(false);
+  api.setMapDay(-1);
+  api.setItinMode('ours');
   api.renderMapDay();
 
   // R1: theme switch swaps the tile layer without stacking

@@ -5900,15 +5900,14 @@ async function renderMapDay(){
   // POIs = los lugares que PERTENECEN al itinerario activo (membership), con el
   // anillo del color del itinerario. Se excluyen aeropuertos, bases de ciudad y
   // el gemelo no-ancla; las ideas sueltas (insta/ai) no están en ids → no salen.
-  // Las paradas del día seleccionado se pintan numeradas más abajo, no aquí.
+  // 12.65: SOLO en "Todos" (día = null). Con un día concreto seleccionado el
+  // mapa debe mostrar ÚNICAMENTE ese día (sus paradas numeradas + ruta +
+  // extras si están activados) — nada del resto del itinerario alrededor.
   const ring = ITIN_RING[itin] || '#fff';
-  const dayGroupPids = new Set();
-  if(day) (day.stops || []).forEach(s => groupIdsOf(s.pid).forEach(id => dayGroupPids.add(id)));
-  state.places.forEach(sp => {
+  if(!day) state.places.forEach(sp => {
     if(!sp || sp.lat == null || sp.airport || sp.baseLayer || sp.cityBase) return;
     if(isTwinMember(sp.id)) return;
     if(!inItinerary(sp, ids)) return;
-    if(day && groupIdsOf(sp.id).some(id => dayGroupPids.has(id))) return; // va numerada
     const p = placeView(sp);
     if(!activeMapCategories.has(CATS[p.cat] ? p.cat : 'otro')) return; // M5
     poiPts.push([p.lat, p.lng]);
