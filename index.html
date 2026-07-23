@@ -557,6 +557,25 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .guia-row:last-child{border-bottom:none;}
 .guia-row b{font-weight:600;}
 .guia-row small{font-size:12px;margin-top:2px;}
+/* Prioridad 3 (fase de viaje) · Booking Timeline: "qué toca reservar A
+   CONTINUACIÓN" en Guía, con un teaser compacto en Inicio que enlaza aquí. */
+.booking-head{display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-size:12px;
+  font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+.booking-row{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13.5px;}
+.booking-row:last-child{border-bottom:none;}
+.booking-row .br-main{flex:1;min-width:0;}
+.booking-row .br-main small{display:block;font-size:12px;color:var(--muted);margin-top:1px;}
+.booking-row .br-main p{margin:4px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4;}
+.booking-row .br-actions{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.booking-empty{padding:4px 14px 12px;font-size:13px;color:var(--muted);}
+.booking-teaser{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;
+  margin-top:10px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card2);
+  cursor:pointer;font-family:var(--font);}
+.booking-teaser:empty{display:none;}
+.booking-teaser .bt-ico{flex:none;font-size:20px;}
+.booking-teaser .bt-body{flex:1;min-width:0;font-size:13px;}
+.booking-teaser .bt-body b{font-weight:700;}
+.booking-teaser .bt-body small{display:block;color:var(--muted);margin-top:2px;}
 table.phr{width:100%;border-collapse:collapse;font-size:13.5px;}
 table.phr td{padding:8px 10px;border-bottom:1px solid var(--line);}
 table.phr td:first-child{font-weight:700;}
@@ -841,6 +860,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <h2 class="section">🏨 Alojamientos reservados</h2>
     <div class="grid2" id="hotelCards"></div>
     <div id="hotelPending"></div>
+    <button class="booking-teaser" id="bookingTeaser"></button>
 
     <h2 class="section">🗾 La ruta <small id="routeSummary"></small></h2>
     <div class="route-overview" id="routeOverview"></div>
@@ -921,6 +941,9 @@ table.phr tr:last-child td{border-bottom:none;}
 
   <!-- ============ GUÍA ============ -->
   <section class="view" id="view-guia">
+    <h2 class="section">📋 Qué reservar a continuación</h2>
+    <div class="card" id="bookingTimeline" style="padding:6px 0"></div>
+
     <h2 class="section">✅ Preparativos <small id="checkProgress"></small></h2>
     <div class="card" id="checklist"></div>
 
@@ -2000,6 +2023,39 @@ const TRANSPORT = [
   ['rec','Día 21','Hakata → Shin-Osaka (15:00)','Nozomi'],
   ['rec','Día 24','Shin-Osaka → Tokio (13:50)','Nozomi'],
   ['rec','Día 27','Tokyo Station → Narita (16:45)','N’EX (Narita Express)'],
+];
+
+/* ---------------- Reservas con ventana de venta (Prioridad 3, fase de viaje) ----------------
+   "¿Qué toca reservar A CONTINUACIÓN?" Solo entran aquí reglas de apertura
+   YA documentadas en CHECKLIST/TRANSPORT (nunca una fecha inventada):
+   `opensDaysBefore: null` = sin regla de apertura conocida (reservable YA,
+   cuanto antes mejor; no hay venta programada que esperar). `pid` referencia
+   el catálogo para no duplicar la web (se lee `placeById(pid).web` al
+   renderizar); `url` solo cuando no hay ficha propia (transporte/reservas
+   telefónicas). `date` = cuándo hace falta EN JAPÓN (para ordenar por
+   urgencia real del viaje, no por cuándo se reserva). */
+const BOOKINGS = [
+  {name: 'Shibuya Sky', date: '2027-04-10', opensDaysBefore: 14, pid: 'shibuya_sky',
+    timeHint: 'medianoche JST, EXACTO 14 días antes (verificado en la web oficial)',
+    note: 'La franja de atardecer (~18:15 en abril) se agota en minutos.'},
+  {name: 'Santuario Tōshōgū (Nikko)', date: '2027-04-12', opensDaysBefore: 14, pid: 'toshogu',
+    note: 'Entrada online, con antelación.'},
+  {name: 'Bus Nouhi · Kanazawa–Shirakawa-gō–Takayama', date: '2027-04-15', opensDaysBefore: 30,
+    url: 'https://www.nouhibus.co.jp/', note: 'Asiento reservado obligatorio; el tramo vuela.'},
+  {name: 'Cena de cumpleaños en Hiroshima (si es teppanyaki)', date: '2027-04-19', opensDaysBefore: 14,
+    note: 'El plan Okonomimura no necesita reserva; el teppanyaki de wagyū sí.'},
+  {name: 'Ryokan de Takayama (noche 15–16 abr)', date: '2027-04-15', opensDaysBefore: null,
+    note: 'El alojamiento con más demanda de la Ruta: se agota 9–12 meses antes (ver Guía → Lo que dejamos fuera). RESERVAR YA.'},
+  {name: 'Ryokan/onsen de Nikko (noche 12–13 abr)', date: '2027-04-12', opensDaysBefore: null,
+    note: 'Abril es temporada altísima en Nikko: los buenos vuelan.'},
+  {name: 'Myōryū-ji "templo ninja" (Kanazawa)', date: '2027-04-14', opensDaysBefore: null,
+    note: 'Reserva SOLO por teléfono, sin web en inglés: posible barrera de idioma.'},
+  {name: 'Bus Shinjuku ↔ Kawaguchiko (día del Fuji)', date: '2027-04-26', opensDaysBefore: null,
+    url: 'https://highway-buses.jp/', note: 'Ida y vuelta; reservad en cuanto podáis, temporada alta.'},
+  {name: 'USJ + Nintendo World (entrada con fecha)', date: '2027-04-23', opensDaysBefore: null, pid: 'usj',
+    note: 'Cuanto antes, mejor elección de día y del Express Pass.'},
+  {name: 'teamLab Biovortex (Kioto)', date: '2027-04-18', opensDaysBefore: null, pid: 'teamlab_kyoto',
+    note: 'Entradas con fecha/hora: se agotan días antes.'},
 ];
 
 /* ---------------- Precios de referencia (¥, aprox. 2026) ----------------
@@ -4492,6 +4548,13 @@ function renderInicio(){
   $('#hotelPending').innerHTML = pendingCards.length
     ? `<div class="pending-head">Aún por reservar · planificación</div>${pendingCards.join('')}`
     : '';
+
+  // Prioridad 3 (fase de viaje): teaser de la Booking Timeline en el Inicio
+  // (misma lógica que Guía, resumida a lo más urgente) — enlaza a la sección
+  // completa en vez de duplicar la lista. El click se enlaza UNA vez en el
+  // boot (más abajo), no aquí: este botón es estático, solo cambia su
+  // contenido en cada render.
+  const teaser = $('#bookingTeaser'); if(teaser) teaser.innerHTML = bookingTeaserHTML(new Date());
 }
 
 /* ================================================================
@@ -6623,7 +6686,72 @@ $('#placeSearch').addEventListener('input', e => { placeQ = e.target.value.toLow
 /* ================================================================
    GUÍA
 ================================================================ */
+/* ================================================================
+   BOOKING TIMELINE (Prioridad 3, fase de viaje) · "¿qué toca reservar
+   A CONTINUACIÓN?" — combina BOOKINGS (tickets/transporte con regla de
+   apertura conocida) + las noches aún por reservar de NIGHTS (mismo filtro
+   que renderHoteles/renderInicio, sin duplicar la lista: single source).
+   `today` viaja como parámetro (nunca Date.now() implícito dentro de la
+   lógica) para poder fijarlo en los tests sin depender del reloj real.
+================================================================ */
+function bookingWindow(b, today){
+  if(b.opensDaysBefore == null) return {status: 'now', openDate: null, daysUntilOpen: null};
+  const openDate = addDays(new Date(b.date + 'T00:00:00'), -b.opensDaysBefore);
+  const daysUntilOpen = Math.ceil((openDate - today) / 86400000);
+  return {status: daysUntilOpen <= 0 ? 'now' : 'future', openDate, daysUntilOpen};
+}
+function bookingRows(today){
+  const tickets = BOOKINGS.map(b => ({...b, win: bookingWindow(b, today)}));
+  // Una noche "por reservar" no tiene venta programada que esperar (es
+  // disponibilidad de hotel, no una fecha de apertura de entradas): siempre
+  // cae en "reservable ya".
+  const nights = NIGHTS.filter(n => n[2] === 'res' || n[2] === 'amp').map(n => ({
+    name: n[1] + (n[2] === 'amp' ? ' (ampliar reserva)' : ''), date: n[4], note: n[3], isNight: true,
+    win: {status: 'now', openDate: null, daysUntilOpen: null},
+  }));
+  return tickets.concat(nights);
+}
+function bookingRowHTML(b){
+  const url = b.pid ? ((placeById(b.pid) || {}).web || '') : (b.url || '');
+  const countdown = b.win.status === 'future'
+    ? `<span class="pill">abre en ${b.win.daysUntilOpen} día${b.win.daysUntilOpen === 1 ? '' : 's'}</span>` : '';
+  return `<div class="booking-row">
+    <div class="br-main"><b>${esc(b.name)}</b>
+      <small>${fmtDateShort(b.date)}${b.timeHint ? ' · ' + esc(b.timeHint) : ''}</small>
+      ${b.note ? `<p>${esc(b.note)}</p>` : ''}
+    </div>
+    <div class="br-actions">
+      ${countdown}
+      ${url ? `<a class="btn small ghost" href="${esc(url)}" target="_blank" rel="noopener">🔗 Web oficial</a>` : ''}
+    </div>
+  </div>`;
+}
+function bookingTimelineHTML(today){
+  const rows = bookingRows(today || new Date());
+  const now = rows.filter(b => b.win.status === 'now').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const future = rows.filter(b => b.win.status === 'future').sort((a, b) => a.win.openDate - b.win.openDate);
+  return `<div class="booking-head">📋 Puedes reservar YA <span class="pill green">${now.length}</span></div>
+    ${now.length ? now.map(bookingRowHTML).join('') : '<p class="booking-empty">Nada accionable hoy: todo lo que queda espera su venta.</p>'}
+    ${future.length ? `<div class="booking-head" style="margin-top:14px">⏳ Aún no ha abierto la venta <span class="pill">${future.length}</span></div>
+      ${future.map(bookingRowHTML).join('')}` : ''}`;
+}
+function bookingTeaserHTML(today){
+  const rows = bookingRows(today || new Date());
+  const now = rows.filter(b => b.win.status === 'now').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const future = rows.filter(b => b.win.status === 'future').sort((a, b) => a.win.openDate - b.win.openDate);
+  if(!now.length && !future.length) return '';
+  const top = now[0], nextOpen = future[0];
+  // Contenido interior únicamente: el botón contenedor (#bookingTeaser) ya
+  // existe en el HTML estático, con su click enlazado UNA vez en el boot.
+  return `<span class="bt-ico">📋</span>
+    <span class="bt-body">
+      ${top ? `<b>Reservar ahora:</b> ${esc(top.name)}` : '<b>Nada urgente ahora mismo.</b>'}
+      ${nextOpen ? `<small>Próxima venta: ${esc(nextOpen.name)} · abre en ${nextOpen.win.daysUntilOpen} día${nextOpen.win.daysUntilOpen === 1 ? '' : 's'}</small>` : ''}
+    </span>
+    ${now.length ? `<span class="pill red">${now.length}</span>` : ''}`;
+}
 function renderGuia(){
+  $('#bookingTimeline').innerHTML = bookingTimelineHTML(new Date());
   $('#checklist').innerHTML = CHECKLIST.map((c, i) => `
     <div class="check-item ${state.check[i] ? 'done' : ''}">
       <input type="checkbox" id="chk${i}" ${state.check[i] ? 'checked' : ''}>
@@ -6794,6 +6922,11 @@ $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 onClick('#itinModeMaria', () => setItinMode('maria'));
 onClick('#cordBack', () => zoomOut());
 onClick('#btnRealidadIcs', downloadRealidadICS);
+onClick('#bookingTeaser', () => {
+  showTab('guia');
+  const t = $('#bookingTimeline');
+  if(t && t.scrollIntoView) t.scrollIntoView({behavior: 'smooth', block: 'start'});
+});
 $('#btnDaniPdf').href = DANI_PDF_URL;
 const rutaDocBtn = $('#btnRutaDoc'); if(rutaDocBtn) rutaDocBtn.href = RUTA_DOC_URL;
 renderAll();

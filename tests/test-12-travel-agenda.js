@@ -1,7 +1,8 @@
-// Verificación de las 5 prioridades de la fase de viaje (post-planificación):
+// Verificación de las prioridades de la fase de viaje (post-planificación):
 // 1) "Líneas Dani" solo visible en el itinerario de Dani · 2) extras "si sobra
 // tiempo" inlineados dentro del recorrido de un día concreto (panel + mapa) ·
-// 3) agenda de Realidad: hora del hueco de transporte + aviso de reserva ·
+// 3) agenda de Realidad (hora del hueco + aviso de reserva + origen/destino +
+// "(estimado)") y Booking Timeline en Guía ("qué toca reservar a continuación") ·
 // 4) export .ics de Realidad (misma fuente que su render editable) ·
 // 5) indicador de intensidad del día (Ruta y Realidad).
 const fs = require('fs');
@@ -54,6 +55,8 @@ const boot = new Function('document', 'window', 'localStorage', 'location', 'his
     transferHTML, realGapWindow, stopWindow, placeById, canonicalPid,
     realDayTimelineEntries, realidadICS, intensityScore, intensityFromScore,
     rutaDayIntensity, realDayIntensity,
+    BOOKINGS, NIGHTS, bookingWindow, bookingRows, bookingTimelineHTML, bookingTeaserHTML,
+    renderGuia, renderInicio,
     _reseedDays: () => { // fixture: días con paradas (el plan real nace vacío, 12.49)
       const fresh = buildSeedState();
       state.days.forEach((d, i) => { const f = fresh.days[i]; d.stops = f.stops; d.trans = f.trans; d.pre = f.pre; d.post = f.post; }); },
@@ -197,6 +200,46 @@ if(dayWithGap){
     ics2.includes('__marca_de_test_único__') && !ics1.includes('__marca_de_test_único__'));
   dayWithGap.stops[0].note = before;
 }
+
+// ============ Prioridad 3 (Guía) · Booking Timeline ============
+// "¿Qué toca reservar A CONTINUACIÓN?" — bookingWindow es puro (recibe `today`
+// como parámetro), así que se puede probar con cualquier fecha sin depender
+// del reloj real.
+const longBefore = new Date('2020-01-01T00:00:00'); // muy anterior a cualquier venta
+const withWindow = api.BOOKINGS.find(b => b.opensDaysBefore != null);
+check('P3 (booking): con "hoy" muy anterior, una venta con ventana conocida aún NO ha abierto',
+  !!withWindow && api.bookingWindow(withWindow, longBefore).status === 'future');
+const noWindow = api.BOOKINGS.find(b => b.opensDaysBefore == null);
+check('P3 (booking): una reserva sin ventana conocida es SIEMPRE "reservable ya" (no hay venta que esperar)',
+  !!noWindow && api.bookingWindow(noWindow, longBefore).status === 'now');
+const longAfter = new Date('2027-05-01T00:00:00'); // después de todo el viaje
+check('P3 (booking): con "hoy" muy posterior, esa misma venta ya "reservable ya" (la ventana pasó)',
+  !!withWindow && api.bookingWindow(withWindow, longAfter).status === 'now');
+
+const rows = api.bookingRows(longBefore);
+const pendingNights = api.NIGHTS.filter(n => n[2] === 'res' || n[2] === 'amp').length;
+check('P3 (booking): bookingRows combina BOOKINGS + noches por reservar de NIGHTS (sin duplicar la lista)',
+  rows.length === api.BOOKINGS.length + pendingNights);
+check('P3 (booking): las noches por reservar son siempre "reservable ya" (disponibilidad, no venta de entradas)',
+  rows.filter(r => r.isNight).length === pendingNights && rows.filter(r => r.isNight).every(r => r.win.status === 'now'));
+
+const timelineHTML = api.bookingTimelineHTML(longBefore);
+check('P3 (booking): la línea de tiempo lista lo accionable ya y lo que aún no ha abierto',
+  timelineHTML.includes('Puedes reservar YA') && timelineHTML.includes('Aún no ha abierto la venta'));
+const shibuya = api.BOOKINGS.find(b => b.name === 'Shibuya Sky');
+const shibuyaUrl = (api.placeById(shibuya.pid) || {}).web;
+check('P3 (booking): una reserva con ficha de catálogo (pid) enlaza a SU web real (sin duplicar la URL)',
+  !!shibuyaUrl && timelineHTML.includes(shibuyaUrl));
+
+const teaser = api.bookingTeaserHTML(longBefore);
+check('P3 (booking): el teaser del Inicio no está vacío (siempre hay algo accionable: hoteles por reservar)',
+  teaser.length > 0);
+
+// Integración: renderGuia/renderInicio rellenan de verdad sus contenedores.
+api.renderGuia();
+check('P3 (booking): renderGuia rellena #bookingTimeline', els['#bookingTimeline'].innerHTML.includes('Puedes reservar YA'));
+api.renderInicio();
+check('P3 (booking): renderInicio rellena el teaser #bookingTeaser', els['#bookingTeaser'].innerHTML.length > 0);
 
 // ============ Prioridad 5 · indicador de intensidad del día ============
 // Calibrado contra RUTA_DAYS real: 17-abr (Kioto Este, 10 paradas ~9h45 a
