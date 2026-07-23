@@ -4677,11 +4677,15 @@ function spareTimeHTML(date){
 // TRANSPORT (Guía) por su etiqueta "Día N" — sin datos nuevos, sin duplicar
 // duración/coste que TRANSPORT no tiene estructurados (solo train quedan en
 // rd.note, ya visible). 'obl' = reserva obligatoria; 'rec' = recomendado.
-function transportForDayNum(dayNum){
-  return TRANSPORT.filter(t => t[1] === `Día ${dayNum}`);
+// OJO: en TRANSPORT "Día N" es el DÍA DEL MES (abril), no el índice 1-based
+// de RUTA_DAYS (p.ej. 'Día 12' = 12-abr, que es el 5º día de la Ruta).
+function transportForDate(date){
+  const dom = date ? parseInt(date.slice(8, 10), 10) : null;
+  if(!dom) return [];
+  return TRANSPORT.filter(t => t[1] === `Día ${dom}`);
 }
-function dayTransportHTML(dayNum){
-  const segs = transportForDayNum(dayNum);
+function dayTransportHTML(date){
+  const segs = transportForDate(date);
   if(!segs.length) return '';
   return `<div class="day-transport">${segs.map(([kind, , route, mode]) =>
     `<div class="dt-seg"><span class="pill ${kind === 'obl' ? 'red' : ''}">${kind === 'obl' ? '🎫 reserva obligatoria' : '🚄 recomendado'}</span>
@@ -4715,7 +4719,7 @@ function renderRutaItinerary(){
     return `<div class="m-washi seed-day">
       <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b><small>${fmtDateShort(rd.date)}</small></div>
       ${rd.note ? `<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">🚉 ${esc(rd.note)}</div>` : ''}
-      ${dayTransportHTML(i + 1)}
+      ${dayTransportHTML(rd.date)}
       ${(rd.flight && !rows) ? '<div class="sd-flight">✈ Día de vuelos</div>' : rows}
       ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
       ${spareTimeHTML(rd.date)}
