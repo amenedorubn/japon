@@ -941,6 +941,29 @@ table.phr tr:last-child td{border-bottom:none;}
 
   <!-- ============ GUÍA ============ -->
   <section class="view" id="view-guia">
+    <!-- Prioridad 5 (fase de viaje): feed de calendario SUSCRIBIBLE (no solo
+         un .ics suelto para descargar). ruta-japon-2027.ics es estático, sale
+         íntegro de RUTA_DAYS/TRANSPORT/FLIGHTS (ver tools/ics-export.js): se
+         actualiza cuando alguien re-ejecuta el generador y hace commit+push,
+         igual que el docx de la Ruta — no hay servidor detrás que lo
+         regenere solo en cada petición (GitHub Pages es estático). -->
+    <h2 class="section">📅 Calendario <small>suscríbete, no solo descargues</small></h2>
+    <div class="card" style="padding:14px 16px;font-size:13px;color:var(--muted)">
+      La Ruta 21 días como calendario que se puede SEGUIR desde Google/Apple Calendar
+      (Ajustes → Añadir calendario → Desde URL), en vez de descargarlo cada vez.
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn small ghost" href="webcal://amenedorubn.github.io/japon/ruta-japon-2027.ics">📅 Suscribirse a la Ruta</a>
+        <a class="btn small ghost" href="https://amenedorubn.github.io/japon/ruta-japon-2027.ics" target="_blank" rel="noopener">🔗 Copiar la URL</a>
+      </div>
+      <p style="margin-top:8px;font-size:12px">
+        Se actualiza cuando alguien regenera el fichero (<code>node tools/ics-export.js</code>) y
+        sube el cambio: no es en vivo. El plan REAL (Realidad) vive sincronizado en Firebase, no en
+        este repo estático — su descarga en 🗓️ Itinerarios → Realidad → "Exportar a calendario" SÍ
+        sigue el plan de verdad; suscribirse por URL a Realidad exigiría un volcado en vivo (ver
+        <code>tools/ics-export.js</code>).
+      </p>
+    </div>
+
     <h2 class="section">📋 Qué reservar a continuación</h2>
     <div class="card" id="bookingTimeline" style="padding:6px 0"></div>
 

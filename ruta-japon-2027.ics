@@ -1,0 +1,966 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Japon 2027//La Ruta 21 dias//ES
+CALSCALE:GREGORIAN
+BEGIN:VTIMEZONE
+TZID:Asia/Tokyo
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0900
+TZOFFSETTO:+0900
+TZNAME:JST
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:2027-04-08-AY1662@japon2027
+DTSTART:20270408T081500Z
+DTEND:20270408T122500Z
+SUMMARY:✈️ AY1662 Madrid (MAD) → Helsinki (HEL)
+DESCRIPTION:T4
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-08-AY0073@japon2027
+DTSTART:20270408T144500Z
+DTEND:20270409T040500Z
+SUMMARY:✈️ AY0073 Helsinki (HEL) → Tokio Narita (NRT)
+DESCRIPTION:T2 · Llegada el 9 de abril (día siguiente)
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T130500
+DTEND;TZID=Asia/Tokyo:20270409T143500
+SUMMARY:Aeropuerto de Narita (NRT)
+DESCRIPTION:Inmigración con Visit Japan Web\, maletas\, Suica y yenes del 7-Eleven.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T143500
+DTEND;TZID=Asia/Tokyo:20270409T160000
+SUMMARY:🚉 Aeropuerto de Narita (NRT) → Louis House Otsuka Nishi
+DESCRIPTION:Llegada NRT 13:05 · Skyliner a Nippori 41 min + Yamanote a Ōtsuka 12 min.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T160000
+DTEND;TZID=Asia/Tokyo:20270409T164500
+SUMMARY:Louis House Otsuka Nishi
+DESCRIPTION:Check-in y ducha rápida: la tarde es de Asakusa.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T171500
+DTEND;TZID=Asia/Tokyo:20270409T181500
+SUMMARY:Templo Sensō-ji
+DESCRIPTION:Kaminarimon y el templo con luz de tarde (Yamanote+Ginza\, 25 min).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T181500
+DTEND;TZID=Asia/Tokyo:20270409T184500
+SUMMARY:Nakamise-dōri
+DESCRIPTION:Ningyō-yaki recién hechos de merienda.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T184500
+DTEND;TZID=Asia/Tokyo:20270409T191500
+SUMMARY:Parque Sumida y puente Azuma
+DESCRIPTION:La Skytree encendiéndose desde el puente Azuma.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T193000
+DTEND;TZID=Asia/Tokyo:20270409T204500
+SUMMARY:Tokyo Skytree
+DESCRIPTION:Subida nocturna: Tokio infinito el primer día (entrada en el móvil).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-09-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270409T210000
+DTEND;TZID=Asia/Tokyo:20270409T220000
+SUMMARY:Hoppy Street (cena en izakaya)
+DESCRIPTION:Cena en las izakayas de Hoppy Street. Si el jet lag gana: konbini y a dormir.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T084000
+DTEND;TZID=Asia/Tokyo:20270410T090000
+SUMMARY:🚉  → Santuario Meiji Jingū
+DESCRIPTION:Día del oeste: Meiji → Harajuku → Shibuya. Todo en la línea Yamanote.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T090000
+DTEND;TZID=Asia/Tokyo:20270410T101500
+SUMMARY:Santuario Meiji Jingū
+DESCRIPTION:Entrad por el gran torii de Harajuku: bosque en plena ciudad.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T103000
+DTEND;TZID=Asia/Tokyo:20270410T111000
+SUMMARY:Parque Yoyogi
+DESCRIPTION:Paseo por el parque (los rockabillies salen a mediodía).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T111500
+DTEND;TZID=Asia/Tokyo:20270410T121500
+SUMMARY:Takeshita Street (Harajuku)
+DESCRIPTION:Takeshita Street: crepes y caos adolescente.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T123000
+DTEND;TZID=Asia/Tokyo:20270410T133000
+SUMMARY:Harajuku Gyoza Lou
+DESCRIPTION:Comida: las gyozas míticas de Harajuku. La cola va rápida.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T134500
+DTEND;TZID=Asia/Tokyo:20270410T144500
+SUMMARY:Harajuku
+DESCRIPTION:Omotesandō y Cat Street\, la otra cara de Harajuku.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T151500
+DTEND;TZID=Asia/Tokyo:20270410T161500
+SUMMARY:Cruce de Shibuya y Hachikō
+DESCRIPTION:El cruce\, Hachikō y la torre 109 en una pasada (el ángulo bueno: la azotea del Magnet\, gratis).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-13@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T163000
+DTEND;TZID=Asia/Tokyo:20270410T173000
+SUMMARY:Daikanyama
+DESCRIPTION:La "Brooklyn de Tokio": T-Site y boutiques\, paseando desde el cruce.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-10-15@japon2027
+DTSTART;TZID=Asia/Tokyo:20270410T181000
+DTEND;TZID=Asia/Tokyo:20270410T194000
+SUMMARY:Shibuya Sky
+DESCRIPTION:RESERVADO: la venta abre 14 días antes a medianoche JST y la franja del atardecer (sol ~18:15) se agota en minutos. Después\, cena en Ebisu Yokochō (2 min en Yamanote): puestos de izakaya bajo un techo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T081000
+DTEND;TZID=Asia/Tokyo:20270411T083000
+SUMMARY:🚉  → Mercado exterior de Tsukiji
+DESCRIPTION:Domingo: Tsukiji de desayuno → Hamarikyū → Ueno → Akihabara peatonal → Shinjuku de noche.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T083000
+DTEND;TZID=Asia/Tokyo:20270411T093000
+SUMMARY:Mercado exterior de Tsukiji
+DESCRIPTION:Desayuno de mercado: tamagoyaki\, brocheta de atún\, uni si el bolsillo sonríe. Parte cierra los domingos\; los que abren sobran.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T094500
+DTEND;TZID=Asia/Tokyo:20270411T104500
+SUMMARY:Jardines Hamarikyū
+DESCRIPTION:A 5 min a pie: el jardín del shōgun junto a la bahía\, té matcha en la isla del estanque.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T111500
+DTEND;TZID=Asia/Tokyo:20270411T120000
+SUMMARY:Parque Ueno
+DESCRIPTION:Metro a Ueno: los últimos sakura y los museos por fuera.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T120000
+DTEND;TZID=Asia/Tokyo:20270411T130000
+SUMMARY:Mercado Ameyoko
+DESCRIPTION:Comida callejera bajo las vías: pinchos\, marisco a la plancha\, posguerra viva.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T133000
+DTEND;TZID=Asia/Tokyo:20270411T153000
+SUMMARY:Akihabara
+DESCRIPTION:Los domingos la calle principal es PEATONAL: retro-games\, arcades\, UFO catchers.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T163000
+DTEND;TZID=Asia/Tokyo:20270411T171500
+SUMMARY:Mirador del Gobierno Metropolitano
+DESCRIPTION:Mirador GRATIS del Gobierno Metropolitano (45º piso).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-12@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T174500
+DTEND;TZID=Asia/Tokyo:20270411T183000
+SUMMARY:Shinjuku: neones
+DESCRIPTION:Neones de Shinjuku al caer el sol.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-14@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T184500
+DTEND;TZID=Asia/Tokyo:20270411T200000
+SUMMARY:Omoide Yokochō
+DESCRIPTION:Cena: yakitori con humo bajo las vías en Omoide Yokochō.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-16@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T201500
+DTEND;TZID=Asia/Tokyo:20270411T210000
+SUMMARY:Golden Gai
+DESCRIPTION:Bares de 6 plazas en Golden Gai: entrad donde no haya "members only".
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-11-18@japon2027
+DTSTART;TZID=Asia/Tokyo:20270411T211500
+DTEND;TZID=Asia/Tokyo:20270411T214500
+SUMMARY:Kabukichō y Godzilla
+DESCRIPTION:Godzilla asomado y el neón de Kabukichō de remate.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T090500
+DTEND;TZID=Asia/Tokyo:20270412T092500
+SUMMARY:🚉  → Estación Tōbu-Nikkō
+DESCRIPTION:Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento). · Asakusa → Tōbu-Nikkō (07:30) · Tobu ltd. exp. (Revaty/Kegon)\, asiento reservado
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T092500
+DTEND;TZID=Asia/Tokyo:20270412T094500
+SUMMARY:Estación Tōbu-Nikkō
+DESCRIPTION:Consigna de maletas en la estación (o ya en el ryokan).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T100000
+DTEND;TZID=Asia/Tokyo:20270412T102000
+SUMMARY:Puente Shinkyō
+DESCRIPTION:El puente rojo sagrado sobre el Daiya.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T103000
+DTEND;TZID=Asia/Tokyo:20270412T121500
+SUMMARY:Santuario Tōshōgū
+DESCRIPTION:La joya de Ieyasu: puerta Yōmeimon\, el gato dormido\, los 3 monos. Entrada online.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T123000
+DTEND;TZID=Asia/Tokyo:20270412T130000
+SUMMARY:Santuario Futarasan
+DESCRIPTION:El santuario tranquilo de al lado\, favorito de Dani.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T131000
+DTEND;TZID=Asia/Tokyo:20270412T135000
+SUMMARY:Templo Rinnō-ji
+DESCRIPTION:Los tres budas dorados de Rinnō-ji.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-12-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270412T150000
+DTEND;TZID=Asia/Tokyo:20270412T160000
+SUMMARY:Abismo de Kanmangafuchi
+DESCRIPTION:Comida de yuba (especialidad local) antes\; luego los 70 jizō del abismo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-13-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270413T124000
+DTEND;TZID=Asia/Tokyo:20270413T130000
+SUMMARY:🚉  → Mercado Ōmichō
+DESCRIPTION:Nikko → JR a Utsunomiya 45 min → Yamabiko a Ōmiya → Kagayaki a Kanazawa. ~08:45–12:30. · Ōmiya → Kanazawa · Kagayaki (Hokuriku shinkansen): TODO reservado · Utsunomiya → Ōmiya · Yamabiko (Tōhoku shinkansen)
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-13-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270413T130000
+DTEND;TZID=Asia/Tokyo:20270413T140000
+SUMMARY:Mercado Ōmichō
+DESCRIPTION:Comida: kaisendon (bol de marisco) en el mercado Ōmichō.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-13-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270413T143000
+DTEND;TZID=Asia/Tokyo:20270413T151500
+SUMMARY:Castillo de Kanazawa
+DESCRIPTION:El parque del castillo\, gratis\, camino del jardín.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-13-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270413T153000
+DTEND;TZID=Asia/Tokyo:20270413T170000
+SUMMARY:Jardín Kenroku-en
+DESCRIPTION:Uno de los tres grandes jardines de Japón\; aquí el sakura llega tarde y os espera.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-13-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270413T173000
+DTEND;TZID=Asia/Tokyo:20270413T184500
+SUMMARY:Higashi Chaya (barrio de geishas)
+DESCRIPTION:El barrio de las casas de té al atardecer + helado con pan de oro.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-14-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270414T091000
+DTEND;TZID=Asia/Tokyo:20270414T093000
+SUMMARY:🚉  → Barrio samurái de Nagamachi
+DESCRIPTION:Día entero sin trenes. Ojo: muchos puestos de Ōmichō cierran los miércoles.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-14-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270414T093000
+DTEND;TZID=Asia/Tokyo:20270414T104500
+SUMMARY:Barrio samurái de Nagamachi
+DESCRIPTION:El barrio samurái con las calles vacías\; casa Nomura (¥550).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-14-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270414T113000
+DTEND;TZID=Asia/Tokyo:20270414T140000
+SUMMARY:Kanazawa
+DESCRIPTION:A elegir: Museo del s. XXI\, D.T. Suzuki (zen) o el templo "ninja" Myōryū-ji (reservar). Comida en Katamachi.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-14-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270414T160000
+DTEND;TZID=Asia/Tokyo:20270414T170000
+SUMMARY:Jardín Kenroku-en
+DESCRIPTION:Segunda pasada al jardín con luz baja (la entrada vale todo el día no\; ¥320 bien pagados).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-14-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270414T173000
+DTEND;TZID=Asia/Tokyo:20270414T183000
+SUMMARY:Higashi Chaya (barrio de geishas)
+DESCRIPTION:Kazue-machi y la orilla del Asano\, la parte que nadie mira.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-15-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270415T100500
+DTEND;TZID=Asia/Tokyo:20270415T123500
+SUMMARY:Shirakawa-go
+DESCRIPTION:La aldea gassho-zukuri: subid al mirador Shiroyama. Comida: soba.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-15-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270415T124500
+DTEND;TZID=Asia/Tokyo:20270415T130500
+SUMMARY:Puente colgante de Ogimachi
+DESCRIPTION:El puente colgante sobre el Shō para la última foto.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-15-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270415T130500
+DTEND;TZID=Asia/Tokyo:20270415T161500
+SUMMARY:🚉 Puente colgante de Ogimachi → Casco antiguo de Takayama / Sanmachi
+DESCRIPTION:Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40. · Kanazawa → Shirakawa-gō (08:40) y → Takayama (14:50) · Bus Nouhi · nouhibus.co.jp\, abre ~1 mes antes\, vuela
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-15-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270415T161500
+DTEND;TZID=Asia/Tokyo:20270415T174500
+SUMMARY:Casco antiguo de Takayama / Sanmachi
+DESCRIPTION:El casco antiguo de Takayama: sake tasting en las bodegas (cedro colgado = sake nuevo).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-15-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270415T180000
+DTEND;TZID=Asia/Tokyo:20270415T182000
+SUMMARY:Puente Nakabashi
+DESCRIPTION:El puente rojo con el río de fondo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T074500
+DTEND;TZID=Asia/Tokyo:20270416T083000
+SUMMARY:Mercado matutino de Miyagawa
+DESCRIPTION:El mercado matutino junto al río: desayuno de puesto en puesto.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T084500
+DTEND;TZID=Asia/Tokyo:20270416T093000
+SUMMARY:Casco antiguo de Takayama / Sanmachi
+DESCRIPTION:Takayama Jinya y última vuelta antes del tren.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T093000
+DTEND;TZID=Asia/Tokyo:20270416T163000
+SUMMARY:🚉 Casco antiguo de Takayama / Sanmachi → Gion y Hanamikōji
+DESCRIPTION:Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. Variante B por Matsumoto y Narai-juku: en el documento. · Takayama → Nagoya (10:38) · Hida ltd. exp. · pedid lado derecho por el valle · Nagoya → Kioto (14:20) · Nozomi
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T163000
+DTEND;TZID=Asia/Tokyo:20270416T174500
+SUMMARY:Gion y Hanamikōji
+DESCRIPTION:Primer paseo por Hanamikōji: quizá veáis una geiko de camino al trabajo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T180000
+DTEND;TZID=Asia/Tokyo:20270416T183000
+SUMMARY:Santuario Yasaka
+DESCRIPTION:El santuario de los farolillos encendidos.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-16-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270416T190000
+DTEND;TZID=Asia/Tokyo:20270416T203000
+SUMMARY:Pontochō
+DESCRIPTION:Cena en el callejón de Pontochō\, mesa con vistas al Kamo si suena la flauta.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T071000
+DTEND;TZID=Asia/Tokyo:20270417T073000
+SUMMARY:🚉  → Kiyomizu-dera
+DESCRIPTION:Kioto Este de punta a punta\, todo a pie.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T073000
+DTEND;TZID=Asia/Tokyo:20270417T090000
+SUMMARY:Kiyomizu-dera
+DESCRIPTION:A las 7:30 tendréis la terraza casi sola\; a las 10 es un festival escolar.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T091500
+DTEND;TZID=Asia/Tokyo:20270417T100000
+SUMMARY:Sannenzaka y Ninenzaka
+DESCRIPTION:Las cuestas de madera: fotos AHORA\, antes de las hordas.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T101500
+DTEND;TZID=Asia/Tokyo:20270417T110000
+SUMMARY:Templo Kōdai-ji
+DESCRIPTION:El templo de la viuda de Hideyoshi: bambú y jardín zen sin las colas de al lado.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T111500
+DTEND;TZID=Asia/Tokyo:20270417T120000
+SUMMARY:Higashiyama
+DESCRIPTION:Callejeo por Higashiyama y Yasaka Pagoda.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T121500
+DTEND;TZID=Asia/Tokyo:20270417T130000
+SUMMARY:Sanjūsangen-dō
+DESCRIPTION:Bus 10 min: las 1.001 Kannon doradas en fila\, una de las salas más sobrecogedoras de Japón (María la apuntó\; prohibido fotografiar\, imposible olvidar).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T133000
+DTEND;TZID=Asia/Tokyo:20270417T143000
+SUMMARY:Issen Yoshoku
+DESCRIPTION:Comida: el okonomiyaki histórico de Gion que apuntó María.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-13@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T150000
+DTEND;TZID=Asia/Tokyo:20270417T163000
+SUMMARY:Castillo de Nijō
+DESCRIPTION:El castillo del shōgun y sus suelos de ruiseñor (chirrían a propósito).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-15@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T164500
+DTEND;TZID=Asia/Tokyo:20270417T173000
+SUMMARY:Mercado Nishiki
+DESCRIPTION:El mercado Nishiki: tako tamago y encurtidos de merienda.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-17@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T174500
+DTEND;TZID=Asia/Tokyo:20270417T184500
+SUMMARY:Teramachi y Shijō-Kawaramachi
+DESCRIPTION:Teramachi y compras de la tarde.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-17-19@japon2027
+DTSTART;TZID=Asia/Tokyo:20270417T193000
+DTEND;TZID=Asia/Tokyo:20270417T203000
+SUMMARY:K36 (The Bar & Rooftop)
+DESCRIPTION:Copa en el rooftop K36 (María dixit) y cena por Kiyamachi.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T074000
+DTEND;TZID=Asia/Tokyo:20270418T080000
+SUMMARY:🚉  → Bosque de bambú de Arashiyama
+DESCRIPTION:Arashiyama al alba\, el norte dorado por la tarde. teamLab: RESERVAR fecha y hora.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T080000
+DTEND;TZID=Asia/Tokyo:20270418T090000
+SUMMARY:Bosque de bambú de Arashiyama
+DESCRIPTION:El bambú ANTES de las 9 o no hay foto.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T090000
+DTEND;TZID=Asia/Tokyo:20270418T100000
+SUMMARY:Templo Tenryū-ji
+DESCRIPTION:El jardín zen con los montes prestados de fondo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T101500
+DTEND;TZID=Asia/Tokyo:20270418T104500
+SUMMARY:Puente Togetsukyō y río
+DESCRIPTION:El puente sobre el Katsura\; helado en la orilla.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T105000
+DTEND;TZID=Asia/Tokyo:20270418T111000
+SUMMARY:Kimono Forest
+DESCRIPTION:Las columnas de kimono de la estación Randen.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T113000
+DTEND;TZID=Asia/Tokyo:20270418T121500
+SUMMARY:Otagi Nenbutsu-ji
+DESCRIPTION:Los 1.200 rakan con caras de risa: el rincón secreto de Dani. Comida en Arashiyama.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T134500
+DTEND;TZID=Asia/Tokyo:20270418T143000
+SUMMARY:Ryōan-ji
+DESCRIPTION:El jardín seco más famoso del mundo: contad las 15 piedras (no se ven todas).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-12@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T150000
+DTEND;TZID=Asia/Tokyo:20270418T160000
+SUMMARY:Kinkaku-ji (Pabellón Dorado)
+DESCRIPTION:El Pabellón Dorado con la luz de la tarde en el estanque.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-18-14@japon2027
+DTSTART;TZID=Asia/Tokyo:20270418T180000
+DTEND;TZID=Asia/Tokyo:20270418T193000
+SUMMARY:teamLab Biovortex Kyoto
+DESCRIPTION:teamLab Biovortex\, reservado con fecha: arte digital para cerrar el día.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T073000
+DTEND;TZID=Asia/Tokyo:20270419T093000
+SUMMARY:Fushimi Inari Taisha
+DESCRIPTION:Empezar el cumpleaños amaneciendo entre los mil torii: el mirador Yotsutsuji con la ciudad despertando abajo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T093000
+DTEND;TZID=Asia/Tokyo:20270419T100000
+SUMMARY:Vermillion Espresso Bar
+DESCRIPTION:Café de cumpleaños con vistas al bosque de Inari.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T110000
+DTEND;TZID=Asia/Tokyo:20270419T120000
+SUMMARY:Byodo-in Hoodo
+DESCRIPTION:JR a Uji 25 min: Byōdō-in\, el templo de la moneda de ¥10.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T121500
+DTEND;TZID=Asia/Tokyo:20270419T131500
+SUMMARY:Uji (té verde)
+DESCRIPTION:Matcha en Nakamura Tōkichi: comida ligera y tarta de té verde con vela improvisada.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T151500
+DTEND;TZID=Asia/Tokyo:20270419T170000
+SUMMARY:Castillo de Himeji
+DESCRIPTION:La Garza Blanca\, el castillo original más bello de Japón (última entrada 16:00: llegáis justos y bien). Si sobra media hora: el jardín Kōko-en (entrada combinada\, pegado al castillo) cierra el regalo de cumpleaños\; los Nozomi/Sakura a Hiroshima salen cada 10–15 min\, así que un tren algo más tarde no rompe el plan.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T170000
+DTEND;TZID=Asia/Tokyo:20270419T200000
+SUMMARY:🚉 Castillo de Himeji → Okonomimura
+DESCRIPTION:CUMPLEAÑOS. Check-out y consigna · Nozomi 14:10 → Himeji 14:55 · 18:10 → Hiroshima 19:10. El Museo de la Paz queda para mañana A PROPÓSITO: hoy se celebra. · Kioto → Himeji (14:10) y Himeji → Hiroshima (18:10) · Nozomi / Sakura
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-19-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270419T200000
+DTEND;TZID=Asia/Tokyo:20270419T213000
+SUMMARY:Okonomimura
+DESCRIPTION:CENA DE CUMPLEAÑOS: okonomiyaki en la barra con espectáculo de plancha\; si apetece más fiesta\, teppanyaki de wagyū y bares de Nagarekawa.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T083000
+DTEND;TZID=Asia/Tokyo:20270420T101500
+SUMMARY:Parque y Museo de la Paz
+DESCRIPTION:El museo al abrir (8:30): duro e imprescindible. Luego el parque y la llama.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T103000
+DTEND;TZID=Asia/Tokyo:20270420T110000
+SUMMARY:Cúpula de la Bomba Atómica
+DESCRIPTION:La cúpula en pie bajo el hipocentro. Silencio y a la estación.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T123000
+DTEND;TZID=Asia/Tokyo:20270420T134500
+SUMMARY:Santuario Itsukushima y O-torii
+DESCRIPTION:Mareas del 20-abr 2027 (verificadas contra el JMA oficial): llegáis con el torii AÚN EN EL AGUA (pleamar 09:05\, 3\,35 m\, bajando). JR 25 min + ferry 10.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T135000
+DTEND;TZID=Asia/Tokyo:20270420T145000
+SUMMARY:Anago-meshi (anguila de mar)
+DESCRIPTION:Comida: anago-meshi\, la anguila de mar a la brasa sobre arroz\, dulce y glaseada. (Ueno junto al ferry o Fujitaya en la isla.)
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T151000
+DTEND;TZID=Asia/Tokyo:20270420T161000
+SUMMARY:Templo Daishō-in
+DESCRIPTION:A la vuelta\, BAJAMAR (15:20\, 0\,17 m\, verificada JMA): se camina hasta la base del torii para la foto de cerca. Luego Daishō-in: 500 rakan con gorritos. Con energía: ropeway al Misen (+2 h).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T162000
+DTEND;TZID=Asia/Tokyo:20270420T164000
+SUMMARY:Momiji manjū (probar)
+DESCRIPTION:Momiji manjū recién hecho para el ferry de vuelta.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T164000
+DTEND;TZID=Asia/Tokyo:20270420T203000
+SUMMARY:🚉 Momiji manjū (probar) → Yatai de Nakasu (puestos nocturnos)
+DESCRIPTION:Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00. · Hiroshima → Hakata (18:55) · Nozomi
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-20-12@japon2027
+DTSTART;TZID=Asia/Tokyo:20270420T203000
+DTEND;TZID=Asia/Tokyo:20270420T220000
+SUMMARY:Yatai de Nakasu (puestos nocturnos)
+DESCRIPTION:Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T093000
+DTEND;TZID=Asia/Tokyo:20270421T101500
+SUMMARY:Santuario Kushida
+DESCRIPTION:El santuario patrón de Hakata con la carroza gigante del Yamakasa.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T103000
+DTEND;TZID=Asia/Tokyo:20270421T111500
+SUMMARY:Fukuoka
+DESCRIPTION:Paseo por Hakata/Tenjin\, la ciudad que el documento pedía pisar.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T114500
+DTEND;TZID=Asia/Tokyo:20270421T124500
+SUMMARY:Parque Ōhori y castillo de Fukuoka
+DESCRIPTION:El lago del castillo: el Japón cotidiano que no sale en los reels.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T124500
+DTEND;TZID=Asia/Tokyo:20270421T190000
+SUMMARY:🚉 Parque Ōhori y castillo de Fukuoka → Dōtonbori y Glico Man
+DESCRIPTION:Mañana en Hakata · Nozomi 15:00 → Shin-Osaka 17:26 · Midōsuji a Namba. · Hakata → Shin-Osaka (15:00) · Nozomi
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T190000
+DTEND;TZID=Asia/Tokyo:20270421T203000
+SUMMARY:Dōtonbori y Glico Man
+DESCRIPTION:Glico Man\, neones y cena en Dōtonbori: bienvenidos a la cocina de Japón.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-21-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270421T204500
+DTEND;TZID=Asia/Tokyo:20270421T210500
+SUMMARY:Templo Hozen-ji
+DESCRIPTION:El templo cubierto de musgo escondido entre bares (se le echa agua).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T090000
+DTEND;TZID=Asia/Tokyo:20270422T094500
+SUMMARY:Parque de Nara y ciervos
+DESCRIPTION:Los ciervos que hacen reverencia (las galletas shika senbei\, ¥200).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T100000
+DTEND;TZID=Asia/Tokyo:20270422T111500
+SUMMARY:Templo Tōdai-ji
+DESCRIPTION:El Gran Buda de 15 m en el edificio de madera más grande del mundo.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T113000
+DTEND;TZID=Asia/Tokyo:20270422T120000
+SUMMARY:Nigatsu-do
+DESCRIPTION:La terraza con vistas a Nara: el favorito de Dani\, gratis y vacío.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T121500
+DTEND;TZID=Asia/Tokyo:20270422T131500
+SUMMARY:Kasuga Taisha
+DESCRIPTION:Los 3.000 farolillos de piedra entre ciervos.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T132000
+DTEND;TZID=Asia/Tokyo:20270422T140000
+SUMMARY:Mizuya Chaya
+DESCRIPTION:Té y udon bajo los árboles en Mizuya Chaya.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T143000
+DTEND;TZID=Asia/Tokyo:20270422T151500
+SUMMARY:Kōfuku-ji
+DESCRIPTION:La pagoda de 5 pisos\, recién restaurada.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-12@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T153000
+DTEND;TZID=Asia/Tokyo:20270422T163000
+SUMMARY:Naramachi
+DESCRIPTION:Las machiya del casco viejo: cafés y tiendas de artesanos.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-14@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T164500
+DTEND;TZID=Asia/Tokyo:20270422T170500
+SUMMARY:Nakatanidou (mochi)
+DESCRIPTION:El mochi más rápido de Japón: el show del machacado y a comerlo caliente.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-15@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T170500
+DTEND;TZID=Asia/Tokyo:20270422T183000
+SUMMARY:🚉 Nakatanidou (mochi) → Templo Shitennō-ji
+DESCRIPTION:Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta ~18:00.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-16@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T183000
+DTEND;TZID=Asia/Tokyo:20270422T191000
+SUMMARY:Templo Shitennō-ji
+DESCRIPTION:Kintetsu de vuelta y metro a Tennōji: el recinto del templo más antiguo del país (593) al atardecer\, con la pagoda recortada. Estáis a 10 min a pie de Shinsekai.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-18@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T193000
+DTEND;TZID=Asia/Tokyo:20270422T210000
+SUMMARY:Shinsekai y Tsūtenkaku
+DESCRIPTION:Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-23-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270423T084000
+DTEND;TZID=Asia/Tokyo:20270423T090000
+SUMMARY:🚉  → Universal Studios Japan
+DESCRIPTION:USJ: JR Loop + rama Sakurajima a Universal City\, 15 min desde Nishikujō.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-23-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270423T090000
+DTEND;TZID=Asia/Tokyo:20270423T180000
+SUMMARY:Universal Studios Japan
+DESCRIPTION:Día entero: a la apertura y directos a Super Nintendo World (turno de área en la app). Express Pass = horas de vida.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-23-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270423T194500
+DTEND;TZID=Asia/Tokyo:20270423T210000
+SUMMARY:Umeda Sky Building
+DESCRIPTION:Si el parque os deja vivos: JR Loop a Osaka y el Jardín Flotante de noche\, la azotea abierta al cielo. Cena en Umeda y a casa en Midōsuji.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T081500
+DTEND;TZID=Asia/Tokyo:20270424T090000
+SUMMARY:Mercado Kuromon Ichiba
+DESCRIPTION:Desayuno de mercado en Kuromon: atún\, melón y lo que caiga.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T093000
+DTEND;TZID=Asia/Tokyo:20270424T110000
+SUMMARY:Castillo de Osaka
+DESCRIPTION:Tanimachi 10 min: el castillo de Hideyoshi entre fosos ciclópeos y 600 cerezos. El parque y las murallas son lo grande\; el interior-museo\, opcional si vais bien de hora.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T113000
+DTEND;TZID=Asia/Tokyo:20270424T120000
+SUMMARY:Doguyasuji (menaje)
+DESCRIPTION:De vuelta en Namba: la calle del menaje\, cuchillos y moldes de tako-yaki.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T120500
+DTEND;TZID=Asia/Tokyo:20270424T123000
+SUMMARY:Barrio de Namba: neones y luces
+DESCRIPTION:Último neón de Namba.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T123500
+DTEND;TZID=Asia/Tokyo:20270424T130000
+SUMMARY:Den Den Town
+DESCRIPTION:El Akihabara de Osaka\, camino del hotel a por maletas.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T130000
+DTEND;TZID=Asia/Tokyo:20270424T163000
+SUMMARY:🚉 Den Den Town → Estación de Tokio y Character Street
+DESCRIPTION:Mañana de mercado · Nozomi 13:50 → Tokio 16:24 · la tarde cae sola: todo pegado a la estación. · Shin-Osaka → Tokio (13:50) · Nozomi
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T163000
+DTEND;TZID=Asia/Tokyo:20270424T171500
+SUMMARY:Estación de Tokio y Character Street
+DESCRIPTION:Llegáis A la estación: Character Street en el sótano (Ghibli\, Pokémon).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-12@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T174500
+DTEND;TZID=Asia/Tokyo:20270424T181500
+SUMMARY:APA Hotel Asakusabashi Ekimae
+DESCRIPTION:Check-in APA (reserva ampliada al 24) y a la calle.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-14@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T183000
+DTEND;TZID=Asia/Tokyo:20270424T194500
+SUMMARY:Ginza
+DESCRIPTION:Ginza encendida: papelería Itoya\, Uniqlo de 12 plantas.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-15@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T194500
+DTEND;TZID=Asia/Tokyo:20270424T200500
+SUMMARY:Teatro Kabuki-za
+DESCRIPTION:El teatro kabuki iluminado (entradas de un acto si os tienta) y cena en Ginza.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T085500
+DTEND;TZID=Asia/Tokyo:20270425T091500
+SUMMARY:🚉  → Tsurugaoka Hachimangū
+DESCRIPTION:JR Yokosuka 08:04 → Kamakura 09:00 · Enoden a Hase · JR a Yokohama 14:45 · vuelta 20:30.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T091500
+DTEND;TZID=Asia/Tokyo:20270425T100000
+SUMMARY:Tsurugaoka Hachimangū
+DESCRIPTION:El gran santuario de los shōgun Minamoto.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T100000
+DTEND;TZID=Asia/Tokyo:20270425T104500
+SUMMARY:Calle Komachi-dōri
+DESCRIPTION:Komachi-dōri: picoteo y compras camino del Enoden.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-4@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T111500
+DTEND;TZID=Asia/Tokyo:20270425T120000
+SUMMARY:Gran Buda de Kamakura
+DESCRIPTION:El Gran Buda de bronce a cielo abierto desde 1495 (se entra dentro\, ¥50).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-6@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T121500
+DTEND;TZID=Asia/Tokyo:20270425T131500
+SUMMARY:Templo Hase-dera
+DESCRIPTION:La Kannon de 11 caras y la terraza con la bahía entera. Comida: shirasu-don en Hase.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-8@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T153000
+DTEND;TZID=Asia/Tokyo:20270425T170000
+SUMMARY:Barrio Chino de Yokohama
+DESCRIPTION:El Chinatown más grande de Japón: merienda-cena de nikuman en Yokohama.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-10@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T173000
+DTEND;TZID=Asia/Tokyo:20270425T190000
+SUMMARY:Minato Mirai 21 (Yokohama)
+DESCRIPTION:El puerto al atardecer: Cosmo Clock\, Red Brick y el skyline.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-26-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270426T095500
+DTEND;TZID=Asia/Tokyo:20270426T101500
+SUMMARY:🚉  → Pagoda Chūreitō
+DESCRIPTION:Bus directo Shinjuku 07:45 → Kawaguchiko 09:30 (RESERVAR highway-buses.jp) · vuelta 17:00. · Shinjuku → Kawaguchiko (07:45\, ida y vuelta) · Bus · highway-buses.jp
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-26-1@japon2027
+DTSTART;TZID=Asia/Tokyo:20270426T101500
+DTEND;TZID=Asia/Tokyo:20270426T114500
+SUMMARY:Pagoda Chūreitō
+DESCRIPTION:LA foto: pagoda Chūreitō + Fuji. 400 escalones y los subiréis contentos.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-26-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270426T120000
+DTEND;TZID=Asia/Tokyo:20270426T124500
+SUMMARY:Honcho Street (Fujiyoshida)
+DESCRIPTION:La otra foto famosa: la calle retro con el Fuji llenando el fondo. Comida: hōtō (guiso local).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-26-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270426T140000
+DTEND;TZID=Asia/Tokyo:20270426T160000
+SUMMARY:Lago Kawaguchi
+DESCRIPTION:La orilla norte del lago: el Fuji doblado en el agua\; ropeway o barco si apetece.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-27-AY0074@japon2027
+DTSTART:20270427T140500Z
+DTEND:20270428T025500Z
+SUMMARY:✈️ AY0074 Tokio Narita (NRT) → Helsinki (HEL)
+DESCRIPTION:T2 · Último check-in 22:05 · llegada el 28
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-28-AY1661@japon2027
+DTSTART:20270428T134000Z
+DTEND:20270428T180500Z
+SUMMARY:✈️ AY1661 Helsinki (HEL) → Madrid (MAD)
+DESCRIPTION:T4 · Último check-in 15:55
+END:VEVENT
+END:VCALENDAR
