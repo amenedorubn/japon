@@ -4004,6 +4004,12 @@ function hotelBasePlaceholders(){
   return state.places.filter(hotelPlaceholderBase)
     .map(p => ({pid: p.id, p: placeView(p)}));
 }
+// 12.64 (Prioridad 2): fechas/noches reales de NIGHTS para una base "por
+// reservar" del catálogo, por ciudad (region). Solo 'res' (no 'amp': esa fila
+// es ampliar una reserva YA existente, no una base de hotel nueva).
+function nightsForCity(city){
+  return NIGHTS.find(n => n[2] === 'res' && n[1].split(' · ')[0] === city);
+}
 function hotelCardHTML(p){
   const nights = daysBetween(p.checkIn, p.checkOut);
   const website = p.hotelWebsite && /^https?:\/\//i.test(p.hotelWebsite) ? p.hotelWebsite : '';
@@ -4052,14 +4058,18 @@ function renderHoteles(){
   $('#hotelsList').innerHTML = hotels.map(hotelCardHTML).join('')
     || `<div class="card" style="padding:18px;color:var(--muted);font-size:13.5px">${emptyMsg}</div>`;
   $$('#hotelsList .h-edit').forEach(b => b.addEventListener('click', () => openPlaceForm(b.dataset.pid)));
-  $('#hotelPlaceholders').innerHTML = hotelBasePlaceholders().map(({pid, p}) => `
+  $('#hotelPlaceholders').innerHTML = hotelBasePlaceholders().map(({pid, p}) => {
+    const n = nightsForCity(p.region);
+    return `
     <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer" data-pid="${pid}">
       <div style="font-size:22px">🏨</div>
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>
+        ${n ? `<div style="font-size:12.5px;color:var(--muted)">${esc(n[4])} → ${esc(n[5])} · ${n[6]} noche${n[6] === 1 ? '' : 's'}</div>` : ''}
         <div style="font-size:12.5px;color:var(--muted)">${esc(p.desc)}</div>
       </div>
       <span class="pill red">Por reservar</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   bindPlaceOpen('#hotelPlaceholders .card[data-pid]');
   // Las 20 noches con fecha y ciudad. Estado: ok (reservado, verde) ·
   // amp (ampliar reserva) · res (base por reservar) · vuelo (a bordo).
