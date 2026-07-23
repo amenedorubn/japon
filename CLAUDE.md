@@ -82,12 +82,20 @@ Antes de proceder, pregunta si:
 
 ## 🚀 Estado actual
 
-- **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.66–12.67** (`dayTimeline()`: agenda cronológica del día, fuente única para
-  el render de la app y el export .ics; el mapa ya filtra de verdad por día seleccionado — fix
-  12.65 — y el toggle 🎁 Extras es independiente del itinerario). El docx (`Ruta-21-dias.docx`)
-  queda deliberadamente FUERA de esa fuente única por ahora: ya tiene narrativa más rica de la que
-  `dayTimeline()` deriva hoy, y regenerarlo sería una regresión (ver PROJECT.md §7).
+- **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
+  planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
+  Última materialización **12.68** (5 prioridades de esa fase): "〰️ Líneas Dani" solo se ve en el
+  itinerario de Dani; los extras "si sobra tiempo" se leen inlineados DENTRO del recorrido de un
+  día concreto (panel y mapa, con rama punteada hacia un pin propio) en vez de aparte, salvo en
+  "Todos los días" que conserva el `<details>` colapsado; Realidad gana horas inferidas en cada
+  hueco de transporte + aviso 🎫 de reserva y su propio export **.ics** en vivo (sigue el plan
+  real, no una referencia fija); e indicador de intensidad por día (🟢🟡🟠🔴) visible en el Cord, en
+  Realidad y en la Ruta. Antes, **12.66–12.67** (`dayTimeline()`: agenda cronológica del día,
+  fuente única para el render de la Ruta y su export .ics; el mapa ya filtra de verdad por día
+  seleccionado — fix 12.65 — y el toggle 🎁 Extras es independiente del itinerario). El docx
+  (`Ruta-21-dias.docx`) queda deliberadamente FUERA de esa fuente única por ahora: ya tiene
+  narrativa más rica de la que `dayTimeline()` deriva hoy, y regenerarlo sería una regresión (ver
+  PROJECT.md §7).
 - Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Dani · María; Propuesta oculta pero
   restaurable) · Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos

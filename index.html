@@ -344,6 +344,8 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
    (sin caja punteada ruidosa; un panel hundido en el papel). */
 .transfer{position:relative;margin:2px 0 12px;padding:9px 12px;border-radius:12px;
   background:color-mix(in srgb,var(--card2) 70%,var(--bg));border:1px solid var(--line);}
+/* Prioridad 3: hora del hueco de transporte, derivada de las paradas vecinas. */
+.transfer .t-time{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;}
 .transfer .t-opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .t-opt{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;font-size:12px;
   font-weight:600;background:var(--card);border:1.5px solid var(--line);color:var(--muted);
@@ -485,6 +487,20 @@ h2.section small{font-size:12px;font-weight:600;color:var(--muted);letter-spacin
 .spare-time-item b{font-size:13px;}
 .spare-time-item small{color:var(--muted);}
 .spare-time-item p{margin:2px 0 0;color:var(--muted);line-height:1.4;}
+/* Prioridad 2 (fase de viaje): extra "si sobra tiempo" inlineado dentro del
+   recorrido de un día concreto (.timeline / .tl-ruta), justo tras la parada
+   real de la que es prolongación. Borde punteado y sin acento: se lee como
+   un alto OPCIONAL del propio camino, no como una parada más ni como una
+   sección aparte (esa sigue siendo spare-time, para las vistas "Todos"). */
+.opt-stop{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;margin:2px 0 12px;
+  border:1px dashed var(--hairline);border-radius:12px;background:transparent;}
+.opt-stop .oe-ico{flex:none;font-size:14px;line-height:1.4;}
+.opt-stop .oe-body{flex:1;min-width:0;font-size:13px;}
+.opt-stop .oe-body b{font-weight:600;}
+.opt-stop .oe-body small{display:block;color:var(--muted);line-height:1.4;}
+.opt-stop .oe-tag{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);border:1px dashed var(--hairline);border-radius:999px;
+  padding:2px 8px;align-self:center;}
 .places-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
 .places-grid.grouped{display:block;}
 .ideas-group{margin-bottom:26px;}
@@ -829,6 +845,7 @@ table.phr tr:last-child td{border-bottom:none;}
         <button class="fchip" id="itinModeMaria" title="El viaje que hizo María en 2024">📋 María</button>
       </div>
       <div style="display:flex;gap:6px">
+        <button class="btn small ghost" id="btnRealidadIcs" title="Exportar el plan real a un calendario (.ics)">📅 Exportar a calendario</button>
         <a class="btn small ghost" id="btnDaniPdf" download style="display:none">📄 Documento Dani</a>
         <a class="btn small ghost" id="btnRutaDoc" download style="display:none">📄 Ruta hora a hora</a>
       </div>
@@ -841,7 +858,7 @@ table.phr tr:last-child td{border-bottom:none;}
     <div class="day-chips" id="mapDayChips"></div>
     <div class="map-toggles">
       <button class="fchip src-chip" id="flightsToggle" title="Mostrar u ocultar los vuelos en el mapa">✈️ Vuelos</button>
-      <button class="fchip src-chip src-dani" id="daniLinesToggle" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo en el itinerario de Dani)">〰️ Líneas Dani</button>
+      <button class="fchip src-chip src-dani" id="daniLinesToggle" style="display:none" title="Mostrar u ocultar las líneas que conectan los días de la ruta de Dani (solo en el itinerario de Dani)">〰️ Líneas Dani</button>
       <button class="fchip src-chip" id="extrasToggle" title="Mostrar u ocultar en el mapa los extras 'si sobra tiempo' (independiente del itinerario)">🎁 Extras</button>
       <span class="pill" id="routeStatus" style="display:none">calculando rutas…</span>
     </div>
@@ -4496,19 +4513,47 @@ function transferOptionChip(o, selected){
     ${m.emoji} ${esc(m.label)}${dur ? ' · ' + dur : ''}${o.y ? ` <span class="y">· ${fmtYen(o.y)}</span>` : o.y === 0 && o.m === 'walk' ? '' : ''}
   </button>`;
 }
+/* Prioridad 3 (agenda de viaje): hora estimada de cada hueco de transporte,
+   para que Realidad se lea de corrido como las paradas (que ya tienen su
+   input de hora). Se DERIVA de las horas ya escritas por el usuario en las
+   paradas vecinas -20 min antes de la primera, o el hueco real entre el fin
+   de una parada y el inicio de la siguiente- nunca se inventa una hora
+   nueva: mismo principio que dayTimeline() para la Ruta (12.65). */
+function stopWindow(s){ const start = timeToMin(s.time); return {start, end: start + (s.dur || 30)}; }
+function realGapWindow(day, gapIdx){
+  if(!day || !day.stops || !day.stops.length) return null;
+  if(gapIdx === 'pre'){
+    const first = day.stops[0];
+    return {start: minToTime(stopWindow(first).start - 20), end: first.time};
+  }
+  if(gapIdx === 'post'){
+    const last = day.stops[day.stops.length - 1];
+    const end = stopWindow(last).end;
+    return {start: minToTime(end), end: minToTime(end + 20)};
+  }
+  const a = day.stops[gapIdx], b = day.stops[gapIdx + 1];
+  if(!a || !b) return null;
+  return {start: minToTime(stopWindow(a).end), end: b.time};
+}
 function transferHTML(t, a, b, dayIdx, gapIdx, label){
   const sel = t.opts[t.sel] || t.opts[0];
+  const win = realGapWindow(state.days[dayIdx], gapIdx);
+  // Reserva obligatoria: se resalta lo que YA estaba escrito en el trayecto
+  // (texto/nota), no un dato nuevo.
+  const needsReserve = !!(sel && /reserv/i.test((sel.t || '') + ' ' + (sel.n || '')));
   const links = (a && b) ? `<span class="t-links">
       <a href="${gmapsLink(a, b, 'transit')}" target="_blank" rel="noopener">🚇 Google Maps</a>
       <a href="${gmapsLink(a, b, 'walking')}" target="_blank" rel="noopener">🚶 a pie</a></span>` : '';
   return `<div class="transfer" data-day="${dayIdx}" data-gap="${gapIdx}">
     ${label ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">${label}</div>` : ''}
     <button class="mini edit-t" title="Editar opciones de transporte">✎</button>
+    ${win ? `<div class="t-time u-tabular">${win.start} → ${win.end}</div>` : ''}
     <div class="t-opts">${t.opts.map((o, i) => transferOptionChip(o, i === t.sel)).join('')}</div>
     <div class="t-detail">
       ${sel ? `${sel.t && sel.t !== modeOf(sel.m).label ? `<b>${esc(sel.t)}</b>` : ''}
       ${sel.l ? `<span>🔀 ${esc(sel.l)}</span>` : ''}
-      ${sel.n ? `<span>${esc(sel.n)}</span>` : ''}` : ''}
+      ${sel.n ? `<span>${esc(sel.n)}</span>` : ''}
+      ${needsReserve ? '<span class="pill red" style="flex:none">🎫 reserva</span>' : ''}` : ''}
       ${links}
     </div>
   </div>`;
@@ -4566,6 +4611,9 @@ function setItinMode(mode){
   const rutaChip = $('#itinModeRuta'); if(rutaChip) rutaChip.classList.toggle('active', mode === 'ruta');
   $('#btnDaniPdf').style.display = mode === 'dani' ? '' : 'none';
   const rutaDoc = $('#btnRutaDoc'); if(rutaDoc) rutaDoc.style.display = mode === 'ruta' ? '' : 'none';
+  // Prioridad 1 (fase de viaje): "Líneas Dani" solo tiene sentido viendo SU itinerario.
+  const daniLines = $('#daniLinesToggle'); if(daniLines) daniLines.style.display = mode === 'dani' ? '' : 'none';
+  const icsBtn = $('#btnRealidadIcs'); if(icsBtn) icsBtn.style.display = mode === 'ours' ? '' : 'none';
   setItinAlt(mode === 'ours' ? 'trip' : 'plain'); // ours abre en la altitud de Viaje (Cord)
   // 12.56: el mapa sigue al itinerario activo. Al cambiar, arranca en "Todos"
   // (todo el itinerario) y se redibuja con los elementos de ESE itinerario.
@@ -4699,6 +4747,37 @@ function spareTimeHTML(date){
     </div>
   </details>`;
 }
+/* Prioridad 2 (fase de viaje): con un día CONCRETO a la vista, cada extra se
+   lee como una prolongación opcional de la parada de la que sale (`x.near`),
+   no como una sección aparte al final del día. `spareTimeHTML` (arriba) se
+   conserva tal cual para las vistas "Todos los días" (comportamiento global
+   sin cambios). */
+function extraEntryHTML(x){
+  return `<div class="opt-stop">
+    <span class="oe-ico">🎁</span>
+    <span class="oe-body"><b>${esc(x.name)}</b>
+      <small>${x.mins === 0 ? 'en la puerta de' : x.mins + ' min de'} ${esc(x.near)} · ${esc(x.why)}</small>
+    </span>
+    <span class="oe-tag">Opcional</span>
+  </div>`;
+}
+// Empareja cada extra con la parada real más parecida por nombre (mismo
+// criterio que extraLatLng en el mapa) y lo inserta justo después en la
+// lista de filas ya renderizadas; sin match, va al final del día.
+function insertExtrasInline(rowsArr, matchNames, date){
+  const extras = DAY_EXTRAS[date];
+  if(!extras || !extras.length) return rowsArr;
+  const out = rowsArr.slice();
+  let offset = 0;
+  extras.forEach(x => {
+    const n = x.near.toLowerCase();
+    let idx = matchNames.findIndex(name => name && (n.includes(name.toLowerCase()) || name.toLowerCase().includes(n)));
+    if(idx === -1) idx = matchNames.length - 1;
+    out.splice(idx + 1 + offset, 0, extraEntryHTML(x));
+    offset++;
+  });
+  return out;
+}
 // 12.64 (Prioridad 6): transporte del día DENTRO de la Ruta, reutilizando
 // TRANSPORT (Guía) por su etiqueta "Día N" — sin datos nuevos, sin duplicar
 // duración/coste que TRANSPORT no tiene estructurados (solo train quedan en
@@ -4797,6 +4876,60 @@ function dayTimeline(rd){
   });
   return entries;
 }
+/* ================================================================
+   INTENSIDAD DEL DÍA (Prioridad 5, fase de viaje)
+   ----------------------------------------------------------------
+   Heurística sobre datos YA existentes (nada nuevo que mantener): nº de
+   paradas, minutos de actividad, km caminados entre paradas contiguas
+   (inferidos de las coordenadas reales del catálogo, igual que en
+   dayTimeline/inferTransitMode) y nº de cambios de medio de transporte no
+   peatonales. `longLeg` sube un punto si el día incluye un tramo de
+   verdad entre ciudades (la nota/reserva real de la Ruta, o un pre/post de
+   Realidad): un día de trenes largos cansa aunque tenga pocas paradas.
+   Es una guía rápida, no una medida exacta: no ve el trajín DENTRO de una
+   sola parada larga (un parque temático es una única "parada" de horas).
+   Umbrales calibrados a ojo contra los 18 días con contenido de la Ruta
+   (ver historia de fase): reparto ~5/6/4/3 entre los 4 niveles. */
+function intensityScore({stopCount, activeMin, walkKm, hops, longLeg}){
+  return stopCount + hops + walkKm * 0.8 + activeMin / 60 + (longLeg ? 1.5 : 0);
+}
+const INTENSITY_LEVELS = [
+  {max: 13, emoji: '🟢', label: 'Relajado'},
+  {max: 18, emoji: '🟡', label: 'Moderado'},
+  {max: 23, emoji: '🟠', label: 'Ajetreado'},
+  {max: Infinity, emoji: '🔴', label: 'Muy intenso'},
+];
+const intensityFromScore = score => INTENSITY_LEVELS.find(l => score < l.max);
+function rutaDayIntensity(rd){
+  if(!rd || rd.flight || !(rd.stops && rd.stops.length)) return null;
+  const tl = dayTimeline(rd);
+  if(!tl.length) return null;
+  const stops = rd.stops.map(s => ({s, p: placeById(canonicalPid(s.pid))})).filter(x => x.p);
+  const activeMin = tl.filter(e => e.kind === 'activity')
+    .reduce((s, e) => s + ((timeToMin(e.end) - timeToMin(e.start) + 1440) % 1440), 0);
+  let walkKm = 0, hops = 0, longLeg = false;
+  tl.filter(e => e.kind === 'transit').forEach(e => {
+    if(!e.estimated){ longLeg = true; return; } // tramo real (nota/reserva), no un paseo inferido
+    if(e.mode === 'A pie'){
+      const idx = stops.findIndex(x => x.p.name === e.from);
+      if(idx >= 0 && stops[idx + 1]) walkKm += haversine(stops[idx].p, stops[idx + 1].p);
+    } else hops++;
+  });
+  return intensityFromScore(intensityScore({stopCount: stops.length, activeMin, walkKm, hops, longLeg}));
+}
+function realDayIntensity(d){
+  if(!d || d.flight || !d.stops || !d.stops.length) return null;
+  const activeMin = d.stops.reduce((s, x) => s + (x.dur || 0), 0);
+  let walkKm = 0, hops = 0;
+  (d.trans || []).forEach((t, i) => {
+    const opt = t && t.opts && t.opts[t.sel];
+    const a = placeById(d.stops[i] && d.stops[i].pid), b = placeById(d.stops[i + 1] && d.stops[i + 1].pid);
+    if(!opt || !a || !b) return;
+    if(opt.m === 'walk') walkKm += haversine(a, b);
+    else hops++;
+  });
+  return intensityFromScore(intensityScore({stopCount: d.stops.length, activeMin, walkKm, hops, longLeg: !!(d.pre || d.post)}));
+}
 function timelineEntryHTML(e, extra){
   if(e.kind === 'activity'){
     const c = catOf({cat: e.cat});
@@ -4888,6 +5021,73 @@ function downloadRutaICS(){
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+/* Prioridad 4 (fase de viaje): el export de Realidad usa la MISMA fuente que
+   su render editable de arriba (stopHTML/transferHTML: horas de parada ya
+   escritas por el usuario + opción de transporte ya elegida por gap,
+   realGapWindow/stopWindow) — nada nuevo que mantener aparte. A diferencia
+   de la Ruta (referencia fija), esto sigue el plan REAL, con lo que cada
+   edición en Realidad se refleja en el siguiente export. */
+function realDayTimelineEntries(d){
+  if(!d || d.flight || !d.stops || !d.stops.length) return [];
+  const entries = [];
+  const pushGap = (t, gapIdx) => {
+    if(!t) return;
+    const win = realGapWindow(d, gapIdx);
+    const opt = t.opts && t.opts[t.sel];
+    if(!win || !opt) return;
+    entries.push({kind: 'transit', start: win.start, end: win.end, opt});
+  };
+  pushGap(d.pre, 'pre');
+  d.stops.forEach((s, i) => {
+    const p = placeById(s.pid);
+    entries.push({kind: 'activity', start: s.time, end: minToTime(timeToMin(s.time) + (s.dur || 30)),
+      name: p ? p.name : '(sitio eliminado)', notes: s.note || ''});
+    if(i < d.stops.length - 1) pushGap(d.trans[i], i);
+  });
+  pushGap(d.post, 'post');
+  return entries;
+}
+function realidadICS(){
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Japon 2027//Realidad//ES', 'CALSCALE:GREGORIAN',
+    'BEGIN:VTIMEZONE', 'TZID:Asia/Tokyo', 'BEGIN:STANDARD', 'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0900', 'TZOFFSETTO:+0900', 'TZNAME:JST', 'END:STANDARD', 'END:VTIMEZONE'];
+  state.days.forEach(d => {
+    if(d.flight){
+      flightsOn(d.date).forEach(f => {
+        const endDate = icsFlightEndDate(d.date, f.dep, f.arr);
+        lines.push('BEGIN:VEVENT', 'UID:real-' + d.date + '-' + f.flight + '@japon2027',
+          'DTSTART:' + icsFlightUTC(f.from, d.date, f.dep),
+          'DTEND:' + icsFlightUTC(f.to, endDate, f.arr),
+          'SUMMARY:' + icsEscape('✈️ ' + f.flight + ' ' + f.from + ' → ' + f.to),
+          'DESCRIPTION:' + icsEscape([f.terminal, f.note].filter(Boolean).join(' · ')), 'END:VEVENT');
+      });
+      return;
+    }
+    realDayTimelineEntries(d).forEach((e, i) => {
+      const mode = e.kind === 'transit' ? modeOf(e.opt.m) : null;
+      const hasNote = e.kind === 'transit' && !!(e.opt.n || (e.opt.t && e.opt.t !== mode.label));
+      if(e.kind === 'transit' && e.opt.m === 'walk' && !hasNote) return; // paseo trivial, ya visible en la app
+      const summary = e.kind === 'activity' ? e.name : `${mode.emoji} ${e.opt.t || mode.label}`;
+      const desc = e.kind === 'activity' ? e.notes
+        : [e.opt.l ? '🔀 ' + e.opt.l : '', e.opt.n, e.opt.y ? '💴 ' + fmtYen(e.opt.y) : ''].filter(Boolean).join(' · ');
+      lines.push('BEGIN:VEVENT', 'UID:real-' + d.date + '-' + i + '@japon2027',
+        'DTSTART;TZID=Asia/Tokyo:' + icsDT(d.date, e.start), 'DTEND;TZID=Asia/Tokyo:' + icsDT(d.date, e.end),
+        'SUMMARY:' + icsEscape(summary));
+      if(desc) lines.push('DESCRIPTION:' + icsEscape(desc));
+      lines.push('END:VEVENT');
+    });
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadRealidadICS(){
+  const blob = new Blob([realidadICS()], {type: 'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'realidad-japon-2027.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
@@ -4900,24 +5100,34 @@ function renderRutaItinerary(){
       <button class="btn ghost small" id="rutaToTransport">🚄 Trenes y buses a reservar →</button>
       <button class="btn ghost small" id="rutaToCalendar">📅 Exportar a calendario (.ics)</button>
     </div></div>`;
+  // Prioridad 2: con un día concreto a la vista (mapDay elegido en el mapa),
+  // los extras se leen prolongando la parada real de la que salen, en vez de
+  // en una sección aparte al final; "Todos" conserva el <details> de siempre.
+  const singleDay = mapDay >= 0;
   html += dayIndices(RUTA_DAYS.length).map(i => {
     const rd = RUTA_DAYS[i];
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
     const timeline = dayTimeline(rd);
-    const rows = timeline.map(e => {
+    const rowsArr = timeline.map(e => {
       if(e.kind !== 'activity') return timelineEntryHTML(e);
       const pid = canonicalPid(e.pid);
       const inPlan = planned.has(pid);
       const extra = inPlan ? '<span class="pill green" style="flex:none">✓ en el plan</span>'
         : `<button class="btn small ghost b-plant" data-pid="${esc(pid)}" data-day="${i}" title="Plantar en nuestro viaje" style="flex:none">＋</button>`;
       return timelineEntryHTML(e, extra);
-    }).join('');
+    });
+    const rows = singleDay
+      ? insertExtrasInline(rowsArr, timeline.map(e => e.kind === 'activity' ? e.name : ''), rd.date).join('')
+      : rowsArr.join('');
     if(!rows && !rd.flight && !rd.note) return '';
+    const intensity = rutaDayIntensity(rd);
     return `<div class="m-washi seed-day">
-      <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b><small>${fmtDateShort(rd.date)}</small></div>
+      <div class="sd-head"><b>${esc(rd.icon || '')} Día ${i + 1} · ${esc(rd.city || '')}</b>
+        ${intensity ? `<span class="pill" title="Intensidad estimada del día">${intensity.emoji} ${intensity.label}</span>` : ''}
+        <small>${fmtDateShort(rd.date)}</small></div>
       ${rd.flight && !rows ? '<div class="sd-flight">✈ Día de vuelos</div>' : `<div class="tl-ruta">${rows}</div>`}
       ${rd.stay ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">🛏 ${esc(rd.stay)}</div>` : ''}
-      ${spareTimeHTML(rd.date)}
+      ${singleDay ? '' : spareTimeHTML(rd.date)}
     </div>`;
   }).join('');
   $('#dayPanel').innerHTML = html;
@@ -5041,12 +5251,13 @@ function renderCord(){
       : (nStops ? names : (night ? '🛏 ' + esc(night.name) : 'Día libre'));
     const rail = isFlight ? '' : `--stay:var(--stay-${stays[i].tone})`;
     const city = nightCityFor(d.date);
+    const intensity = realDayIntensity(d); // Prioridad 5: intensidad, de un vistazo en el Cord
     return `<button class="${cls.join(' ')}" data-day="${i}" style="${rail}"
-      aria-label="Día ${i + 1}, ${fmtDateShort(d.date)}${city ? ', noche en ' + esc(city) : ''}, ${isFlight ? 'vuelos' : nStops + ' paradas'}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
+      aria-label="Día ${i + 1}, ${fmtDateShort(d.date)}${city ? ', noche en ' + esc(city) : ''}, ${isFlight ? 'vuelos' : nStops + ' paradas'}${intensity ? ', ' + intensity.label.toLowerCase() : ''}${completed ? ', completado' : ''}${isToday ? ', hoy' : ''}">
       <span class="cord-rail" aria-hidden="true"></span>
       <span class="cord-idx u-tabular">${isFlight ? '✈' : (i + 1)}</span>
       <span class="cord-body">
-        <span class="cord-city">${fmtDateShort(d.date)}${city ? ` · <span class="cord-night">${esc(city)}</span>` : ''}</span>
+        <span class="cord-city">${intensity ? `<span title="${intensity.label}: intensidad estimada del día">${intensity.emoji}</span> ` : ''}${fmtDateShort(d.date)}${city ? ` · <span class="cord-night">${esc(city)}</span>` : ''}</span>
         <span class="cord-stops">${sub}</span>
       </span>
       <span class="cord-fill" aria-hidden="true">${cordFill(nStops)}</span>
@@ -5085,6 +5296,7 @@ function renderItinerary(){
   // La cabecera del día ya no tiene título ni ciudad inventados: la fecha es el
   // día, y lo único que se afirma junto a ella es la reserva de esa noche (12.52).
   const city = nightCityFor(d.date);
+  const intensity = realDayIntensity(d); // Prioridad 5: indicador de intensidad
   let html = `<div class="card day-head">
     <div class="dh-main">
       <h3>${fmtDateLong(d.date)}</h3>
@@ -5092,6 +5304,7 @@ function renderItinerary(){
     </div>
     <div class="tots">
       ${city ? `<span class="pill" style="color:${CITY_COLORS[city] || ''}">🛏 ${esc(city)}</span>` : ''}
+      ${intensity ? `<span class="pill" title="Intensidad estimada del día">${intensity.emoji} ${intensity.label}</span>` : ''}
       ${d.stops.length ? `<span class="pill green">✓ ${doneN}/${d.stops.length}</span>` : ''}
     </div>
     ${d.stops.length ? `<div class="progress"><i style="width:${d.stops.length ? Math.round(doneN / d.stops.length * 100) : 0}%"></i></div>` : ''}
@@ -5116,26 +5329,33 @@ function renderItinerary(){
     return;
   }
 
-  html += '<div class="timeline">';
+  // Prioridad 2: los blocks se acumulan en un array (en vez de concatenar
+  // directo) para poder insertar los extras "si sobra tiempo" justo tras la
+  // parada real de la que son prolongación (insertExtrasInline, igual que en
+  // la Ruta) — se leen como un alto opcional del recorrido, no aparte al final.
+  const blocksArr = [], matchNames = [];
   if(d.pre){
-    const first = placeById(d.stops[0] && d.stops[0].pid);
-    html += transferHTML(d.pre, null, null, curDay, 'pre', '🚄 Cómo llegar');
+    blocksArr.push(transferHTML(d.pre, null, null, curDay, 'pre', '🚄 Cómo llegar'));
+    matchNames.push('');
   }
   d.stops.forEach((s, i) => {
-    html += stopHTML(s, i, curDay);
+    blocksArr.push(stopHTML(s, i, curDay));
+    matchNames.push((placeById(s.pid) || {}).name || '');
     if(i < d.stops.length - 1){
       const a = placeById(s.pid), b = placeById(d.stops[i + 1].pid);
-      html += transferHTML(d.trans[i], a, b, curDay, i, '');
+      blocksArr.push(transferHTML(d.trans[i], a, b, curDay, i, ''));
+      matchNames.push('');
     }
   });
   if(d.post){
-    html += transferHTML(d.post, null, null, curDay, 'post', '🔙 Vuelta');
+    blocksArr.push(transferHTML(d.post, null, null, curDay, 'post', '🔙 Vuelta'));
+    matchNames.push('');
   }
-  html += '</div>';
+  // Sin paradas no hay de qué "ir sobrado": ningún extra se cuelga de un día vacío.
+  const blocks = d.stops.length ? insertExtrasInline(blocksArr, matchNames, d.date) : blocksArr;
+  html += '<div class="timeline">' + blocks.join('') + '</div>';
   if(!d.stops.length) html += emptyDayHTML(d); // Fase 12: EmptyState · invitación de día libre
   html += seasonDayExtras(d); // Fase 12 · Stage 7: Now-Line + Recap durante/después del viaje
-  // 12.62: "si sobra tiempo" solo tiene sentido si HAY plan del que ir sobrado.
-  if(d.stops.length) html += spareTimeHTML(d.date);
   const nightHotel = hotelForNight(d.date); // dónde dormís esta noche (reserva confirmada → Foil)
   if(nightHotel) html += `<div class="night-pass m-foil">🛏 <b>${esc(nightHotel.name)}</b><div class="np-sub">Dónde dormís esta noche · reserva confirmada</div></div>`;
   html += `<button class="add-stop">＋ Añadir parada a este día</button>`;
@@ -5808,6 +6028,18 @@ function extraLatLng(date, near){
   const p = hit || stops[0];
   return [p.lat, p.lng];
 }
+// Prioridad 2: con un día concreto, el pin del extra se separa un poco de la
+// parada real (si no, quedaría exactamente encima, indistinguible) y se lee
+// como una prolongación de ESE punto, no como un pin suelto en cualquier
+// parte del mapa. Ángulo determinista (hash del nombre): estable entre
+// renders, sin Math.random.
+function offsetLatLng(anchor, seed){
+  let h = 0;
+  for(let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const angle = (h % 360) * Math.PI / 180;
+  const R = 0.0025; // ~250 m: se distingue del pin real sin desligarse del sitio
+  return [anchor[0] + Math.sin(angle) * R, anchor[1] + Math.cos(angle) * R];
+}
 
 /* --- M5 · Filtro del mapa por categoría (no persistido, como el original) --- */
 const activeMapCategories = new Set(Object.keys(CATS));
@@ -6122,9 +6354,19 @@ async function renderMapDay(){
   if(extrasVisible){
     const extraDates = day ? [day.date] : days.map(d => d.date).filter(Boolean);
     extraDates.forEach(date => (DAY_EXTRAS[date] || []).forEach(x => {
-      const ll = extraLatLng(date, x.near);
-      if(!ll) return;
-      const mk = L.marker(ll, {icon: L.divIcon({className: 'extra-icon', html: '🎁', iconSize: [24, 24], iconAnchor: [12, 12]})});
+      const anchor = extraLatLng(date, x.near);
+      if(!anchor) return;
+      // Con un día concreto: rama punteada desde la parada real + pin más
+      // pequeño y separado (offsetLatLng), para que se lea como una
+      // prolongación opcional del recorrido. En "Todos" no hay un recorrido
+      // que prolongar entre 21 días: se deja el pin simple de siempre.
+      const ll = day ? offsetLatLng(anchor, x.name) : anchor;
+      if(day){
+        const branch = L.polyline([anchor, ll], {color: '#8a8577', weight: 2, opacity: .7, dashArray: '2,6'});
+        branch.addTo(map); mapLayers.push(branch);
+      }
+      const mk = L.marker(ll, {icon: L.divIcon({className: 'extra-icon', html: '🎁',
+        iconSize: day ? [20, 20] : [24, 24], iconAnchor: day ? [10, 10] : [12, 12]})});
       mk.bindPopup(`<b>🎁 ${esc(x.name)}</b><br>${x.mins === 0 ? 'en la puerta de' : x.mins + ' min de'} ${esc(x.near)}<br>${esc(x.why)}`);
       mk.addTo(map); mapLayers.push(mk);
     }));
@@ -6490,6 +6732,7 @@ $('#itinModeSeed').addEventListener('click', () => setItinMode('seed'));
 $('#itinModeDani').addEventListener('click', () => setItinMode('dani'));
 onClick('#itinModeMaria', () => setItinMode('maria'));
 onClick('#cordBack', () => zoomOut());
+onClick('#btnRealidadIcs', downloadRealidadICS);
 $('#btnDaniPdf').href = DANI_PDF_URL;
 const rutaDocBtn = $('#btnRutaDoc'); if(rutaDocBtn) rutaDocBtn.href = RUTA_DOC_URL;
 renderAll();
