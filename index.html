@@ -4763,19 +4763,21 @@ function extraEntryHTML(x){
 }
 // Empareja cada extra con la parada real más parecida por nombre (mismo
 // criterio que extraLatLng en el mapa) y lo inserta justo después en la
-// lista de filas ya renderizadas; sin match, va al final del día.
+// lista de filas ya renderizadas; sin match, va al final del día. Se
+// ordenan por índice de parada ANTES de insertar (DAY_EXTRAS no promete
+// venir en orden cronológico): insertar en orden de aparición es lo único
+// que hace que el offset acumulado siga apuntando al hueco correcto.
 function insertExtrasInline(rowsArr, matchNames, date){
   const extras = DAY_EXTRAS[date];
   if(!extras || !extras.length) return rowsArr;
   const out = rowsArr.slice();
-  let offset = 0;
-  extras.forEach(x => {
+  const withIdx = extras.map(x => {
     const n = x.near.toLowerCase();
     let idx = matchNames.findIndex(name => name && (n.includes(name.toLowerCase()) || name.toLowerCase().includes(n)));
     if(idx === -1) idx = matchNames.length - 1;
-    out.splice(idx + 1 + offset, 0, extraEntryHTML(x));
-    offset++;
-  });
+    return {x, idx};
+  }).sort((a, b) => a.idx - b.idx);
+  withIdx.forEach(({x, idx}, offset) => out.splice(idx + 1 + offset, 0, extraEntryHTML(x)));
   return out;
 }
 // 12.64 (Prioridad 6): transporte del día DENTRO de la Ruta, reutilizando

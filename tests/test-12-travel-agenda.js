@@ -95,6 +95,27 @@ const oneDayHTML = els['#dayPanel'].innerHTML;
 check('P2 (Ruta): con un día concreto, los extras se leen dentro del recorrido (opt-stop), no aparte',
   count(oneDayHTML, 'class="opt-stop"') === nExtras && !oneDayHTML.includes('class="m-washi spare-time"'));
 
+// Orden: DAY_EXTRAS no promete llegar en orden cronológico. Si el extra que
+// hace referencia a la ÚLTIMA parada viene ANTES en el array que el que
+// referencia la PRIMERA, deben seguir insertándose en orden de aparición en
+// el día (offset acumulado por posición, no por orden de llegada).
+{
+  const rd = api.RUTA_DAYS[rutaDayIdx];
+  const firstName = api.placeById(api.canonicalPid(rd.stops[0].pid)).name;
+  const lastName = api.placeById(api.canonicalPid(rd.stops[rd.stops.length - 1].pid)).name;
+  const savedExtras = api.DAY_EXTRAS[rd.date];
+  api.DAY_EXTRAS[rd.date] = [
+    { name: 'Extra del final', near: lastName, mins: 5, why: 'test' },
+    { name: 'Extra del principio', near: firstName, mins: 5, why: 'test' },
+  ];
+  api.renderItinerary();
+  const orderedHTML = els['#dayPanel'].innerHTML;
+  api.DAY_EXTRAS[rd.date] = savedExtras;
+  check('P2: extras fuera de orden en DAY_EXTRAS se insertan en orden de aparición en el día',
+    orderedHTML.indexOf('Extra del principio') > -1 && orderedHTML.indexOf('Extra del final') > -1 &&
+    orderedHTML.indexOf('Extra del principio') < orderedHTML.indexOf('Extra del final'));
+}
+
 // Realidad: mismo criterio, siempre a nivel de un día concreto.
 api.setItinMode('ours');
 const realHasStops = api.state.days[rutaDayIdx].stops.length > 0;
