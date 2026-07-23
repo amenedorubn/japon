@@ -83,9 +83,11 @@ Antes de proceder, pregunta si:
 ## 🚀 Estado actual
 
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; última
-  materialización **12.64** (La Ruta es la referencia principal — Propuesta oculta de la UI pero
-  intacta en código/datos; mapa↔itinerario sincronizados por día; capa de mapa propia para "Si
-  sobra tiempo"; transporte del día visible dentro de la Ruta).
+  materialización **12.66–12.67** (`dayTimeline()`: agenda cronológica del día, fuente única para
+  el render de la app y el export .ics; el mapa ya filtra de verdad por día seleccionado — fix
+  12.65 — y el toggle 🎁 Extras es independiente del itinerario). El docx (`Ruta-21-dias.docx`)
+  queda deliberadamente FUERA de esa fuente única por ahora: ya tiene narrativa más rica de la que
+  `dayTimeline()` deriva hoy, y regenerarlo sería una regresión (ver PROJECT.md §7).
 - Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Dani · María; Propuesta oculta pero
   restaurable) · Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
