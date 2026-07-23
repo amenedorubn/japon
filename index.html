@@ -4821,6 +4821,73 @@ function timelineEntryHTML(e, extra){
     </span>
   </div>`;
 }
+/* 12.66 (Prioridad 2, ronda 2) · Export a calendario (.ics), MISMA fuente que
+   el render de arriba: un evento por cada entrada de dayTimeline() (más los
+   vuelos, de FLIGHTS). Se omiten los tramos de transporte puramente
+   inferidos (sin nota real ni reserva) para no llenar el calendario de
+   "A pie 5 min" entre paradas — ruido que ya se ve en la app, no hace falta
+   duplicarlo como evento. Asia/Tokyo fijo (Japón no tiene horario de
+   verano): un VTIMEZONE mínimo basta. */
+const icsEscape = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+const icsDT = (dateISO, hhmm) => dateISO.replace(/-/g, '') + 'T' + hhmm.replace(':', '') + '00';
+function icsFlightEndDate(dateISO, dep, arr){
+  return timeToMin(arr) < timeToMin(dep) ? isoDate(addDays(new Date(dateISO + 'T00:00:00'), 1)) : dateISO;
+}
+// Los vuelos cruzan 3 husos (Madrid/Helsinki/Tokio) y dep/arr vienen en la
+// hora LOCAL de cada aeropuerto (notación estándar de itinerario): a
+// diferencia del resto de la agenda (todo Japón, un huso fijo sin DST), aquí
+// hace falta un offset por ciudad. Abril 2027 cae en horario de verano
+// europeo (DST empieza el último domingo de marzo); Japón no tiene DST.
+const AIRPORT_UTC_OFFSET_MIN = {MAD: 120, HEL: 180, NRT: 540};
+function icsFlightUTC(cityStr, dateISO, hhmm){
+  const code = (String(cityStr).match(/\(([A-Z]{3})\)/) || [])[1];
+  const offset = AIRPORT_UTC_OFFSET_MIN[code] || 540;
+  const [y, mo, d] = dateISO.split('-').map(Number);
+  const [h, mi] = hhmm.split(':').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d, h, mi) - offset * 60000);
+  const p = n => String(n).padStart(2, '0');
+  return dt.getUTCFullYear() + p(dt.getUTCMonth() + 1) + p(dt.getUTCDate()) + 'T' +
+    p(dt.getUTCHours()) + p(dt.getUTCMinutes()) + '00Z';
+}
+function rutaICS(){
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Japon 2027//La Ruta 21 dias//ES', 'CALSCALE:GREGORIAN',
+    'BEGIN:VTIMEZONE', 'TZID:Asia/Tokyo', 'BEGIN:STANDARD', 'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0900', 'TZOFFSETTO:+0900', 'TZNAME:JST', 'END:STANDARD', 'END:VTIMEZONE'];
+  RUTA_DAYS.forEach(rd => {
+    if(rd.flight){
+      flightsOn(rd.date).forEach(f => {
+        const endDate = icsFlightEndDate(rd.date, f.dep, f.arr);
+        lines.push('BEGIN:VEVENT', 'UID:' + rd.date + '-' + f.flight + '@japon2027',
+          'DTSTART:' + icsFlightUTC(f.from, rd.date, f.dep),
+          'DTEND:' + icsFlightUTC(f.to, endDate, f.arr),
+          'SUMMARY:' + icsEscape('✈️ ' + f.flight + ' ' + f.from + ' → ' + f.to),
+          'DESCRIPTION:' + icsEscape([f.terminal, f.note].filter(Boolean).join(' · ')), 'END:VEVENT');
+      });
+      return;
+    }
+    dayTimeline(rd).forEach((e, i) => {
+      if(e.kind === 'transit' && !e.notes && !e.reservation) return;
+      const summary = e.kind === 'activity' ? e.name : `🚉 ${e.from} → ${e.to}`;
+      const desc = e.kind === 'activity' ? e.notes
+        : [e.mode, e.notes, (e.segs || []).map(s => s[2] + ' · ' + s[3]).join(' · ')].filter(Boolean).join(' · ');
+      lines.push('BEGIN:VEVENT', 'UID:' + rd.date + '-' + i + '@japon2027',
+        'DTSTART;TZID=Asia/Tokyo:' + icsDT(rd.date, e.start), 'DTEND;TZID=Asia/Tokyo:' + icsDT(rd.date, e.end),
+        'SUMMARY:' + icsEscape(summary));
+      if(desc) lines.push('DESCRIPTION:' + icsEscape(desc));
+      lines.push('END:VEVENT');
+    });
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadRutaICS(){
+  const blob = new Blob([rutaICS()], {type: 'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ruta-japon-2027.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 function renderRutaItinerary(){
   const chips = $('#dayChips'); if(chips) chips.innerHTML = '';
   let html = `<div class="card" style="padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--muted)">
@@ -4829,7 +4896,10 @@ function renderRutaItinerary(){
     descartes razonados) y entran Himeji, Tsukiji, el castillo de Osaka o Umeda Sky por mérito.
     Trenes, comidas y noches resueltos; el 19-abr es el 🎂 y se celebra.
     No es el viaje: plantad con ＋ lo que os convenza. El documento 📄 la cuenta hora a hora.
-    <div style="margin-top:8px"><button class="btn ghost small" id="rutaToTransport">🚄 Trenes y buses a reservar →</button></div></div>`;
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost small" id="rutaToTransport">🚄 Trenes y buses a reservar →</button>
+      <button class="btn ghost small" id="rutaToCalendar">📅 Exportar a calendario (.ics)</button>
+    </div></div>`;
   html += dayIndices(RUTA_DAYS.length).map(i => {
     const rd = RUTA_DAYS[i];
     const planned = new Set(((state.days[i] || {}).stops || []).map(s => s.pid));
@@ -4860,6 +4930,7 @@ function renderRutaItinerary(){
     const t = $('#transportList');
     if(t && t.scrollIntoView) t.scrollIntoView({behavior: 'smooth', block: 'start'});
   });
+  onClick('#rutaToCalendar', downloadRutaICS);
   bindPlaceOpen('#dayPanel .tl-activity');
 }
 /* --- Vista "María" (12.52) · el viaje que ella HIZO en 2024, como referencia
