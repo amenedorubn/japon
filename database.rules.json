@@ -1,0 +1,41 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "proyectos": {
+
+      "viaje-japon": {
+
+        ".read": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": false,
+
+        "state": {
+          ".write": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'"
+        },
+
+        "tripTitle": {
+          ".write": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/role').val() === 'admin'"
+        },
+
+        "access": {
+          ".read": "auth != null",
+
+          "users": {
+            "$uid": {
+              ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('status').val() === 'pending' && newData.child('role').val() === 'user') || root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/role').val() === 'admin')",
+              "uid":    { ".validate": "newData.val() === $uid" },
+              "role":   { ".validate": "newData.val() === 'user' || newData.val() === 'admin'" },
+              "status": { ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'" }
+            }
+          }
+        }
+      },
+
+      "japon27-app-v2": {
+        ".read": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'",
+        ".write": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'"
+      }
+    }
+  }
+}
