@@ -25,8 +25,11 @@
     name: 'Japón 2027',
     short_name: 'Japón 2027',
     description: 'Planificador compartido del viaje a Japón · 8–28 abril 2027.',
-    start_url: location.pathname + location.search + location.hash,
-    scope: location.pathname.replace(/[^/]*$/, ''),
+    // URLs absolutas: el manifest se sirve desde un blob:, que no tiene
+    // estructura de carpetas para resolver rutas relativas (Chrome las
+    // marcaba como inválidas). Con origin+pathname no hace falta resolver.
+    start_url: location.origin + location.pathname,
+    scope: location.origin + location.pathname.replace(/[^/]*$/, ''),
     display: 'standalone',
     display_override: ['standalone', 'fullscreen', 'minimal-ui', 'browser'],
     background_color: '#f6f4ee',
