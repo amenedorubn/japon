@@ -19,14 +19,25 @@
         },
 
         "access": {
-          ".read": "auth != null",
+
+          "adminEmail": {
+            ".read": "auth != null"
+          },
 
           "users": {
+            ".read": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/role').val() === 'admin'",
+
             "$uid": {
-              ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('status').val() === 'pending' && newData.child('role').val() === 'traveler') || root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/role').val() === 'admin')",
-              "uid":    { ".validate": "newData.val() === $uid" },
-              "role":   { ".validate": "newData.val() === 'traveler' || newData.val() === 'admin'" },
-              "status": { ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'" }
+              ".read": "auth != null && auth.uid === $uid",
+              ".write": "auth != null && ((auth.uid === $uid && !data.exists() && auth.token.email_verified === true && newData.child('status').val() === 'pending' && newData.child('role').val() === 'traveler') || root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/role').val() === 'admin')",
+
+              "uid":         { ".validate": "newData.val() === $uid" },
+              "email":       { ".validate": "auth.uid !== $uid || newData.val() === auth.token.email" },
+              "displayName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+              "photoURL":    { ".validate": "newData.isString() && newData.val().length <= 500" },
+              "createdAt":   { ".validate": "newData.isNumber()" },
+              "role":        { ".validate": "newData.val() === 'traveler' || newData.val() === 'admin'" },
+              "status":      { ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'" }
             }
           }
         }
