@@ -1,4 +1,8 @@
-# CLAUDE.md — Proyecto Japón 2027
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Proyecto Japón 2027
 
 ## 🎯 Propósito
 
@@ -14,12 +18,73 @@ Este archivo es solo el resumen de comportamiento; si algo contradice a PROJECT.
 
 ## 📋 Stack real
 
-- **App:** UNA página (`index.html`, ~5.6k líneas: HTML + CSS + JS vanilla). Sin framework,
+- **App:** UNA página (`index.html`, ~7.3k líneas: HTML + CSS + JS vanilla). Sin framework,
   sin build, sin TypeScript, sin dependencias de runtime. Leaflet 1.9 por CDN.
 - **Offline:** `sw.js` (service worker cache-first).
 - **Publicación:** GitHub Pages. **Sync:** Firebase RTDB compartida entre los 3 móviles.
 - **Tests:** `node tests/run-all.js` (Node ≥18, sin frameworks de test).
 - **Dev-time:** importadores en `tools/` (Node puro; Playwright SOLO para el de María).
+
+## ⚙️ Comandos
+
+```bash
+node tests/run-all.js                      # suite completa (obligatorio antes de cada commit)
+```
+
+```bash
+node tests/run-all.js live.json            # + suite 8c (gate de paridad contra un volcado real)
+```
+
+El volcado en vivo NUNCA se versiona (está en `.gitignore`); se obtiene con:
+
+```bash
+curl https://viaje-japon-8748a-default-rtdb.firebaseio.com/proyectos/viaje-japon.json > live.json
+```
+
+**Ejecutar UNA sola suite** tiene truco: los `tests/test-*.js` no leen `index.html`, reciben por
+`argv[2]` la ruta del JS ya extraído. `run-all.js` lo escribe en
+`<tmp>/japon27-app-under-test.js`, así que tras una pasada completa basta con:
+
+```bash
+node tests/test-12-ruta.js "$TEMP/japon27-app-under-test.js"
+```
+
+En PowerShell el mismo fichero es `$env:TEMP\japon27-app-under-test.js`. Si `index.html` cambió
+después, vuelve a lanzar `run-all.js` (regenera el extracto) antes de repetir la suite suelta.
+
+**Servidor local** (smoke HTTP obligatorio antes de commitear: `index.html`, `sw.js` y el PDF en
+200) — `http://localhost:8734/`. Preferible arrancarlo con la herramienta de preview
+(`.claude/launch.json`, configuración `japon2027`) en vez de a mano:
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File .claude/serve.ps1
+```
+
+**Importadores dev-time** (todos siguen el patrón import→bake→seed; `--bake` es lo que reescribe
+el bloque correspondiente dentro de `index.html`):
+
+```bash
+node tools/docx-import.js --bake            # Itinerario.docx  -> DOCX_OURS_IDS
+```
+
+```bash
+node tools/dani-import.js --bake            # PDF de Dani      -> DANI_PLACES_RAW
+```
+
+```bash
+node tools/maria-xlsx-import.js --bake      # planningjapon.xlsx (local, no versionado)
+```
+
+`tools/maria-import.js` es la excepción: necesita `npm i` + `npx playwright install chromium`
+porque resuelve las listas de Google Maps con un navegador real.
+
+**Exportador de calendario** (el inverso: lee `index.html` y escribe assets estáticos). Regenerar
+y COMITEAR tras tocar `RUTA_DAYS`/`TRANSPORT`/`FLIGHTS`; con volcado en vivo genera también el
+plan real:
+
+```bash
+node tools/ics-export.js [live.json]
+```
 
 ## 🏗️ Estructura real de directorios
 
@@ -28,14 +93,33 @@ japon/
 ├── index.html               LA app entera (datos horneados entre marcadores)
 ├── sw.js                    Service worker offline
 ├── index-pre-source.html    App original, referencia SOLO LECTURA (no borrar)
-├── tools/                   Importadores dev-time (import→bake→seed)
+├── database.rules.json      Reglas RTDB (fuente en el repo; se pegan A MANO en la consola)
+├── tools/                   Importadores dev-time (import→bake→seed) + ics-export.js
 ├── import/                  Datos extraídos que se hornean en index.html
 ├── tests/                   Suite de regresión + run-all.js
 ├── design/                  Sistema de diseño modular (+ DIRECTION.md, DESIGN.md)
+├── *.ics                    Feeds de calendario estáticos (generados, se comitean)
 ├── Itinerario.docx          Fuente de la procedencia "ours"
 ├── JAPON-DEFINITIVO-Dani.pdf  Fuente de los lugares de Dani
 └── PROJECT.md · PRODUCT.md · PARITY.md · CLAUDE.md
 ```
+
+## 🔑 Tres contratos que atan todo el repo
+
+Entender estos tres explica por qué el proyecto se toca de una forma y no de otra:
+
+1. **Contrato de extracción de tests.** Todo el JS de la app vive en el ÚNICO bloque
+   `<script>"use strict";…</script>` justo antes de `</body>`; `run-all.js` lo extrae con una
+   regex, hace `node --check` y lo ejecuta con stubs de DOM/Leaflet. Añadir un segundo `<script>`
+   ahí, o cambiar ese preámbulo, deja la suite entera a ciegas.
+2. **Marcadores de horneado.** Los datos de fuentes externas nunca se escriben a mano: viven entre
+   pares `// @@X_START` / `// @@X_END` dentro de `index.html` y los reescriben los importadores
+   (`DANI_PLACES`, `OURS_IDS`, `MARIA_TRIP`, `INSTA_PLACES`, `AI_PLACES`). Editar a mano dentro de
+   un marcador se pierde en el siguiente `--bake`.
+3. **Política Firebase v2-only.** Exactamente 3 `fb.set` en toda la app (`pushRemote → state/v2`,
+   `pushPlaces → state/places`, `pushTitle → tripTitle`) y ni uno más. `state/days` y
+   `state/transfers` son archivo congelado de la app original: se leen, jamás se escriben.
+   Es el invariante nº 1 (PROJECT.md §5).
 
 ## ✅ Patrones que USAMOS (respétalos)
 
@@ -48,6 +132,8 @@ japon/
   zona (derivada de coordenadas, nunca persistida). No mezclarlos.
 - **Tests contra el código real**: `run-all.js` extrae el JS de `index.html` y lo ejecuta con
   stubs de DOM/Leaflet. Los tests dependen del contrato del DOM (ids, clases-gancho, `data-pid`).
+- **Servicios externos en cola, nunca en paralelo**: Nominatim 1,15 s entre peticiones, OSRM en
+  cola de 250 ms, con caché en localStorage. Son servicios públicos con rate-limit.
 
 ## ❌ NUNCA hagas esto
 
@@ -60,6 +146,8 @@ japon/
 - **No dejes TODOs o FIXMEs sin contexto.**
 - **No re-implementes lo descartado** (PROJECT.md §8: presupuesto, días variables, IA de 5
   pestañas Hoy/Plan/Ideas/Mapa/Guía rechazada el 19-jul-2026, etc.) sin decisión del usuario.
+- **No metas datos privados de terceros en el repo**: es PÚBLICO (GitHub Pages). `planningjapon.xlsx`
+  está en `.gitignore` por eso; su importador hornea solo lo publicable.
 
 ## 🔄 Cuando tengas dudas, PREGUNTA
 
@@ -114,6 +202,11 @@ Antes de proceder, pregunta si:
   (`Ruta-21-dias.docx`) queda deliberadamente FUERA de esa fuente única por ahora: ya tiene
   narrativa más rica de la que `dayTimeline()` deriva hoy, y regenerarlo sería una regresión (ver
   PROJECT.md §7).
+- **Después de 12.75** (endurecimiento, sin número de materialización): `database.rules.json`
+  entra al repo con las reglas RTDB reales (lectura y escritura solo para uid aprobado, `tripTitle`
+  solo admin, lista de usuarios cerrada, autorregistro validado a `pending`/`traveler` con email
+  verificado) y se corrige el `start_url`/`scope` del manifest PWA dinámico. Las reglas del repo
+  son la FUENTE, pero solo aplican cuando el usuario las pega en la consola de Firebase.
 - Pestañas vigentes: Ideas · Itinerarios (Realidad · Ruta · Dani · María; Propuesta oculta pero
   restaurable) · Confirmado · Hoteles · Guía.
 - Decisiones del 19-jul-2026: propuesta de 5 pestañas RECHAZADA; el reparto de alojamientos
@@ -123,7 +216,7 @@ Historia completa de fases, invariantes y supuestos: `PROJECT.md` §7, §12 y §
 
 ---
 
-**Última actualización:** 23 de julio de 2026
+**Última actualización:** 28 de julio de 2026
 **Mantenedor:** amenedorubn
 **Sincronización:** Archivado en Git. Actualizar cuando cambien decisiones arquitectónicas.
 
