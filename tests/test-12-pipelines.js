@@ -128,18 +128,39 @@ api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo di
 
 // ---- 4) real committed arrays are still empty; boot didn't break ----
 check('real build: AI_PLACES is empty (no real data curated yet)', Array.isArray(api.AI_PLACES) && api.AI_PLACES.length === 0);
-// INSTA_PLACES ya NO está vacío: trae el primer sitio curado de verdad
-// (Harukas 300, horneado por tools/insta-import.js). Es una lista de SIEMBRA,
-// no un manifiesto: los sitios insta que solo viven en la nube no se tocan.
-check('real build: INSTA_PLACES trae el sitio curado (Harukas 300)',
-  Array.isArray(api.INSTA_PLACES) && api.INSTA_PLACES.length === 1 &&
-  api.INSTA_PLACES[0].name === 'Harukas 300');
+// INSTA_PLACES ya NO está vacío: trae los 29 sitios curados (Harukas 300 más
+// los 28 bajados de la nube en el back-fill). Es una lista de SIEMBRA, no un
+// manifiesto: los sitios insta que solo viven en la nube no se tocan.
+check('real build: INSTA_PLACES trae los 29 sitios curados',
+  Array.isArray(api.INSTA_PLACES) && api.INSTA_PLACES.length === 29 &&
+  api.INSTA_PLACES.some(p => p.name === 'Harukas 300'));
+// Los 28 del back-fill conservan su id de la nube LITERAL. Es lo único que
+// evita el duplicado: si el bake los re-derivase con instaSlug, ensureInstaPlaces
+// no reconocería los que ya están en la nube y sembraría 28 gemelos.
+check('real build: los 28 del back-fill conservan su id id_* de la nube',
+  api.INSTA_PLACES.filter(p => /^id_/.test(p.id || '')).length === 28);
+check('real build: el enlace del reel sobrevive al horneado (video)',
+  api.INSTA_PLACES.filter(p => /^https:\/\/www\.instagram\.com\//.test(p.video || '')).length === 28);
+check('real build: las notas curadas sobreviven al horneado',
+  api.INSTA_PLACES.filter(p => (p.notes || '').trim()).length === 16);
 check('real build: ensureAiPlaces() exposed and a no-op on empty', api.ensureAiPlaces() === false);
 // Ya sembrado en el arranque: la segunda llamada es no-op POR IDEMPOTENCIA
-// (mismo id ya presente), no por lista vacía.
+// (mismos ids ya presentes), no por lista vacía.
 check('real build: ensureInstaPlaces() exposed and idempotent after boot', api.ensureInstaPlaces() === false);
-check('real build: boot unaffected, seed still 441 places (440 + Harukas 300)',
-  api.state.places.filter(Boolean).length === 441);
+// 469 = exactamente el tamaño del catálogo que ya vive en la nube: el back-fill
+// dejó repo y nube en el MISMO conjunto de ids, sin duplicar ni perder nada.
+check('real build: boot unaffected, seed now 469 places (440 + 29 insta)',
+  api.state.places.filter(Boolean).length === 469);
+// El id horneado gana sobre instaSlug: el sitio sembrado ES el de la nube.
+(function(){
+  const seeded = api.state.places.find(p => p && p.id === 'id_jtzldsxjmr3fgmv5');
+  check('back-fill: un sitio con id de la nube se siembra con ESE id, no con uno derivado',
+    !!seeded && seeded.name === 'Round 1 Stadium' && seeded.provenance === 'instagram');
+  check('back-fill: y no existe además un gemelo con id derivado del nombre',
+    !api.state.places.some(p => p && p.id === 'insta_round_1_stadium_osaka'));
+  check('back-fill: el reel y la nota llegan al lugar sembrado',
+    !!seeded && /instagram\.com/.test(seeded.video || '') && /Round 1 Stadium/.test(seeded.notes || ''));
+})();
 
 // ---- 5) coexistence (Fase 1): a synthetic 'ai'-imported place and a
 // synthetic unattributed ('ai' fallback) place both resolve to 'ai',

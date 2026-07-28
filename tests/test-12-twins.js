@@ -3,7 +3,7 @@
 // with DOM/Leaflet stubs and checks: single appearance under 'all' and under
 // each single-source filter, the union of provenance chips, the preserved
 // Dani note in the fused detail, that non-twins are unaffected, and the
-// count sanity (441 data entries, 60 folded duplicates).
+// count sanity (469 data entries, 60 folded duplicates).
 const fs = require('fs');
 const appJs = fs.readFileSync(process.argv[2], 'utf8');
 
@@ -151,14 +151,15 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
     !html.includes('Nota de Dani'));
 })();
 
-// ---- 10) count sanity: 441 data entries unchanged; 60 members folded away ----
-// 441 = los 440 históricos + Harukas 300 (primer sitio insta horneado). El
-// alta fue ADITIVA: ninguna entrada desapareció al sembrarlo.
-check('sanity: total data entries still 441 (nothing deleted)', api.state.places.filter(Boolean).length === 441);
+// ---- 10) count sanity: 469 data entries unchanged; 60 members folded away ----
+// 469 = los 440 históricos + los 29 sitios insta horneados (Harukas 300 y los
+// 28 bajados de la nube). Las altas fueron ADITIVAS: ninguna entrada
+// desapareció, y 469 cuadra exactamente con el catálogo que ya vive en la nube.
+check('sanity: total data entries still 469 (nothing deleted)', api.state.places.filter(Boolean).length === 469);
 const foldedCount = api.state.places.filter(p => p && api.isTwinMember(p.id)).length;
 check('sanity: exactly 60 places fold away as non-anchor twins', foldedCount === 60);
-check('sanity: visible identities with everything active = 441 - 60 = 381',
-  api.state.places.filter(Boolean).length - foldedCount === 381);
+check('sanity: visible identities with everything active = 469 - 60 = 409',
+  api.state.places.filter(Boolean).length - foldedCount === 409);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

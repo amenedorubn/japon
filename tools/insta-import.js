@@ -6,6 +6,14 @@
    Este script (dev-time, Node puro, sin red) parsea cada entrada y escribe
    import/insta-places.json en el mismo formato que produce maria-import.js.
 
+   CAMPO `id` OPCIONAL — back-fill desde la nube. Una entrada puede traer un id
+   explícito, y entonces se propaga TAL CUAL al bloque horneado. Es lo que
+   permite bajar al repo sitios que nacieron en la web desplegada (ids `id_*`
+   generados por el formulario de alta) sin duplicarlos: ensureInstaPlaces hace
+   `m.id || instaSlug(...)`, así que con el id original reconoce el sitio como
+   ya presente y no siembra un gemelo. Sin `id` se deriva del nombre, como
+   siempre; en ese caso RENOMBRAR el sitio cambia su id.
+
    Ese JSON se hornea en index.html en su propio bloque marcado:
      // @@INSTA_PLACES_START
      const INSTA_PLACES = [];
@@ -18,8 +26,9 @@
 
    INVARIANTES DEL PRODUCTO (nunca romper aquí):
    - Nunca se inventan coordenadas: si una entrada no trae Maps, se omite y se avisa.
-   - city debe normalizar a uno de: Tokio, Osaka, Kioto, Kioto y Nara, Nara, Nagano, Nagoya.
-   - cat debe ser uno de: templo, museo, naturaleza, comida, compras, mirador, otro.
+   - city debe normalizar a una region del catálogo (VALID_CITIES).
+   - cat debe ser una categoria de CATS (VALID_CATS).
+   - Un id explícito se respeta LITERALMENTE: jamás se re-deriva ni se normaliza.
 ============================================================================ */
 'use strict';
 const fs = require('fs');
@@ -32,8 +41,17 @@ const INDEX = path.join(ROOT, 'index.html');
 const START_MARKER = '// @@INSTA_PLACES_START';
 const END_MARKER = '// @@INSTA_PLACES_END';
 
-const VALID_CITIES = ['Tokio', 'Osaka', 'Kioto', 'Kioto y Nara', 'Nara', 'Nagano', 'Nagoya'];
-const VALID_CATS = ['templo', 'museo', 'naturaleza', 'comida', 'compras', 'mirador', 'otro'];
+// Vocabulario de `region` del catálogo (el valor que la app pinta como ciudad).
+// Antes solo cubría las 5 ciudades de las listas de María, así que una region
+// legítima de la nube como "Otros" caía a null y el sitio se omitía en silencio.
+const VALID_CITIES = ['Tokio', 'Osaka', 'Kioto', 'Kioto y Nara', 'Nara', 'Nagano', 'Nagoya',
+  'Hiroshima', 'Miyajima', 'Himeji', 'Fukuoka', 'Nikko', 'Kamakura', 'Yokohama',
+  'Monte Fuji', 'Takayama', 'Kanazawa', 'Alpes', 'Excursiones', 'Ideas', 'Otros'];
+// Vocabulario COMPLETO de CATS (index.html). Antes faltaban zona/excursion/
+// alojamiento/transporte: una categoría real como "zona" no estaba en la lista,
+// caía a guessCategory y el sitio cambiaba de categoría sin avisar.
+const VALID_CATS = ['templo', 'museo', 'naturaleza', 'comida', 'compras', 'mirador', 'otro',
+  'zona', 'excursion', 'alojamiento', 'transporte'];
 
 function readInstaData() {
   if (!fs.existsSync(DATA)) throw new Error(`No existe ${path.relative(ROOT, DATA)}`);
@@ -98,6 +116,7 @@ function normalizeCat(raw, fallbackText) {
 
 function buildPlaces(rawEntries) {
   const places = [];
+  const seenIds = new Set();
   for (const e of rawEntries) {
     const name = (e.name || '').trim();
     if (!name) { console.error('✗ entrada sin name, omitida'); continue; }
@@ -106,18 +125,28 @@ function buildPlaces(rawEntries) {
     const city = normalizeCity(e.city);
     if (!city) { console.error(`✗ ${name} — ciudad "${e.city || ''}" no reconocida, omitida`); continue; }
     const cat = normalizeCat(e.cat, `${name} ${e.desc || ''}`);
-    const place = { name, city, lat: coords.lat, lng: coords.lng, cat };
+    // El id explícito viaja LITERAL (es la identidad del sitio en la nube: si
+    // se toca, ensureInstaPlaces siembra un duplicado en vez de reconocerlo).
+    const id = (e.id || '').trim();
+    if (id && seenIds.has(id)) { console.error(`✗ ${name} — id duplicado "${id}", omitida`); continue; }
+    if (id) seenIds.add(id);
+    const place = id ? { id, name, city, lat: coords.lat, lng: coords.lng, cat }
+                     : { name, city, lat: coords.lat, lng: coords.lng, cat };
     if (e.desc) place.notes = e.desc;
+    if (e.reel) place.video = String(e.reel).trim(); // enlace al reel/post original
     places.push(place);
-    console.error(`✓ ${name} — ${city} · ${cat}`);
+    console.error(`✓ ${name} — ${city} · ${cat}${id ? ` · id ${id}` : ' · id derivado del nombre'}`);
   }
   return places;
 }
 
 function fmtEntry(p) {
-  const parts = [`name: ${JSON.stringify(p.name)}`, `city: ${JSON.stringify(p.city)}`];
+  const parts = [];
+  if (p.id) parts.push(`id: ${JSON.stringify(p.id)}`); // primero: es la identidad
+  parts.push(`name: ${JSON.stringify(p.name)}`, `city: ${JSON.stringify(p.city)}`);
   parts.push(`lat: ${p.lat}`, `lng: ${p.lng}`, `cat: ${JSON.stringify(p.cat)}`);
   if (p.notes) parts.push(`notes: ${JSON.stringify(p.notes)}`);
+  if (p.video) parts.push(`video: ${JSON.stringify(p.video)}`);
   return '  {' + parts.join(', ') + '}';
 }
 

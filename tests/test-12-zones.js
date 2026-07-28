@@ -143,8 +143,13 @@ check('kyushu: no se cuela a Honshu (Shimonoseki y Yamaguchi fuera)',
   zoneOf({lat: 33.9576, lng: 130.9412}) !== 'kyushu' &&
   zoneOf({lat: 34.1785, lng: 131.4737}) !== 'kyushu' &&
   !api.pointInPolygon({lat: 33.9576, lng: 130.9412}, KYU_POLY));
-check('kyushu: en la zona caen esos 3 + los 3 sitios de Fukuoka y su base de hotel (Ruta)',
-  places.filter(p => zoneOf(p) === 'kyushu').length === 7);
+// +2 desde el back-fill de Instagram: "Kyūshū" y "Takachiho Gorge" traen región
+// de la nube ("Tokio" y "Otros"), pero la zona la decide la GEOGRAFÍA y ambos
+// caen dentro del polígono de la isla. Es el eje funcionando, no un error de
+// etiquetado: conviven con los `kyushu`/`takachiho` que ya había con otra
+// procedencia, porque son entradas distintas del catálogo.
+check('kyushu: en la zona caen esos 3 + los 3 de Fukuoka + su base de hotel + los 2 de Insta',
+  places.filter(p => zoneOf(p) === 'kyushu').length === 9);
 
 // ================= 5) NO ROMPE LOS OTROS EJES =================
 // Fuente: los 139 de María siguen siendo de María, etc.

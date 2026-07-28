@@ -98,9 +98,9 @@ const markersByTag = tag => layersOfType('marker').filter(l => l._icon && l._ico
 (async () => {
   // Boot sanity: app evaluated, merged seed built (2 airports + 38 catalog +
   // 150 dani + 110 curated folded in = 300, Fase 10a/12; +1 Louis House (Fase 12 §9.4) = 301;
-  // +1 Harukas 300 (primer sitio insta horneado, siembra aditiva) = 302)
+  // +29 insta horneados (Harukas 300 + los 28 bajados de la nube) = 330)
   // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
-  check('boot: merged seed state built (302 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 302);
+  check('boot: merged seed state built (330 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 330);
 
   // Open the itinerary tab (12.54: el mapa vive embebido en Itinerarios; ya no
   // hay pestaña "Mapa" suelta). 12.56: el mapa muestra SOLO el itinerario activo
