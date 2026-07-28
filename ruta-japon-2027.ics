@@ -763,21 +763,28 @@ END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-22-15@japon2027
 DTSTART;TZID=Asia/Tokyo:20270422T170500
-DTEND;TZID=Asia/Tokyo:20270422T183000
-SUMMARY:🚉 Nakatanidou (mochi) → Templo Shitennō-ji
-DESCRIPTION:Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta ~18:00.
+DTEND;TZID=Asia/Tokyo:20270422T175000
+SUMMARY:🚉 Nakatanidou (mochi) → Harukas 300
+DESCRIPTION:Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta 17:05 (Tsuruhashi + JR Loop) → Tennōji ~17:45.
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-22-16@japon2027
-DTSTART;TZID=Asia/Tokyo:20270422T183000
-DTEND;TZID=Asia/Tokyo:20270422T191000
-SUMMARY:Templo Shitennō-ji
-DESCRIPTION:Kintetsu de vuelta y metro a Tennōji: el recinto del templo más antiguo del país (593) al atardecer\, con la pagoda recortada. Estáis a 10 min a pie de Shinsekai.
+DTSTART;TZID=Asia/Tokyo:20270422T175000
+DTEND;TZID=Asia/Tokyo:20270422T190000
+SUMMARY:Harukas 300
+DESCRIPTION:Vuelta de Nara directos a Tennōji: 300 m de altura justo encima de la estación. Entrando ahora se ve Osaka con luz\, la puesta de sol (~18:40) desde la galería de cristal de la planta 60 y la ciudad ya encendida\, todo sin bajar. ~2.000 ¥\, COMPRAR ONLINE. No os perdáis los baños de la 59 ni el Sky Garden al aire libre de la 58.
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-22-18@japon2027
-DTSTART;TZID=Asia/Tokyo:20270422T193000
-DTEND;TZID=Asia/Tokyo:20270422T210000
+DTSTART;TZID=Asia/Tokyo:20270422T191000
+DTEND;TZID=Asia/Tokyo:20270422T193000
+SUMMARY:Templo Shitennō-ji
+DESCRIPTION:Bajáis y en 10 min a pie: el recinto del templo más antiguo del país (593) iluminado\, con la pagoda recortada\, de camino a la cena.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-22-20@japon2027
+DTSTART;TZID=Asia/Tokyo:20270422T194000
+DTEND;TZID=Asia/Tokyo:20270422T211000
 SUMMARY:Shinsekai y Tsūtenkaku
 DESCRIPTION:Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).
 END:VEVENT

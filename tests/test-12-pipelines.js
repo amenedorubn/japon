@@ -128,10 +128,18 @@ api.startApp(); // Prioridad 4: arranque real gateado tras auth; los tests lo di
 
 // ---- 4) real committed arrays are still empty; boot didn't break ----
 check('real build: AI_PLACES is empty (no real data curated yet)', Array.isArray(api.AI_PLACES) && api.AI_PLACES.length === 0);
-check('real build: INSTA_PLACES is empty (no real data curated yet)', Array.isArray(api.INSTA_PLACES) && api.INSTA_PLACES.length === 0);
+// INSTA_PLACES ya NO está vacío: trae el primer sitio curado de verdad
+// (Harukas 300, horneado por tools/insta-import.js). Es una lista de SIEMBRA,
+// no un manifiesto: los sitios insta que solo viven en la nube no se tocan.
+check('real build: INSTA_PLACES trae el sitio curado (Harukas 300)',
+  Array.isArray(api.INSTA_PLACES) && api.INSTA_PLACES.length === 1 &&
+  api.INSTA_PLACES[0].name === 'Harukas 300');
 check('real build: ensureAiPlaces() exposed and a no-op on empty', api.ensureAiPlaces() === false);
-check('real build: ensureInstaPlaces() exposed and a no-op on empty', api.ensureInstaPlaces() === false);
-check('real build: boot unaffected, seed still 440 places', api.state.places.filter(Boolean).length === 440);
+// Ya sembrado en el arranque: la segunda llamada es no-op POR IDEMPOTENCIA
+// (mismo id ya presente), no por lista vacía.
+check('real build: ensureInstaPlaces() exposed and idempotent after boot', api.ensureInstaPlaces() === false);
+check('real build: boot unaffected, seed still 441 places (440 + Harukas 300)',
+  api.state.places.filter(Boolean).length === 441);
 
 // ---- 5) coexistence (Fase 1): a synthetic 'ai'-imported place and a
 // synthetic unattributed ('ai' fallback) place both resolve to 'ai',

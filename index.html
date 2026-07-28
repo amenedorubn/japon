@@ -1810,7 +1810,7 @@ const RUTA_DAYS = [
   S('dani_hozenji','20:45',20,'El templo cubierto de musgo escondido entre bares (se le echa agua).'),
 ]},
 {date:'2027-04-22', city:'Osaka', icon:'🦌', stay:'Osaka, Namba (por reservar)',
-  note:'Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta ~18:00.', stops:[
+  note:'Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta 17:05 (Tsuruhashi + JR Loop) → Tennōji ~17:45.', stops:[
   S('catalog_nara','09:00',45,'Los ciervos que hacen reverencia (las galletas shika senbei, ¥200).'),
   S('todaiji','10:00',75,'El Gran Buda de 15 m en el edificio de madera más grande del mundo.'),
   S('dani_nigatsudo','11:30',30,'La terraza con vistas a Nara: el favorito de Dani, gratis y vacío.'),
@@ -1819,8 +1819,9 @@ const RUTA_DAYS = [
   S('kofukuji','14:30',45,'La pagoda de 5 pisos, recién restaurada.'),
   S('naramachi','15:30',60,'Las machiya del casco viejo: cafés y tiendas de artesanos.'),
   S('nakatanidou','16:45',20,'El mochi más rápido de Japón: el show del machacado y a comerlo caliente.'),
-  S('shitennoji','18:30',40,'Kintetsu de vuelta y metro a Tennōji: el recinto del templo más antiguo del país (593) al atardecer, con la pagoda recortada. Estáis a 10 min a pie de Shinsekai.'),
-  S('shinsekai','19:30',90,'Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).'),
+  S('insta_harukas_300_osaka','17:50',70,'Vuelta de Nara directos a Tennōji: 300 m de altura justo encima de la estación. Entrando ahora se ve Osaka con luz, la puesta de sol (~18:40) desde la galería de cristal de la planta 60 y la ciudad ya encendida, todo sin bajar. ~2.000 ¥, COMPRAR ONLINE. No os perdáis los baños de la 59 ni el Sky Garden al aire libre de la 58.'),
+  S('shitennoji','19:10',20,'Bajáis y en 10 min a pie: el recinto del templo más antiguo del país (593) iluminado, con la pagoda recortada, de camino a la cena.'),
+  S('shinsekai','19:40',90,'Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).'),
 ]},
 {date:'2027-04-23', city:'Osaka', icon:'🍄', stay:'Osaka, Namba (por reservar)',
   note:'USJ: JR Loop + rama Sakurajima a Universal City, 15 min desde Nishikujō.', stops:[
@@ -3269,7 +3270,9 @@ const MARIA_PLACES = [
    desde import/insta-places.json vía tools/insta-import.js --bake. Sin datos
    es un array vacío y no se inventa ningún sitio. */
 // @@INSTA_PLACES_START
-const INSTA_PLACES = [];
+const INSTA_PLACES = [
+  {name: "Harukas 300", city: "Osaka", lat: 34.6459, lng: 135.5136, cat: "mirador", notes: "Mirador del Abeno Harukas, el edificio más alto de Japón (300 m), en Tennōji/Abeno. Planta 60: galería de cristal con vistas 360°. Planta 59: los baños con ventanal de suelo a techo. Planta 58: Sky Garden al aire libre con restaurante. Conectado con la estación de Tennōji (JR y metro) y con Kintetsu Abenobashi. ~2.000 ¥ (~12 €) por adulto, mejor comprado online por adelantado. Abierto de 9:00 a 22:00. El truco: entrar sobre las 17:00-17:30 para encadenar el día, el atardecer y las luces de noche sin volver a bajar."},
+];
 // @@INSTA_PLACES_END
 /* Formato de cada entrada: {name, city, lat, lng, cat, notes?}. Se rellena
    desde import/ai-places.json vía tools/ai-import.js --bake. Sin datos es un

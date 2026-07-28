@@ -1,13 +1,13 @@
 [
   {
-    "name": "",
-    "city": "",
-    "cat": "",
-    "desc": "",
-    "price": "",
-    "hours": "",
-    "duration": "",
+    "name": "Harukas 300",
+    "city": "Osaka",
+    "cat": "mirador",
+    "desc": "Mirador del Abeno Harukas, el edificio más alto de Japón (300 m), en Tennōji/Abeno. Planta 60: galería de cristal con vistas 360°. Planta 59: los baños con ventanal de suelo a techo. Planta 58: Sky Garden al aire libre con restaurante. Conectado con la estación de Tennōji (JR y metro) y con Kintetsu Abenobashi. ~2.000 ¥ (~12 €) por adulto, mejor comprado online por adelantado. Abierto de 9:00 a 22:00. El truco: entrar sobre las 17:00-17:30 para encadenar el día, el atardecer y las luces de noche sin volver a bajar.",
+    "price": "~2.000 ¥ (~12 €) adultos",
+    "hours": "9:00-22:00",
+    "duration": "70 min",
     "reel": "",
-    "maps": ""
+    "maps": "https://www.google.com/maps/search/?api=1&query=34.6459,135.5136"
   }
 ]
