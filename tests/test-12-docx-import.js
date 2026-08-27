@@ -120,8 +120,11 @@ check('gemelos: un par de ejemplo sigue funcionando (kiyomizu ancla, dani_kiyomi
   api.twinGroupOf('kiyomizu') !== null && api.isTwinMember('dani_kiyomizu') === true);
 
 // ---- 6) Ni el eje confirmado (incluido el fix de dani_) ----
-check('confirmado: bookedHotels() sigue siendo solo nuestras 2 reservas reales',
-  api.bookedHotels().map(p => p.id).sort().join(',') === 'apa_asakusabashi,id_louis_otsuka_nishi');
+// v2 (27-ago-2026): las 7 bases de la Ruta también son reservas reales (ensureHotelFixes).
+check('confirmado: bookedHotels() sigue siendo solo nuestras 9 reservas reales',
+  api.bookedHotels().map(p => p.id).sort().join(',') ===
+    'apa_asakusabashi,id_inova_kanazawa,id_kuwataniya,id_kyoto_guesthouse,id_louis_otsuka_nishi,' +
+    'id_nakasu_inn,id_sunshine_kinugawa,id_twilight_osaka,id_vessel_hiroshima');
 check('confirmado: ningún id del documento cuenta como reserva',
   genIds.every(id => api.isBookedHotel(byId(id)) === false));
 check('confirmado: los alojamientos de Dani siguen sin colarse (fix intacto)',

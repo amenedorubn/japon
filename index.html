@@ -3976,7 +3976,8 @@ function placeView(p){
     source: p.source || (p.catalogItem ? 'catalog' : 'user'), dani: !!p.dani,
     address: p.address || '', hotelArea: p.hotelArea || '', checkIn: p.checkIn || '',
     checkOut: p.checkOut || '', bookingRef: p.bookingRef || '', hotelPhone: p.hotelPhone || '',
-    hotelWebsite: p.hotelWebsite || '', provenance: p.provenance || provenanceOf(p),
+    hotelWebsite: p.hotelWebsite || '', confirmUrl: p.confirmUrl || '',
+    provenance: p.provenance || provenanceOf(p),
     confirmed: isConfirmed(p), sealed: p.confirmed === true};
 }
 /* Noches entre dos fechas ISO (portado de la app original) */
@@ -4102,6 +4103,48 @@ function ensureHotelFixes(){
     });
     changed = true;
   }
+  // v2 (27-ago-2026): las 7 bases de la Ruta también están reservadas y confirmadas.
+  // lat/lng son un PIN APROXIMADO (zona/estación conocida, no la puerta del hotel):
+  // sin la dirección exacta del PDF de confirmación todavía. Afinar con el buscador
+  // del formulario ✏️ Editar en cuanto llegue el PDF real (no antes).
+  const NEW_HOTELS = [
+    {id: 'id_sunshine_kinugawa', name: 'Hotel Sunshine Kinugawa', region: 'Nikko',
+      hotelArea: 'Kinugawa Onsen', lat: 36.805, lng: 139.744,
+      checkIn: '2027-04-12', checkOut: '2027-04-13', price: '198 € · 1 noche · media pensión',
+      notes: 'Media pensión (cena + desayuno). Prohibido el acceso a los baños comunes con '+
+        'tatuajes visibles; hay onsen privado reservable.'},
+    {id: 'id_inova_kanazawa', name: 'INOVA Kanazawa', region: 'Kanazawa',
+      hotelArea: 'Kanazawa centro', lat: 36.5613, lng: 136.6562,
+      checkIn: '2027-04-13', checkOut: '2027-04-15', price: '144 € · 2 noches · Superior Triple'},
+    {id: 'id_kuwataniya', name: 'Minshuku Kuwataniya', region: 'Takayama',
+      hotelArea: 'Takayama', lat: 36.1408, lng: 137.2531,
+      checkIn: '2027-04-15', checkOut: '2027-04-16', price: '121 € · 1 noche',
+      notes: 'Baños y aseos compartidos, sin duchas individuales (onsen común 07:00–09:00 y '+
+        '16:00–22:00). Desayuno solo con reserva la tarde anterior; sin cena.'},
+    {id: 'id_kyoto_guesthouse', name: 'Kyoto Guesthouse', region: 'Kioto',
+      hotelArea: 'Shijō-Ōmiya', lat: 35.0026, lng: 135.7470,
+      checkIn: '2027-04-16', checkOut: '2027-04-19', price: '229 € · 3 noches · japonesa B',
+      notes: 'Check-in solo de 16:00 a 19:00.'},
+    {id: 'id_vessel_hiroshima', name: 'Vessel Hotel Hiroshima Peace Blvd', region: 'Hiroshima',
+      hotelArea: 'Heiwa Odori', lat: 34.3930, lng: 132.4600,
+      checkIn: '2027-04-19', checkOut: '2027-04-20', price: '79 € · 1 noche'},
+    {id: 'id_nakasu_inn', name: 'Hotel Hakata Nakasu Inn', region: 'Fukuoka',
+      hotelArea: 'Nakasu', lat: 33.5925, lng: 130.4017,
+      checkIn: '2027-04-20', checkOut: '2027-04-21', price: '76 € · 1 noche · triple',
+      notes: 'Check-in hasta las 00:00. Dentro de la propia isla de Nakasu, cruzando la calle '+
+        'de los yatai.'},
+    {id: 'id_twilight_osaka', name: 'Twilight Osaka Inn', region: 'Osaka',
+      hotelArea: 'Tengachaya', lat: 34.6437, lng: 135.4894,
+      checkIn: '2027-04-21', checkOut: '2027-04-25', price: '150 € · 4 noches · cuádruple'},
+  ];
+  NEW_HOTELS.forEach(h => {
+    const exists = state.places.some(p => p && (p.id === h.id ||
+      (/alojamiento/.test(p.category || '') && p.name === h.name)));
+    if(exists) return;
+    state.places.push(Object.assign({category: 'alojamiento', source: 'user', dur: 45,
+      provenance: 'ours', confirmed: true, dayId: null, time: ''}, h));
+    changed = true;
+  });
   return changed;
 }
 /* Resolución del catálogo ÚNICO (Fase 10): todo lugar vive en state.places. */
@@ -4403,6 +4446,10 @@ function openPlaceForm(placeId, presetCat){
         <div class="form-row"><label>Teléfono</label><input id="fpHotelPhone" value="${p ? esc(p.hotelPhone || '') : ''}" placeholder="+81 …"></div>
         <div class="form-row"><label>Web del hotel</label><input id="fpHotelWebsite" value="${p ? esc(p.hotelWebsite || '') : ''}" placeholder="https://…"></div>
       </div>
+      <div class="form-row"><label>Confirmación (enlace privado)</label>
+        <input id="fpConfirmUrl" value="${p ? esc(p.confirmUrl || '') : ''}" placeholder="Enlace a Drive/Dropbox con el PDF de la reserva…">
+        <small style="color:var(--muted)">Nunca subáis el PDF al repo (es público): un enlace a una carpeta privada compartida solo entre vosotros.</small>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn" id="fpSave">${p ? 'Guardar cambios' : 'Añadir sitio'}</button>
@@ -4457,6 +4504,8 @@ function savePlaceForm(placeId){
   if(pendingLat == null){ toast('Busca una dirección o toca el mini-mapa'); return; }
   const video = $('#fpVideo').value.trim();
   if(video && !/^https?:\/\//i.test(video)){ toast('El enlace del vídeo no es una URL válida'); return; }
+  const confirmUrlInput = $('#fpConfirmUrl') ? $('#fpConfirmUrl').value.trim() : '';
+  if(confirmUrlInput && !/^https?:\/\//i.test(confirmUrlInput)){ toast('El enlace de confirmación no es una URL válida'); return; }
   const sourceVal = $('#fpSource').value || 'user';
   const data = {name, category: $('#fpCat').value, region: $('#fpRegion').value.trim() || 'Mis sitios',
     source: sourceVal, dani: sourceVal === 'dani',
@@ -4465,7 +4514,7 @@ function savePlaceForm(placeId){
     address: $('#fpAddress').value.trim(), hotelArea: $('#fpHotelArea').value.trim(),
     checkIn: $('#fpCheckIn').value, checkOut: $('#fpCheckOut').value,
     bookingRef: $('#fpBookingRef').value.trim(), hotelPhone: $('#fpHotelPhone').value.trim(),
-    hotelWebsite: $('#fpHotelWebsite').value.trim()};
+    hotelWebsite: $('#fpHotelWebsite').value.trim(), confirmUrl: confirmUrlInput};
   if(placeId){
     const p = state.places.find(x => x.id === placeId);
     if(p){
@@ -4514,8 +4563,18 @@ $('#btnAddPlace').addEventListener('click', () => openPlaceForm(null));
    original: address, checkIn/Out, bookingRef, hotelPhone, …) +
    las bases "por reservar" sugeridas del catálogo como referencia.
 ================================================================ */
+// v2 (27-ago-2026): estas 7 bases quedaron redundantes en cuanto sus fechas
+// pasaron a tener reserva real (ensureHotelFixes); mostrarlas junto a la
+// tarjeta ✓ Reservado de la misma ciudad sería confuso. Se ocultan de la
+// lista de sugerencias sin borrar la ficha (decisión pendiente, ver CLAUDE.md).
+// hotel_tokyo NO se oculta: sigue siendo una sugerencia real para fechas sin
+// reserva (noches extra en Tokio), no un duplicado de Louis House/APA.
+const REDUNDANT_HOTEL_BASES = new Set([
+  'hotel_nikko', 'hotel_kanazawa', 'hotel_takayama', 'hotel_kyoto',
+  'hotel_hiroshima', 'hotel_fukuoka', 'hotel_osaka',
+]);
 function hotelBasePlaceholders(){
-  return state.places.filter(hotelPlaceholderBase)
+  return state.places.filter(p => hotelPlaceholderBase(p) && !REDUNDANT_HOTEL_BASES.has(p.id))
     .map(p => ({pid: p.id, p: placeView(p)}));
 }
 // 12.64 (Prioridad 2): fechas/noches reales de NIGHTS para una base "por
@@ -4527,6 +4586,9 @@ function nightsForCity(city){
 function hotelCardHTML(p){
   const nights = daysBetween(p.checkIn, p.checkOut);
   const website = p.hotelWebsite && /^https?:\/\//i.test(p.hotelWebsite) ? p.hotelWebsite : '';
+  // Enlace privado a la confirmación (Drive/Dropbox compartido solo entre vosotros):
+  // el PDF NUNCA vive en el repo, es público (GitHub Pages). Ver nota en el formulario.
+  const confirmUrl = p.confirmUrl && /^https?:\/\//i.test(p.confirmUrl) ? p.confirmUrl : '';
   const src = sourceValueForPlace(p);
   const srcPill = src === 'dani' ? '<span class="pill" style="color:#223A5E">D Dani</span>'
     : src === 'insta' ? '<span class="pill" style="color:#C13584">I Insta</span>'
@@ -4550,6 +4612,7 @@ function hotelCardHTML(p){
     ${p.notes ? `<div style="font-size:12.5px;color:var(--muted)">${esc(p.notes)}</div>` : ''}
     <div class="btn-row" style="margin-top:2px">
       ${website ? `<a class="btn ghost small" href="${esc(website)}" target="_blank" rel="noopener">🌐 Web</a>` : ''}
+      ${confirmUrl ? `<a class="btn ghost small" href="${esc(confirmUrl)}" target="_blank" rel="noopener">📄 Confirmación</a>` : ''}
       <a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">🗺️ Maps</a>
       <button class="btn ghost small h-edit" data-pid="${p.id}">✏️ Editar</button>
     </div>

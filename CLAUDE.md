@@ -189,6 +189,24 @@ Antes de proceder, pregunta si:
   `fukuoka`/`osaka` del catálogo ("Bases por reservar") quedan tal cual, con fechas que ahora
   coinciden con reservas ya cerradas — no se tocaron por no estar en el encargo; decidir si se
   retiran o se reescriben como "por si ampliáis" (igual que `hotel_tokyo`, que sí sigue vigente).
+- **v2.1** (27-ago-2026, mismo día): `ensureHotelFixes()` da de alta las 7 reservas restantes como
+  `state.places` reales (mismo patrón que Louis House: `id_sunshine_kinugawa`, `id_inova_kanazawa`,
+  `id_kuwataniya`, `id_kyoto_guesthouse`, `id_vessel_hiroshima`, `id_nakasu_inn`,
+  `id_twilight_osaka`), con fechas/precio/notas (política de tatuajes en Kinugawa, baños
+  compartidos y horario de onsen en Kuwataniya, ventana de check-in en Kyoto Guesthouse y en
+  Nakasu Inn). `lat/lng` son un PIN APROXIMADO (zona/estación conocida, documentado en el propio
+  código): pendiente de afinar con la dirección exacta en cuanto lleguen los PDF de confirmación.
+  Nuevo campo `confirmUrl` (formulario ✏️ Editar → "Confirmación") para enlazar la reserva a un
+  documento privado: **el PDF nunca se sube al repo** (GitHub Pages es público; una confirmación de
+  hotel lleva nombre completo, dirección de facturación y a veces datos de tarjeta) — va a una
+  carpeta compartida solo entre los 3 viajeros (Drive/Dropbox) y aquí solo vive el enlace. El login
+  de Google + aprobación de admin (Fase 12.75) protege la BASE DE DATOS de Firebase, no los ficheros
+  estáticos de GitHub Pages: cualquier cosa commiteada al repo (como el PDF de Dani) es pública para
+  quien tenga la URL, lo pida el gate de la app o no. Al mismo tiempo se ocultan de "📋 Bases por
+  reservar" (`REDUNDANT_HOTEL_BASES`) los 7 placeholders de la Ruta ya redundantes (mostrar "por
+  reservar" junto a la tarjeta ✓ Reservado de la misma ciudad confundía); las fichas del catálogo
+  NO se borran, decisión de retirarlas o no sigue pendiente. `bookedHotels()` pasa de 2 a 9; total
+  de `state.places` 469 → 476 (tests actualizados en el mismo commit).
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
   planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
   Última materialización **12.75** (revisión de acceso: Google Sign-In + flujo de aprobación,

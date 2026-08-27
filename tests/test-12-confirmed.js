@@ -100,8 +100,11 @@ check('dani: sus alojamientos de 2025 existen y traen campos de reserva',
   daniLodgings.length === 6 && daniLodgings.every(p => p.checkIn || p.bookingRef));
 check('dani: ninguno de sus alojamientos cuenta como isBookedHotel',
   daniLodgings.every(p => api.isBookedHotel(p) === false));
-check('bookedHotels(): solo nuestras 2 reservas reales',
-  api.bookedHotels().map(p => p.id).sort().join(',') === 'apa_asakusabashi,id_louis_otsuka_nishi');
+// v2 (27-ago-2026): las 7 bases de la Ruta también son reservas reales (ensureHotelFixes).
+check('bookedHotels(): nuestras 9 reservas reales',
+  api.bookedHotels().map(p => p.id).sort().join(',') ===
+    'apa_asakusabashi,id_inova_kanazawa,id_kuwataniya,id_kyoto_guesthouse,id_louis_otsuka_nishi,' +
+    'id_nakasu_inn,id_sunshine_kinugawa,id_twilight_osaka,id_vessel_hiroshima');
 
 // 7b) LA FUGA (corregida): adoptar un hotel de Dani no lo hace reserva nuestra.
 // adoptPlace pone dani=false y source='user'; sin la guarda por id dani_*,
@@ -131,10 +134,12 @@ check('bookedHotels(): solo nuestras 2 reservas reales',
   louis.daniAdopted = true;
   check('no-regresión: APA sigue confirmado tras editarlo en el formulario', api.isConfirmed(apa) === true);
   check('no-regresión: Louis sigue confirmado tras editarlo en el formulario', api.isConfirmed(louis) === true);
-  check('no-regresión: bookedHotels() conserva nuestras 2 reservas',
-    api.bookedHotels().map(p => p.id).sort().join(',') === 'apa_asakusabashi,id_louis_otsuka_nishi');
+  check('no-regresión: bookedHotels() conserva nuestras 9 reservas',
+    api.bookedHotels().map(p => p.id).sort().join(',') ===
+      'apa_asakusabashi,id_inova_kanazawa,id_kuwataniya,id_kyoto_guesthouse,id_louis_otsuka_nishi,' +
+      'id_nakasu_inn,id_sunshine_kinugawa,id_twilight_osaka,id_vessel_hiroshima');
   api.renderInicio();
-  check('no-regresión: la pestaña Confirmado sigue mostrando nuestras 2 reservas',
+  check('no-regresión: la pestaña Confirmado sigue mostrando nuestras reservas',
     els['#hotelCards'].innerHTML.includes('apa_asakusabashi') &&
     els['#hotelCards'].innerHTML.includes('id_louis_otsuka_nishi'));
 })();

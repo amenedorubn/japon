@@ -149,8 +149,9 @@ check('real build: ensureAiPlaces() exposed and a no-op on empty', api.ensureAiP
 check('real build: ensureInstaPlaces() exposed and idempotent after boot', api.ensureInstaPlaces() === false);
 // 469 = exactamente el tamaño del catálogo que ya vive en la nube: el back-fill
 // dejó repo y nube en el MISMO conjunto de ids, sin duplicar ni perder nada.
-check('real build: boot unaffected, seed now 469 places (440 + 29 insta)',
-  api.state.places.filter(Boolean).length === 469);
+// v2 (27-ago-2026) suma +7 reservas reales de la Ruta (ensureHotelFixes): 469 -> 476.
+check('real build: boot unaffected, seed now 476 places (440 + 29 insta + 7 v2)',
+  api.state.places.filter(Boolean).length === 476);
 // El id horneado gana sobre instaSlug: el sitio sembrado ES el de la nube.
 (function(){
   const seeded = api.state.places.find(p => p && p.id === 'id_jtzldsxjmr3fgmv5');

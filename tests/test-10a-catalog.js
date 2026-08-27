@@ -61,8 +61,10 @@ const dupIds = ids.filter((x, i) => ids.indexOf(x) !== i);
 // María es aditiva (Exploración, provenance 'maria'): se excluye del recuento
 // del catálogo fusionado para que re-importar sus listas no rompa el test.
 const nonMaria = api.state.places.filter(p => p.provenance !== 'maria');
-check('seed: 330 merged places excl. María (190 shared + 110 curated + Louis House booking + 29 insta)',
-  nonMaria.length === 330);
+// v2 (27-ago-2026): +7 bases de la Ruta pasan de sugerencia a reserva real
+// (ensureHotelFixes), sembradas junto a Louis House: 330 -> 337.
+check('seed: 337 merged places excl. María (190 shared + 110 curated + Louis House + 7 nuevas + 29 insta)',
+  nonMaria.length === 337);
 check('seed: María curation seeded as Exploración (provenance maria)', api.state.places.some(p => p.provenance === 'maria'));
 check('seed: no duplicate ids', dupIds.length === 0);
 const aliasKeys = Object.keys(api.LEGACY_PID_MAP);
@@ -190,8 +192,14 @@ check('hoteles[ours]: APA (curated, reservado) listed as real hotel',
   els['#hotelsList'].innerHTML.includes('APA Hotel Asakusabashi') && els['#hotelsList'].innerHTML.includes('✓ Reservado'));
 check('hoteles[ours]: por-reservar bases NOT in the booked list',
   !els['#hotelsList'].innerHTML.includes('Alojamiento en Tokio') && !els['#hotelsList'].innerHTML.includes('Alojamiento en Kioto'));
-check('hoteles: 8 bases por reservar as placeholders (3 clásicas + 5 de la Ruta 21 días)',
-  api.hotelBasePlaceholders().length === 8 && els['#hotelPlaceholders'].innerHTML.includes('Por reservar'));
+// v2 (27-ago-2026): las 7 bases de la Ruta (Nikko/Kanazawa/Takayama/Kioto/
+// Hiroshima/Fukuoka/Osaka) tienen ya reserva real y se ocultan de esta lista
+// (REDUNDANT_HOTEL_BASES); solo queda hotel_tokyo, que sigue siendo una
+// sugerencia real (noches extra en Tokio, no un duplicado de Louis House/APA).
+check('hoteles: 1 base por reservar como placeholder (solo Tokio, noches extra)',
+  api.hotelBasePlaceholders().length === 1 &&
+  api.hotelBasePlaceholders()[0].pid === 'hotel_tokyo' &&
+  els['#hotelPlaceholders'].innerHTML.includes('Por reservar'));
 api.setHotelSrc('dani'); api.renderHoteles();
 check('hoteles[dani]: 6 Dani lodgings with D pill',
   (els['#hotelsList'].innerHTML.match(/🏨/g) || []).length >= 6 && els['#hotelsList'].innerHTML.includes('D Dani'));

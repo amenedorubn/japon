@@ -151,15 +151,16 @@ check('listablePlaces: member dani_kiyomizu absent (folded into its anchor)', !l
     !html.includes('Nota de Dani'));
 })();
 
-// ---- 10) count sanity: 469 data entries unchanged; 60 members folded away ----
+// ---- 10) count sanity: 476 data entries unchanged; 60 members folded away ----
 // 469 = los 440 históricos + los 29 sitios insta horneados (Harukas 300 y los
 // 28 bajados de la nube). Las altas fueron ADITIVAS: ninguna entrada
-// desapareció, y 469 cuadra exactamente con el catálogo que ya vive en la nube.
-check('sanity: total data entries still 469 (nothing deleted)', api.state.places.filter(Boolean).length === 469);
+// desapareció. v2 (27-ago-2026) suma +7 reservas reales de la Ruta
+// (ensureHotelFixes), otra alta aditiva: 469 -> 476.
+check('sanity: total data entries still 476 (nothing deleted)', api.state.places.filter(Boolean).length === 476);
 const foldedCount = api.state.places.filter(p => p && api.isTwinMember(p.id)).length;
 check('sanity: exactly 60 places fold away as non-anchor twins', foldedCount === 60);
-check('sanity: visible identities with everything active = 469 - 60 = 409',
-  api.state.places.filter(Boolean).length - foldedCount === 409);
+check('sanity: visible identities with everything active = 476 - 60 = 416',
+  api.state.places.filter(Boolean).length - foldedCount === 416);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

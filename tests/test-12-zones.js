@@ -148,8 +148,9 @@ check('kyushu: no se cuela a Honshu (Shimonoseki y Yamaguchi fuera)',
 // caen dentro del polígono de la isla. Es el eje funcionando, no un error de
 // etiquetado: conviven con los `kyushu`/`takachiho` que ya había con otra
 // procedencia, porque son entradas distintas del catálogo.
-check('kyushu: en la zona caen esos 3 + los 3 de Fukuoka + su base de hotel + los 2 de Insta',
-  places.filter(p => zoneOf(p) === 'kyushu').length === 9);
+// v2 (27-ago-2026): +1 por la reserva real del Hotel Hakata Nakasu Inn (ensureHotelFixes).
+check('kyushu: en la zona caen esos 3 + los 3 de Fukuoka + su base de hotel + los 2 de Insta + la reserva del Nakasu Inn',
+  places.filter(p => zoneOf(p) === 'kyushu').length === 10);
 
 // ================= 5) NO ROMPE LOS OTROS EJES =================
 // Fuente: los 139 de María siguen siendo de María, etc.
@@ -159,9 +160,9 @@ check('no rompe el eje de fuente: las procedencias no cambian',
 check('no rompe el campo region: sigue intacto y editable',
   byName('Lake Kawaguchi').region === 'Tokio' &&
   places.some(p => p.region === 'Dani · Osaka') && places.some(p => p.region === 'Kioto y Nara'));
-// Confirmado: los 2 hoteles reservados siguen siéndolo.
-check('no rompe el eje confirmado: siguen los 2 hoteles reservados',
-  api.bookedHotels().length === 2);
+// Confirmado: las 9 reservas (v2, 27-ago-2026) siguen siéndolo.
+check('no rompe el eje confirmado: siguen las 9 reservas',
+  api.bookedHotels().length === 9);
 check('no rompe el plan: los 21 días siguen ahí y sin campo zone',
   api.state.days.length === 21 && api.state.days.every(d => !('zone' in d)));
 // Gemelos: la zona no los toca (y como es geografía, los dos caen en la misma).

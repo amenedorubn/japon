@@ -100,7 +100,8 @@ const markersByTag = tag => layersOfType('marker').filter(l => l._icon && l._ico
   // 150 dani + 110 curated folded in = 300, Fase 10a/12; +1 Louis House (Fase 12 §9.4) = 301;
   // +29 insta horneados (Harukas 300 + los 28 bajados de la nube) = 330)
   // María (provenance 'maria') es aditiva; se excluye del recuento del catálogo base.
-  check('boot: merged seed state built (330 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 330);
+  // v2: +7 bases de la Ruta reservadas (ensureHotelFixes), 330 -> 337.
+  check('boot: merged seed state built (337 places excl. María)', api.state.places.filter(p => p.provenance !== 'maria').length === 337);
 
   // Open the itinerary tab (12.54: el mapa vive embebido en Itinerarios; ya no
   // hay pestaña "Mapa" suelta). 12.56: el mapa muestra SOLO el itinerario activo
