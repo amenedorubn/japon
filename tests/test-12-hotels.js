@@ -82,8 +82,13 @@ check('merge: canonical apa is still a confirmed booked hotel', api.isBookedHote
 
 // ---- 4) hotelForNight: reservations connect to the real trip nights ----
 check('night: a covered night maps to Louis House', api.hotelForNight('2027-04-10') && api.hotelForNight('2027-04-10').id === 'id_louis_otsuka_nishi');
-check('night: the checkout night is not covered', !api.hotelForNight('2027-04-12'));
-check('night: an unbooked night returns null', api.hotelForNight('2027-04-18') === null);
+// v2: el 12 ya no es "sin reserva" (Louis House hace checkout), es la primera
+// noche de Nikko (NIGHTS) — el punto es que YA NO es Louis House.
+check('night: the checkout night moves on to the next reservation, not Louis House',
+  api.hotelForNight('2027-04-12') && api.hotelForNight('2027-04-12').id !== 'id_louis_otsuka_nishi');
+// v2: con las 18 noches del viaje reservadas (NIGHTS), solo un día sin check-in
+// alguno (el vuelo de ida) queda de verdad sin cobertura.
+check('night: a day before any check-in returns null', api.hotelForNight('2027-04-08') === null);
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

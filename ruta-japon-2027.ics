@@ -226,7 +226,7 @@ UID:2027-04-12-0@japon2027
 DTSTART;TZID=Asia/Tokyo:20270412T090500
 DTEND;TZID=Asia/Tokyo:20270412T092500
 SUMMARY:🚉  → Estación Tōbu-Nikkō
-DESCRIPTION:Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento). · Asakusa → Tōbu-Nikkō (07:30) · Tobu ltd. exp. (Revaty/Kegon)\, asiento reservado
+DESCRIPTION:Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento). Salir de Kanmangafuchi a las 15:45 · bus a Tōbu-Nikkō\, recoger maletas de consigna\, Tōbu a Shimo-Imaichi y línea de Kinugawa hasta Kinugawa-Onsen (650 m a pie al hotel). Llegada prevista ~17:15 (el check-in cierra a las 18:00). El transbordo en Shimo-Imaichi tiene frecuencias de 30-40 min: no perder el tren. · Asakusa → Tōbu-Nikkō (07:30) · Tobu ltd. exp. (Revaty/Kegon)\, asiento reservado
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-12-1@japon2027
@@ -266,7 +266,7 @@ END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-12-11@japon2027
 DTSTART;TZID=Asia/Tokyo:20270412T150000
-DTEND;TZID=Asia/Tokyo:20270412T160000
+DTEND;TZID=Asia/Tokyo:20270412T154500
 SUMMARY:Abismo de Kanmangafuchi
 DESCRIPTION:Comida de yuba (especialidad local) antes\; luego los 70 jizō del abismo.
 END:VEVENT
@@ -359,7 +359,7 @@ UID:2027-04-15-3@japon2027
 DTSTART;TZID=Asia/Tokyo:20270415T130500
 DTEND;TZID=Asia/Tokyo:20270415T161500
 SUMMARY:🚉 Puente colgante de Ogimachi → Casco antiguo de Takayama / Sanmachi
-DESCRIPTION:Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40. · Kanazawa → Shirakawa-gō (08:40) y → Takayama (14:50) · Bus Nouhi · nouhibus.co.jp\, abre ~1 mes antes\, vuela
+DESCRIPTION:Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40. Cena en el casco antiguo de Takayama (San-machi Suji)\, después de Nakabashi: el minshuku solo da desayuno\, y con reserva la tarde anterior. · Kanazawa → Shirakawa-gō (08:40) y → Takayama (14:50) · Bus Nouhi · nouhibus.co.jp\, abre ~1 mes antes\, vuela
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-15-4@japon2027
@@ -394,7 +394,7 @@ UID:2027-04-16-3@japon2027
 DTSTART;TZID=Asia/Tokyo:20270416T093000
 DTEND;TZID=Asia/Tokyo:20270416T163000
 SUMMARY:🚉 Casco antiguo de Takayama / Sanmachi → Gion y Hanamikōji
-DESCRIPTION:Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. Variante B por Matsumoto y Narai-juku: en el documento. · Takayama → Nagoya (10:38) · Hida ltd. exp. · pedid lado derecho por el valle · Nagoya → Kioto (14:20) · Nozomi
+DESCRIPTION:Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. El check-in del Kyoto Guesthouse solo abre de 16:00 a 19:00: hay margen de sobra desde la llegada a las 14:55. Variante B por Matsumoto y Narai-juku: en el documento. · Takayama → Nagoya (10:38) · Hida ltd. exp. · pedid lado derecho por el valle · Nagoya → Kioto (14:20) · Nozomi
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-16-4@japon2027
@@ -653,7 +653,7 @@ UID:2027-04-20-11@japon2027
 DTSTART;TZID=Asia/Tokyo:20270420T164000
 DTEND;TZID=Asia/Tokyo:20270420T203000
 SUMMARY:🚉 Momiji manjū (probar) → Yatai de Nakasu (puestos nocturnos)
-DESCRIPTION:Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00. · Hiroshima → Hakata (18:55) · Nozomi
+DESCRIPTION:Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00. El check-in del Nakasu Inn llega hasta las 00:00 y el hotel está dentro de la propia isla de Nakasu\, cruzando la calle de los yatai. · Hiroshima → Hakata (18:55) · Nozomi
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-20-12@japon2027
@@ -811,120 +811,127 @@ DESCRIPTION:Si el parque os deja vivos: JR Loop a Osaka y el Jardín Flotante de
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-24-0@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T075500
+DTEND;TZID=Asia/Tokyo:20270424T081500
+SUMMARY:🚉  → Mercado Kuromon Ichiba
+DESCRIPTION:Osaka día completo: el traslado a Tokio se mueve a mañana temprano (25).
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-1@japon2027
 DTSTART;TZID=Asia/Tokyo:20270424T081500
 DTEND;TZID=Asia/Tokyo:20270424T090000
 SUMMARY:Mercado Kuromon Ichiba
 DESCRIPTION:Desayuno de mercado en Kuromon: atún\, melón y lo que caiga.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-2@japon2027
+UID:2027-04-24-3@japon2027
 DTSTART;TZID=Asia/Tokyo:20270424T093000
 DTEND;TZID=Asia/Tokyo:20270424T110000
 SUMMARY:Castillo de Osaka
 DESCRIPTION:Tanimachi 10 min: el castillo de Hideyoshi entre fosos ciclópeos y 600 cerezos. El parque y las murallas son lo grande\; el interior-museo\, opcional si vais bien de hora.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-4@japon2027
+UID:2027-04-24-5@japon2027
 DTSTART;TZID=Asia/Tokyo:20270424T113000
 DTEND;TZID=Asia/Tokyo:20270424T120000
 SUMMARY:Doguyasuji (menaje)
 DESCRIPTION:De vuelta en Namba: la calle del menaje\, cuchillos y moldes de tako-yaki.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-6@japon2027
+UID:2027-04-24-7@japon2027
 DTSTART;TZID=Asia/Tokyo:20270424T120500
 DTEND;TZID=Asia/Tokyo:20270424T123000
 SUMMARY:Barrio de Namba: neones y luces
 DESCRIPTION:Último neón de Namba.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-8@japon2027
+UID:2027-04-24-9@japon2027
 DTSTART;TZID=Asia/Tokyo:20270424T123500
 DTEND;TZID=Asia/Tokyo:20270424T130000
 SUMMARY:Den Den Town
-DESCRIPTION:El Akihabara de Osaka\, camino del hotel a por maletas.
+DESCRIPTION:El Akihabara de Osaka\, sin prisa: hoy no hay tren que coger.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-9@japon2027
-DTSTART;TZID=Asia/Tokyo:20270424T130000
-DTEND;TZID=Asia/Tokyo:20270424T163000
-SUMMARY:🚉 Den Den Town → Estación de Tokio y Character Street
-DESCRIPTION:Mañana de mercado · Nozomi 13:50 → Tokio 16:24 · la tarde cae sola: todo pegado a la estación. · Shin-Osaka → Tokio (13:50) · Nozomi
+UID:2027-04-24-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T131500
+DTEND;TZID=Asia/Tokyo:20270424T144500
+SUMMARY:Shinsaibashi-suji
+DESCRIPTION:Última tarde de compras: la galería cubierta y Amerikamura.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-24-10@japon2027
-DTSTART;TZID=Asia/Tokyo:20270424T163000
-DTEND;TZID=Asia/Tokyo:20270424T171500
-SUMMARY:Estación de Tokio y Character Street
-DESCRIPTION:Llegáis A la estación: Character Street en el sótano (Ghibli\, Pokémon).
-END:VEVENT
-BEGIN:VEVENT
-UID:2027-04-24-12@japon2027
-DTSTART;TZID=Asia/Tokyo:20270424T174500
-DTEND;TZID=Asia/Tokyo:20270424T181500
-SUMMARY:APA Hotel Asakusabashi Ekimae
-DESCRIPTION:Check-in APA (reserva ampliada al 24) y a la calle.
-END:VEVENT
-BEGIN:VEVENT
-UID:2027-04-24-14@japon2027
-DTSTART;TZID=Asia/Tokyo:20270424T183000
-DTEND;TZID=Asia/Tokyo:20270424T194500
-SUMMARY:Ginza
-DESCRIPTION:Ginza encendida: papelería Itoya\, Uniqlo de 12 plantas.
+UID:2027-04-24-13@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T150000
+DTEND;TZID=Asia/Tokyo:20270424T160000
+SUMMARY:Tokito (sando de wagyū)
+DESCRIPTION:Merienda: el steak-sando de vuestro reel\, con huevo y jalapeños.
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-24-15@japon2027
-DTSTART;TZID=Asia/Tokyo:20270424T194500
-DTEND;TZID=Asia/Tokyo:20270424T200500
-SUMMARY:Teatro Kabuki-za
-DESCRIPTION:El teatro kabuki iluminado (entradas de un acto si os tienta) y cena en Ginza.
+DTSTART;TZID=Asia/Tokyo:20270424T161500
+DTEND;TZID=Asia/Tokyo:20270424T181500
+SUMMARY:Round 1 Stadium (Spo-Cha)
+DESCRIPTION:Spo-Cha opcional: deporte\, arcades y karaoke ilimitados para soltar piernas tras 11 días de viaje.
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-24-17@japon2027
+DTSTART;TZID=Asia/Tokyo:20270424T190000
+DTEND;TZID=Asia/Tokyo:20270424T203000
+SUMMARY:Kitan Hibiki (wagyū burger)
+DESCRIPTION:Cena de despedida de Osaka: la burger de wagyū de vuestro reel (RESERVAR antes del viaje).
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-25-0@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T085500
+DTSTART;TZID=Asia/Tokyo:20270425T083000
 DTEND;TZID=Asia/Tokyo:20270425T091500
-SUMMARY:🚉  → Tsurugaoka Hachimangū
-DESCRIPTION:JR Yokosuka 08:04 → Kamakura 09:00 · Enoden a Hase · JR a Yokohama 14:45 · vuelta 20:30.
+SUMMARY:Estación de Tokio y Character Street
+DESCRIPTION:Llegada del Shinkansen: taquillas de la estación para las maletas (el check-in del APA es por la tarde). Character Street de paso\, sin prisa.
 END:VEVENT
 BEGIN:VEVENT
 UID:2027-04-25-1@japon2027
 DTSTART;TZID=Asia/Tokyo:20270425T091500
-DTEND;TZID=Asia/Tokyo:20270425T100000
+DTEND;TZID=Asia/Tokyo:20270425T103000
+SUMMARY:🚉 Estación de Tokio y Character Street → Tsurugaoka Hachimangū
+DESCRIPTION:Shinkansen Shin-Ōsaka → Tokio ~06:00 → ~08:30 (horario a confirmar cuando salga el calendario de JR\, unos meses antes) · maletas en las taquillas de Tokyo Station (el check-in del APA es por la tarde) · salida hacia Kamakura ~09:15 (JR Yokosuka) · Enoden a Hase · JR a Yokohama 14:45 · vuelta ~20:30. ⚠️ Día con un único punto de fallo: cualquier retraso del Shinkansen se come Kamakura\, y no hay hueco donde recolocarlo. · Shin-Osaka → Tokio (~06:00 → ~08:30) · Nozomi · horario exacto a confirmar cuando salga el calendario JR
+END:VEVENT
+BEGIN:VEVENT
+UID:2027-04-25-2@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T103000
+DTEND;TZID=Asia/Tokyo:20270425T111500
 SUMMARY:Tsurugaoka Hachimangū
 DESCRIPTION:El gran santuario de los shōgun Minamoto.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-25-2@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T100000
-DTEND;TZID=Asia/Tokyo:20270425T104500
+UID:2027-04-25-3@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T111500
+DTEND;TZID=Asia/Tokyo:20270425T120000
 SUMMARY:Calle Komachi-dōri
 DESCRIPTION:Komachi-dōri: picoteo y compras camino del Enoden.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-25-4@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T111500
-DTEND;TZID=Asia/Tokyo:20270425T120000
+UID:2027-04-25-5@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T123000
+DTEND;TZID=Asia/Tokyo:20270425T131500
 SUMMARY:Gran Buda de Kamakura
 DESCRIPTION:El Gran Buda de bronce a cielo abierto desde 1495 (se entra dentro\, ¥50).
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-25-6@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T121500
-DTEND;TZID=Asia/Tokyo:20270425T131500
+UID:2027-04-25-7@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T133000
+DTEND;TZID=Asia/Tokyo:20270425T143000
 SUMMARY:Templo Hase-dera
 DESCRIPTION:La Kannon de 11 caras y la terraza con la bahía entera. Comida: shirasu-don en Hase.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-25-8@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T153000
-DTEND;TZID=Asia/Tokyo:20270425T170000
+UID:2027-04-25-9@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T164500
+DTEND;TZID=Asia/Tokyo:20270425T181500
 SUMMARY:Barrio Chino de Yokohama
 DESCRIPTION:El Chinatown más grande de Japón: merienda-cena de nikuman en Yokohama.
 END:VEVENT
 BEGIN:VEVENT
-UID:2027-04-25-10@japon2027
-DTSTART;TZID=Asia/Tokyo:20270425T173000
-DTEND;TZID=Asia/Tokyo:20270425T190000
+UID:2027-04-25-11@japon2027
+DTSTART;TZID=Asia/Tokyo:20270425T184500
+DTEND;TZID=Asia/Tokyo:20270425T201500
 SUMMARY:Minato Mirai 21 (Yokohama)
 DESCRIPTION:El puerto al atardecer: Cosmo Clock\, Red Brick y el skyline.
 END:VEVENT

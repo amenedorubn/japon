@@ -170,6 +170,25 @@ Antes de proceder, pregunta si:
 
 ## 🚀 Estado actual
 
+- **v2** (27-ago-2026, sin número de materialización de Fase 12): alojamiento completo — las 9
+  reservas del viaje (18 noches del 9 al 27 de abril) están cerradas y confirmadas, y el traslado
+  Osaka→Tokio se movió del 24 por la tarde (Nozomi 13:50) al 25 por la mañana (Shinkansen
+  Shin-Ōsaka→Tokio ~06:00→~08:30, horario a confirmar cuando salga el calendario JR). Osaka pasa
+  de 3 a 4 noches (21–25 abr); el 24 es día completo en Osaka (mañana de mercado/castillo ya
+  existente + tarde nueva de Shinsaibashi/Tokito/Round1/Kitan); el 25 arranca con el Shinkansen,
+  taquillas en Tokyo Station y Kamakura desplazado ~1h15 (nota de riesgo: único punto de fallo del
+  día). `RUTA_DAYS.stay`, `NIGHTS` (las 11 filas pasan a `ok`, la fila `amp` desaparece), `DAY_EXTRAS`,
+  `TRANSPORT`, `Ruta-21-dias.docx` y los `.ics` estáticos se regeneraron/editaron a mano en el mismo
+  commit. `nightCityFor`/`hotelForNight` ganan un fallback a `NIGHTS` para las 7 ciudades que no
+  viajan como nodo propio en `state.places` (solo Louis House y APA lo hacen): con las 18 noches
+  reservadas, REALIDAD y Ruta ya coinciden en alojamiento para todo el viaje. Correcciones puntuales:
+  Kanmangafuchi (12-abr) se acorta a 45 min para llegar a tiempo al check-in de Kinugawa Onsen;
+  Kuwataniya (Takayama) no incluye cena kaiseki (solo desayuno con reserva previa); el motivo de
+  descarte de Nagoya deja de ser "María ya la vio" (inválido) y pasa a "ciudad de paso, no destino".
+  Pendiente sin decidir: los placeholders `hotel_nikko`/`kanazawa`/`takayama`/`kyoto`/`hiroshima`/
+  `fukuoka`/`osaka` del catálogo ("Bases por reservar") quedan tal cual, con fechas que ahora
+  coinciden con reservas ya cerradas — no se tocaron por no estar en el encargo; decidir si se
+  retiran o se reescriben como "por si ampliáis" (igual que `hotel_tokyo`, que sí sigue vigente).
 - **Fase 12** (EN CURSO): procedencia, importadores (F1–F3b), pestaña Itinerarios; con la
   planificación dada por completa, el foco pasa a ser el mejor compañero durante el viaje real.
   Última materialización **12.75** (revisión de acceso: Google Sign-In + flujo de aprobación,
@@ -216,7 +235,7 @@ Historia completa de fases, invariantes y supuestos: `PROJECT.md` §7, §12 y §
 
 ---
 
-**Última actualización:** 28 de julio de 2026
+**Última actualización:** 27 de agosto de 2026
 **Mantenedor:** amenedorubn
 **Sincronización:** Archivado en Git. Actualizar cuando cambien decisiones arquitectónicas.
 

@@ -1720,45 +1720,57 @@ const RUTA_DAYS = [
   S('golden_gai','20:15',45,'Bares de 6 plazas en Golden Gai: entrad donde no haya "members only".'),
   S('kabukicho','21:15',30,'Godzilla asomado y el neón de Kabukichō de remate.'),
 ]},
-{date:'2027-04-12', city:'Nikko', icon:'⛩️', stay:'Ryokan/onsen en Nikko (por reservar)',
-  note:'Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento).', stops:[
+{date:'2027-04-12', city:'Nikko', icon:'⛩️', stay:'Hotel Sunshine Kinugawa, Kinugawa Onsen (RESERVADO · media pensión)',
+  // El check-in del ryokan cierra a las 18:00: la parada de Kanmangafuchi se acorta
+  // (60->45 min) para salir con margen de sobra hacia Kinugawa-Onsen.
+  note:'Check-out · Tobu ltd. exp. desde Asakusa 07:30 → Tōbu-Nikkō 09:25 (reservad asiento). '+
+    'Salir de Kanmangafuchi a las 15:45 · bus a Tōbu-Nikkō, recoger maletas de consigna, Tōbu '+
+    'a Shimo-Imaichi y línea de Kinugawa hasta Kinugawa-Onsen (650 m a pie al hotel). Llegada '+
+    'prevista ~17:15 (el check-in cierra a las 18:00). El transbordo en Shimo-Imaichi tiene '+
+    'frecuencias de 30-40 min: no perder el tren.', stops:[
   S('tobu_nikko','09:25',20,'Consigna de maletas en la estación (o ya en el ryokan).'),
   S('shinkyo','10:00',20,'El puente rojo sagrado sobre el Daiya.'),
   S('toshogu','10:30',105,'La joya de Ieyasu: puerta Yōmeimon, el gato dormido, los 3 monos. Entrada online.'),
   S('dani_futarasan','12:30',30,'El santuario tranquilo de al lado, favorito de Dani.'),
   S('rinnoji','13:10',40,'Los tres budas dorados de Rinnō-ji.'),
-  S('kanmangafuchi','15:00',60,'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.'),
+  S('kanmangafuchi','15:00',45,'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.'),
 ]},
-{date:'2027-04-13', city:'Kanazawa', icon:'🚄', stay:'Kanazawa centro (por reservar)',
+{date:'2027-04-13', city:'Kanazawa', icon:'🚄', stay:'INOVA Kanazawa (RESERVADO)',
   note:'Nikko → JR a Utsunomiya 45 min → Yamabiko a Ōmiya → Kagayaki a Kanazawa. ~08:45–12:30.', stops:[
   S('omicho_market','13:00',60,'Comida: kaisendon (bol de marisco) en el mercado Ōmichō.'),
   S('kanazawa_castle','14:30',45,'El parque del castillo, gratis, camino del jardín.'),
   S('kenrokuen','15:30',90,'Uno de los tres grandes jardines de Japón; aquí el sakura llega tarde y os espera.'),
   S('higashi_chaya','17:30',75,'El barrio de las casas de té al atardecer + helado con pan de oro.'),
 ]},
-{date:'2027-04-14', city:'Kanazawa', icon:'🍵', stay:'Kanazawa centro (por reservar)',
+{date:'2027-04-14', city:'Kanazawa', icon:'🍵', stay:'INOVA Kanazawa (RESERVADO)',
   note:'Día entero sin trenes. Ojo: muchos puestos de Ōmichō cierran los miércoles.', stops:[
   S('nagamachi','09:30',75,'El barrio samurái con las calles vacías; casa Nomura (¥550).'),
   S('catalog_kanazawa','11:30',150,'A elegir: Museo del s. XXI, D.T. Suzuki (zen) o el templo "ninja" Myōryū-ji (reservar). Comida en Katamachi.'),
   S('kenrokuen','16:00',60,'Segunda pasada al jardín con luz baja (la entrada vale todo el día no; ¥320 bien pagados).'),
   S('higashi_chaya','17:30',60,'Kazue-machi y la orilla del Asano, la parte que nadie mira.'),
 ]},
-{date:'2027-04-15', city:'Takayama', icon:'🏔️', stay:'RYOKAN en Takayama, cena kaiseki (por reservar)',
-  note:'Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40.', stops:[
+{date:'2027-04-15', city:'Takayama', icon:'🏔️', stay:'Minshuku Kuwataniya, Takayama (RESERVADO)',
+  // Kuwataniya solo da desayuno (con reserva la tarde anterior), sin cena kaiseki:
+  // la cena real es en el casco antiguo, después de Nakabashi.
+  note:'Bus Nouhi 08:40 → Shirakawa-gō 10:05 (RESERVAR) · 14:50 → Takayama 15:40. Cena en el '+
+    'casco antiguo de Takayama (San-machi Suji), después de Nakabashi: el minshuku solo da '+
+    'desayuno, y con reserva la tarde anterior.', stops:[
   S('dani_shirakawago','10:05',150,'La aldea gassho-zukuri: subid al mirador Shiroyama. Comida: soba.'),
   S('dani_ogimachi_bridge','12:45',20,'El puente colgante sobre el Shō para la última foto.'),
   S('dani_sanmachi','16:15',90,'El casco antiguo de Takayama: sake tasting en las bodegas (cedro colgado = sake nuevo).'),
   S('dani_nakabashi','18:00',20,'El puente rojo con el río de fondo.'),
 ]},
-{date:'2027-04-16', city:'Kioto', icon:'🚅', stay:'Kioto zona Shijō (por reservar)',
-  note:'Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. Variante B por Matsumoto y Narai-juku: en el documento.', stops:[
+{date:'2027-04-16', city:'Kioto', icon:'🚅', stay:'Kyoto Guesthouse, Shijō-Ōmiya (RESERVADO)',
+  note:'Hida 10:38 → Nagoya 13:05 (comida: miso katsu en la estación) · Nozomi 14:20 → Kioto 14:55. '+
+    'El check-in del Kyoto Guesthouse solo abre de 16:00 a 19:00: hay margen de sobra desde la '+
+    'llegada a las 14:55. Variante B por Matsumoto y Narai-juku: en el documento.', stops:[
   S('dani_miyagawa_market','07:45',45,'El mercado matutino junto al río: desayuno de puesto en puesto.'),
   S('dani_sanmachi','08:45',45,'Takayama Jinya y última vuelta antes del tren.'),
   S('catalog_gion','16:30',75,'Primer paseo por Hanamikōji: quizá veáis una geiko de camino al trabajo.'),
   S('catalog_yasaka','18:00',30,'El santuario de los farolillos encendidos.'),
   S('catalog_pontocho','19:00',90,'Cena en el callejón de Pontochō, mesa con vistas al Kamo si suena la flauta.'),
 ]},
-{date:'2027-04-17', city:'Kioto', icon:'🍂', stay:'Kioto zona Shijō (por reservar)',
+{date:'2027-04-17', city:'Kioto', icon:'🍂', stay:'Kyoto Guesthouse, Shijō-Ōmiya (RESERVADO)',
   note:'Kioto Este de punta a punta, todo a pie.', stops:[
   S('kiyomizu','07:30',90,'A las 7:30 tendréis la terraza casi sola; a las 10 es un festival escolar.'),
   S('catalog_sannenzaka','09:15',45,'Las cuestas de madera: fotos AHORA, antes de las hordas.'),
@@ -1771,7 +1783,7 @@ const RUTA_DAYS = [
   S('catalog_shijo_kawaramachi','17:45',60,'Teramachi y compras de la tarde.'),
   S('maria_k36_the_bar_rooftop_kioto_y_nara','19:30',60,'Copa en el rooftop K36 (María dixit) y cena por Kiyamachi.'),
 ]},
-{date:'2027-04-18', city:'Kioto', icon:'🎋', stay:'Kioto zona Shijō (por reservar)',
+{date:'2027-04-18', city:'Kioto', icon:'🎋', stay:'Kyoto Guesthouse, Shijō-Ōmiya (RESERVADO)',
   note:'Arashiyama al alba, el norte dorado por la tarde. teamLab: RESERVAR fecha y hora.', stops:[
   S('catalog_arashiyama','08:00',60,'El bambú ANTES de las 9 o no hay foto.'),
   S('tenryuji','09:00',60,'El jardín zen con los montes prestados de fondo.'),
@@ -1782,7 +1794,7 @@ const RUTA_DAYS = [
   S('catalog_kinkakuji','15:00',60,'El Pabellón Dorado con la luz de la tarde en el estanque.'),
   S('teamlab_kyoto','18:00',90,'teamLab Biovortex, reservado con fecha: arte digital para cerrar el día.'),
 ]},
-{date:'2027-04-19', city:'Hiroshima', icon:'🎂', stay:'Hiroshima centro (POR RESERVAR)',
+{date:'2027-04-19', city:'Hiroshima', icon:'🎂', stay:'Vessel Hotel Hiroshima Peace Blvd (RESERVADO)',
   note:'CUMPLEAÑOS. Check-out y consigna · Nozomi 14:10 → Himeji 14:55 · 18:10 → Hiroshima 19:10. El Museo de la Paz queda para mañana A PROPÓSITO: hoy se celebra.', stops:[
   S('fushimi','07:30',120,'Empezar el cumpleaños amaneciendo entre los mil torii: el mirador Yotsutsuji con la ciudad despertando abajo.'),
   S('vermillion','09:30',30,'Café de cumpleaños con vistas al bosque de Inari.'),
@@ -1791,8 +1803,10 @@ const RUTA_DAYS = [
   S('himeji_castle','15:15',105,'La Garza Blanca, el castillo original más bello de Japón (última entrada 16:00: llegáis justos y bien). Si sobra media hora: el jardín Kōko-en (entrada combinada, pegado al castillo) cierra el regalo de cumpleaños; los Nozomi/Sakura a Hiroshima salen cada 10–15 min, así que un tren algo más tarde no rompe el plan.'),
   S('okonomimura','20:00',90,'CENA DE CUMPLEAÑOS: okonomiyaki en la barra con espectáculo de plancha; si apetece más fiesta, teppanyaki de wagyū y bares de Nagarekawa.'),
 ]},
-{date:'2027-04-20', city:'Fukuoka', icon:'⛴️', stay:'Fukuoka, Hakata/Nakasu (por reservar)',
-  note:'Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00.', stops:[
+{date:'2027-04-20', city:'Fukuoka', icon:'⛴️', stay:'Hotel Hakata Nakasu Inn (RESERVADO)',
+  note:'Museo al abrir · JR + ferry a Miyajima · Nozomi 18:55 → Hakata 20:00. El check-in del '+
+    'Nakasu Inn llega hasta las 00:00 y el hotel está dentro de la propia isla de Nakasu, '+
+    'cruzando la calle de los yatai.', stops:[
   S('peace_museum','08:30',105,'El museo al abrir (8:30): duro e imprescindible. Luego el parque y la llama.'),
   S('atomic_dome','10:30',30,'La cúpula en pie bajo el hipocentro. Silencio y a la estación.'),
   S('itsukushima','12:30',75,'Mareas del 20-abr 2027 (verificadas contra el JMA oficial): llegáis con el torii AÚN EN EL AGUA (pleamar 09:05, 3,35 m, bajando). JR 25 min + ferry 10.'),
@@ -1801,7 +1815,7 @@ const RUTA_DAYS = [
   S('momiji','16:20',20,'Momiji manjū recién hecho para el ferry de vuelta.'),
   S('nakasu_yatai','20:30',90,'Cena en los yatai del río: ramen tonkotsu codo con codo. LA noche de Fukuoka.'),
 ]},
-{date:'2027-04-21', city:'Osaka', icon:'🍜', stay:'Osaka, Namba (por reservar)',
+{date:'2027-04-21', city:'Osaka', icon:'🍜', stay:'Twilight Osaka Inn, Tengachaya (RESERVADO)',
   note:'Mañana en Hakata · Nozomi 15:00 → Shin-Osaka 17:26 · Midōsuji a Namba.', stops:[
   S('kushida_jinja','09:30',45,'El santuario patrón de Hakata con la carroza gigante del Yamakasa.'),
   S('catalog_fukuoka','10:30',45,'Paseo por Hakata/Tenjin, la ciudad que el documento pedía pisar.'),
@@ -1809,7 +1823,7 @@ const RUTA_DAYS = [
   S('dotonbori','19:00',90,'Glico Man, neones y cena en Dōtonbori: bienvenidos a la cocina de Japón.'),
   S('dani_hozenji','20:45',20,'El templo cubierto de musgo escondido entre bares (se le echa agua).'),
 ]},
-{date:'2027-04-22', city:'Osaka', icon:'🦌', stay:'Osaka, Namba (por reservar)',
+{date:'2027-04-22', city:'Osaka', icon:'🦌', stay:'Twilight Osaka Inn, Tengachaya (RESERVADO)',
   note:'Excursión a Nara: Kintetsu desde Namba 08:10 → Nara 08:50 · vuelta 17:05 (Tsuruhashi + JR Loop) → Tennōji ~17:45.', stops:[
   S('catalog_nara','09:00',45,'Los ciervos que hacen reverencia (las galletas shika senbei, ¥200).'),
   S('todaiji','10:00',75,'El Gran Buda de 15 m en el edificio de madera más grande del mundo.'),
@@ -1823,31 +1837,43 @@ const RUTA_DAYS = [
   S('shitennoji','19:10',20,'Bajáis y en 10 min a pie: el recinto del templo más antiguo del país (593) iluminado, con la pagoda recortada, de camino a la cena.'),
   S('shinsekai','19:40',90,'Cena: kushikatsu en Shinsekai bajo la Tsūtenkaku (prohibido mojar dos veces).'),
 ]},
-{date:'2027-04-23', city:'Osaka', icon:'🍄', stay:'Osaka, Namba (por reservar)',
+{date:'2027-04-23', city:'Osaka', icon:'🍄', stay:'Twilight Osaka Inn, Tengachaya (RESERVADO)',
   note:'USJ: JR Loop + rama Sakurajima a Universal City, 15 min desde Nishikujō.', stops:[
   S('usj','09:00',540,'Día entero: a la apertura y directos a Super Nintendo World (turno de área en la app). Express Pass = horas de vida.'),
   S('umeda_sky','19:45',75,'Si el parque os deja vivos: JR Loop a Osaka y el Jardín Flotante de noche, la azotea abierta al cielo. Cena en Umeda y a casa en Midōsuji.'),
 ]},
-{date:'2027-04-24', city:'Tokio', icon:'🚄', stay:'APA Asakusabashi (AMPLIAR reserva: entrar hoy 24)',
-  note:'Mañana de mercado · Nozomi 13:50 → Tokio 16:24 · la tarde cae sola: todo pegado a la estación.', stops:[
+{date:'2027-04-24', city:'Osaka', icon:'🛍️', stay:'Twilight Osaka Inn, Tengachaya (RESERVADO)',
+  // v2: el traslado a Tokio se movió al 25 por la mañana (antes: Nozomi 13:50 este
+  // mismo día). El 24 pasa a ser día completo en Osaka; la tarde, antes vacía
+  // "cae sola pegada a la estación", se rellena con catálogo de Osaka sin usar aún.
+  note:'Osaka día completo: el traslado a Tokio se mueve a mañana temprano (25).', stops:[
   S('kuromon','08:15',45,'Desayuno de mercado en Kuromon: atún, melón y lo que caiga.'),
   S('osaka_castle','09:30',90,'Tanimachi 10 min: el castillo de Hideyoshi entre fosos ciclópeos y 600 cerezos. El parque y las murallas son lo grande; el interior-museo, opcional si vais bien de hora.'),
   S('doguyasuji','11:30',30,'De vuelta en Namba: la calle del menaje, cuchillos y moldes de tako-yaki.'),
   S('catalog_namba','12:05',25,'Último neón de Namba.'),
-  S('catalog_denden_town','12:35',25,'El Akihabara de Osaka, camino del hotel a por maletas.'),
-  S('tokyo_st','16:30',45,'Llegáis A la estación: Character Street en el sótano (Ghibli, Pokémon).'),
-  S('apa_asakusabashi','17:45',30,'Check-in APA (reserva ampliada al 24) y a la calle.'),
-  S('catalog_ginza','18:30',75,'Ginza encendida: papelería Itoya, Uniqlo de 12 plantas.'),
-  S('kabukiza','19:45',20,'El teatro kabuki iluminado (entradas de un acto si os tienta) y cena en Ginza.'),
+  S('catalog_denden_town','12:35',25,'El Akihabara de Osaka, sin prisa: hoy no hay tren que coger.'),
+  S('shinsaibashi','13:15',90,'Última tarde de compras: la galería cubierta y Amerikamura.'),
+  S('tokito','15:00',60,'Merienda: el steak-sando de vuestro reel, con huevo y jalapeños.'),
+  S('round1','16:15',120,'Spo-Cha opcional: deporte, arcades y karaoke ilimitados para soltar piernas tras 11 días de viaje.'),
+  S('kitan','19:00',90,'Cena de despedida de Osaka: la burger de wagyū de vuestro reel (RESERVAR antes del viaje).'),
 ]},
 {date:'2027-04-25', city:'Kamakura', icon:'🌊', stay:'APA Asakusabashi (RESERVADO)',
-  note:'JR Yokosuka 08:04 → Kamakura 09:00 · Enoden a Hase · JR a Yokohama 14:45 · vuelta 20:30.', stops:[
-  S('tsurugaoka','09:15',45,'El gran santuario de los shōgun Minamoto.'),
-  S('komachi','10:00',45,'Komachi-dōri: picoteo y compras camino del Enoden.'),
-  S('kamakura_buddha','11:15',45,'El Gran Buda de bronce a cielo abierto desde 1495 (se entra dentro, ¥50).'),
-  S('hasedera','12:15',60,'La Kannon de 11 caras y la terraza con la bahía entera. Comida: shirasu-don en Hase.'),
-  S('chinatown_y','15:30',90,'El Chinatown más grande de Japón: merienda-cena de nikuman en Yokohama.'),
-  S('minato_mirai','17:30',90,'El puerto al atardecer: Cosmo Clock, Red Brick y el skyline.'),
+  // v2: arranque nuevo (antes: JR Yokosuka 08:04 directo desde Asakusa). El
+  // Shinkansen de la mañana desplaza Kamakura ~1h15; único punto de fallo del
+  // día, documentado a propósito (no es un descuido).
+  note:'Shinkansen Shin-Ōsaka → Tokio ~06:00 → ~08:30 (horario a confirmar cuando '+
+    'salga el calendario de JR, unos meses antes) · maletas en las taquillas de '+
+    'Tokyo Station (el check-in del APA es por la tarde) · salida hacia Kamakura '+
+    '~09:15 (JR Yokosuka) · Enoden a Hase · JR a Yokohama 14:45 · vuelta ~20:30. '+
+    '⚠️ Día con un único punto de fallo: cualquier retraso del Shinkansen se come '+
+    'Kamakura, y no hay hueco donde recolocarlo.', stops:[
+  S('tokyo_st','08:30',45,'Llegada del Shinkansen: taquillas de la estación para las maletas (el check-in del APA es por la tarde). Character Street de paso, sin prisa.'),
+  S('tsurugaoka','10:30',45,'El gran santuario de los shōgun Minamoto.'),
+  S('komachi','11:15',45,'Komachi-dōri: picoteo y compras camino del Enoden.'),
+  S('kamakura_buddha','12:30',45,'El Gran Buda de bronce a cielo abierto desde 1495 (se entra dentro, ¥50).'),
+  S('hasedera','13:30',60,'La Kannon de 11 caras y la terraza con la bahía entera. Comida: shirasu-don en Hase.'),
+  S('chinatown_y','16:45',90,'El Chinatown más grande de Japón: merienda-cena de nikuman en Yokohama.'),
+  S('minato_mirai','18:45',90,'El puerto al atardecer: Cosmo Clock, Red Brick y el skyline.'),
 ]},
 {date:'2027-04-26', city:'Monte Fuji', icon:'🗻', stay:'APA Asakusabashi (RESERVADO)',
   note:'Bus directo Shinjuku 07:45 → Kawaguchiko 09:30 (RESERVAR highway-buses.jp) · vuelta 17:00.', stops:[
@@ -1968,12 +1994,12 @@ const DAY_EXTRAS = {
     {name:'Takimi Kōji (callejón retro Shōwa)', near:'Umeda Sky Building', mins:0, why:'Una calle recreada de los años 20-30 en el sótano del propio edificio: ambientazo y comida barata sin salir del sitio.'},
     {name:'Santuario Ohatsu Tenjin', near:'Camino a Osaka Station', mins:12, why:'Santuario diminuto entre rascacielos, escenario de una obra clásica de Chikamatsu: contraste humano después de tanto skyline.'},
   ],
-  '2027-04-24': [ // Osaka mañana + Tokio noche
+  '2027-04-24': [ // Osaka día completo
     {name:'Santuario Toyokuni (Hōkoku Jinja)', near:'Castillo de Osaka', mins:3, why:'Dedicado a Hideyoshi, con ema en forma de calabaza (su emblema de batalla): dentro del propio parque del castillo, nadie para aquí.'},
     {name:'Hōzenji Yokochō', near:'Doguyasuji', mins:2, why:'Callejón de piedra con farolillos y la estatua de musgo a la que se le echa agua para la suerte: literalmente a una manzana.'},
-    {name:'Jardín de la azotea de KITTE', near:'Estación de Tokio', mins:0, why:'Terraza gratuita con la mejor vista de la fachada de ladrillo de 1914 de la estación: sin coste y sin desvío.'},
   ],
-  '2027-04-25': [ // Kamakura + Yokohama
+  '2027-04-25': [ // Kamakura + Yokohama (arranque desplazado: Shinkansen desde Osaka a primera hora)
+    {name:'Jardín de la azotea de KITTE', near:'Estación de Tokio', mins:0, why:'Terraza gratuita con la mejor vista de la fachada de ladrillo de 1914 de la estación: sin coste y sin desvío, de camino a las taquillas.'},
     {name:'Templo Hōkoku-ji ("templo del bambú")', near:'Centro de Kamakura', mins:15, why:'Un bosquecillo de bambú con casa de té y matcha servido entre las cañas: la versión tranquila y pequeña de Arashiyama, sin las hordas.'},
     {name:'Muelle Osanbashi', near:'Minato Mirai', mins:0, why:'Cubierta de madera ondulada que hace de mirador del puerto: la foto de Yokohama que no sale en las postales típicas, de camino.'},
   ],
@@ -1989,7 +2015,7 @@ const DAY_EXTRAS = {
 const CHECKLIST = [
   ['Pasaportes en regla','Caducidad posterior a octubre 2027. Los españoles no necesitan visado (90 días).'],
   ['Visit Japan Web','Rellenar inmigración y aduanas online 2 semanas antes: ahorra colas al aterrizar. services.digital.go.jp'],
-  ['Reservar las 13 noches de la Ruta','Nikko (12), Kanazawa (13–15), ryokan de Takayama (15), Kioto (16–19), Hiroshima (19), Fukuoka (20), Osaka (21–24) + ampliar APA al 24. Louis House (9–12) y APA (25–27) ya están. Ver pestaña Hoteles.'],
+  ['Reservar las 13 noches de la Ruta','Nikko (12), Kanazawa (13–15), ryokan de Takayama (15), Kioto (16–19), Hiroshima (19), Fukuoka (20), Osaka (21–24). Louis House (9–12) y APA (25–27) ya están. Ver pestaña Hoteles.'],
   ['eSIM de datos','Ubigi, Airalo o Holafly. 10 GB ≈ 15 €. Instalarla antes de salir y activarla al aterrizar.'],
   ['Suica en el móvil','En iPhone/Android se crea en Wallet y se recarga con tarjeta. Si no, Welcome Suica física en Narita.'],
   ['JR Pass: NO compensa con esta Ruta','Los 6 tramos largos suman ~¥58.000/persona en billetes sueltos, MENOS que el pase de 14 días (~¥80.000) — y encima el pase no cubre Nozomi ni Kagayaki (los rápidos que usáis) ni los buses/Kintetsu/Tobu. Billetes sueltos con smartEX. Ver Guía → Transportes.'],
@@ -2006,7 +2032,6 @@ const CHECKLIST = [
   ['Maleta: dejar hueco','Volveréis con más de lo que llevabais. Takkyubin (envío de maletas entre hoteles) ≈ ¥2.000/bulto.'],
   ['Si seguís la Ruta: bus Kanazawa–Shirakawa-gō–Takayama','Asiento reservado obligatorio (Nouhi/Hokutetsu); abren ~1 mes antes. nouhibus.co.jp'],
   ['Si seguís la Ruta: entradas USJ + Nintendo World','Entrada con FECHA en la web oficial; turno de área en la app al entrar. Express Pass opcional.'],
-  ['Si seguís la Ruta: ampliar APA al 24 de abril','La Ruta vuelve a Tokio el 24 por la tarde: añadid esa noche a la reserva existente del 25–27.'],
   ['Si seguís la Ruta: ryokan de Takayama y noche de Nikko','Los dos alojamientos con más demanda de la Ruta: reservar en cuanto se decida.'],
 ];
 
@@ -2038,29 +2063,25 @@ const PHRASES = [
   ['¡Salud!','乾杯','kanpai'],
 ];
 
-/* ---------------- Noches del viaje (Ruta v4) ----------------
-   Las 20 noches del viaje con su fecha, ciudad y estado. RESERVADO =
-   Louis House y APA (hechos de Confirmado); el resto son las bases que
-   propone la Ruta. Se muestra en Hoteles como referencia; no es un
-   nodo persistido (dato horneado). */
-/* Elementos 4-6 (12.63): checkIn/checkOut ISO + nº de noches, SOLO en las filas
-   'res'/'amp' que hay que reservar de verdad — alimentan la sección "Aún por
-   reservar" de Confirmado (antes usaba 3 placeholders fijos hotel_tokyo/kyoto/
-   osaka de la semilla vieja, ya obsoletos con la Ruta) y, junto con las filas
-   'ok' (que también los llevan, 12.63b), el resumen de ruta de Inicio
-   (routeOverview). 'vuelo' no los necesita (no es noche de hotel). */
+/* ---------------- Noches del viaje (Ruta v2 · alojamiento completo) ----------------
+   Las 18 noches de hotel del viaje, TODAS reservadas y confirmadas (9 reservas).
+   Se muestra en Hoteles como referencia; no es un nodo persistido (dato horneado). */
+/* Elementos 4-6 (12.63): checkIn/checkOut ISO + nº de noches. Con la v2 ya no hay
+   filas 'res'/'amp' que alimenten "Aún por reservar" (queda vacía a propósito: ver
+   pendingHTML/renderConfirmado). Se conservan para el resumen de ruta de Inicio
+   (routeOverview), que los lee también en las filas 'ok'. 'vuelo' no los necesita
+   (no es noche de hotel). */
 const NIGHTS = [
   ['8 abr','A bordo (AY0073)','vuelo','—'],
-  ['9–12 abr','Tokio · Louis House Otsuka Nishi','ok','3 noches RESERVADO','2027-04-09','2027-04-12',3],
-  ['12 abr','Nikko · ryokan/onsen','res','zona: Nikko o Kinugawa Onsen','2027-04-12','2027-04-13',1],
-  ['13–15 abr','Kanazawa · centro','res','2 noches · Katamachi/Kōrinbō o estación','2027-04-13','2027-04-15',2],
-  ['15 abr','Takayama · RYOKAN','res','media pensión, onsen + kaiseki (el más urgente)','2027-04-15','2027-04-16',1],
-  ['16–19 abr','Kioto · zona Shijō','res','3 noches · Shijō-Kawaramachi o estación','2027-04-16','2027-04-19',3],
-  ['19 abr','Hiroshima · centro','res','Hondōri/Hatchōbori','2027-04-19','2027-04-20',1],
-  ['20 abr','Fukuoka · Hakata/Nakasu','res','Hakata (estación) o Nakasu/Tenjin','2027-04-20','2027-04-21',1],
-  ['21–24 abr','Osaka · Namba','res','3 noches · Namba/Shinsaibashi','2027-04-21','2027-04-24',3],
-  ['24 abr','Tokio · APA Asakusabashi','amp','AMPLIAR la reserva 25–27 para entrar el 24','2027-04-24','2027-04-25',1],
-  ['25–27 abr','Tokio · APA Asakusabashi','ok','2 noches RESERVADO','2027-04-25','2027-04-27',2],
+  ['9–12 abr','Tokio · Louis House Otsuka Nishi','ok','3 noches RESERVADO · €268','2027-04-09','2027-04-12',3],
+  ['12 abr','Nikko · Hotel Sunshine Kinugawa','ok','1 noche RESERVADO · media pensión · €198','2027-04-12','2027-04-13',1],
+  ['13–15 abr','Kanazawa · INOVA Kanazawa','ok','2 noches RESERVADO · Superior Triple · €144','2027-04-13','2027-04-15',2],
+  ['15 abr','Takayama · Minshuku Kuwataniya','ok','1 noche RESERVADO · €121','2027-04-15','2027-04-16',1],
+  ['16–19 abr','Kioto · Kyoto Guesthouse','ok','3 noches RESERVADO · japonesa B · €229','2027-04-16','2027-04-19',3],
+  ['19 abr','Hiroshima · Vessel Hotel Peace Blvd','ok','1 noche RESERVADO · €79','2027-04-19','2027-04-20',1],
+  ['20 abr','Fukuoka · Hotel Hakata Nakasu Inn','ok','1 noche RESERVADO · €76','2027-04-20','2027-04-21',1],
+  ['21–25 abr','Osaka · Twilight Osaka Inn','ok','4 noches RESERVADO · €150','2027-04-21','2027-04-25',4],
+  ['25–27 abr','Tokio · APA Asakusabashi','ok','2 noches RESERVADO · 2 habitaciones · €186','2027-04-25','2027-04-27',2],
   ['27 abr','A bordo (AY0074, sale 23:05)','vuelo','—'],
 ];
 
@@ -2070,7 +2091,7 @@ const NIGHTS = [
    "otro viaje" (demasiado lejos) y sitios sueltos de criterio. */
 const SKIPPED = [
   ['zona','Nagano (monos de Jigokudani)','En abril los macacos apenas se bañan (es conducta de invierno con nieve) y está a ~8 h ida y vuelta. Ese día de montaña se aprovecha mucho mejor en Shirakawa-gō + Takayama, que sí caen de camino. OJO: los "Alpes" que SÍ hacéis (Takayama, Shirakawa-gō) están en Gifu, no en Nagano.'],
-  ['zona','Nagoya','Pasáis por su estación el 16 y coméis miso katsu allí: es ciudad de paso, no destino. María ya la vio a fondo y no tiene un imprescindible que justifique noche.'],
+  ['zona','Nagoya','Pasáis por su estación el 16 y coméis miso katsu allí: es ciudad de paso, no destino, sin un imprescindible que justifique noche.'],
   ['lejos','Okinawa','Vuelo aparte y playas: es un viaje entero. Otra maleta.'],
   ['lejos','Kyūshū profundo / Takachiho','Pisáis Fukuoka (norte de Kyūshū), pero la garganta de Takachiho está a +4 h de bus al sur.'],
   ['lejos','Kumano Kodō e Ise','Peregrinación de varios días por Wakayama (Kumano) y desvío de un día (Ise): rompen la ruta.'],
@@ -2104,7 +2125,7 @@ const TRANSPORT = [
   ['rec','Día 19','Kioto → Himeji (14:10) y Himeji → Hiroshima (18:10)','Nozomi / Sakura'],
   ['rec','Día 20','Hiroshima → Hakata (18:55)','Nozomi'],
   ['rec','Día 21','Hakata → Shin-Osaka (15:00)','Nozomi'],
-  ['rec','Día 24','Shin-Osaka → Tokio (13:50)','Nozomi'],
+  ['rec','Día 25','Shin-Osaka → Tokio (~06:00 → ~08:30)','Nozomi · horario exacto a confirmar cuando salga el calendario JR'],
   ['rec','Día 27','Tokyo Station → Narita (16:45)','N’EX (Narita Express)'],
 ];
 
@@ -2147,7 +2168,7 @@ const BOOKINGS = [
    'transporte' | 'bono'. Confirmar al reservar. */
 const PRICES = [
   ['hotel','Hotel de ciudad (por persona/noche)','~¥5.000–9.000','En habitación triple/doble; abril sube. Business hotels (APO, Toyoko Inn) por lo bajo.'],
-  ['hotel','Ryokan de Takayama con media pensión','~¥18.000–30.000','Es una experiencia, no una cama: cena kaiseki + onsen + desayuno incluidos.'],
+  ['hotel','Minshuku de Takayama (Kuwataniya)','~¥18.000–30.000','Solo desayuno con reserva la tarde anterior + onsen común; la cena es en el casco antiguo.'],
   ['hotel','Ryokan/onsen de Nikko','~¥12.000–20.000','Con o sin cena; los buenos vuelan en abril.'],
   ['comida','Konbini / desayuno','~¥400–700','Onigiri, café, sándwich. El aliado del viaje.'],
   ['comida','Comida media (ramen, teishoku, gyudon)','~¥900–1.500','Un bol de ramen bueno, ~¥1.000.'],
@@ -3990,12 +4011,28 @@ function isBookedHotel(p){
 function bookedHotels(){
   return state.places.filter(isBookedHotel);
 }
+/* v2: con las 9 reservas cerradas, NIGHTS ya no es "lo que propone la Ruta" sino
+   la fuente de la reserva real para las 7 ciudades que no viajan como nodo propio
+   en state.places (solo Louis House y APA lo hacen, sembrados por ensureHotelFixes).
+   Fallback ligero de solo lectura: NO es un lugar del catálogo (sin lat/lng, sin
+   pid), así que nunca aparece en el mapa ni se confunde con isBookedHotel/Foil. */
+function nightFromRuta(dayDate){
+  if(!dayDate) return null;
+  const n = NIGHTS.find(row => row[4] && row[5] && dayDate >= row[4] && dayDate < row[5]);
+  if(!n) return null;
+  const parts = n[1].split(' · ');
+  return {id: 'ruta-noche-' + n[4], name: parts.slice(1).join(' · ') || n[1], region: parts[0] || '',
+    checkIn: n[4], checkOut: n[5]};
+}
 /* El hotel reservado que cubre la noche de un día (checkIn ≤ fecha < checkOut).
-   Conecta las reservas con los días reales: dónde dormimos esa noche. */
+   Conecta las reservas con los días reales: dónde dormimos esa noche. Primero la
+   reserva sincronizada (state.places); si no hay nodo propio, cae a NIGHTS (v2:
+   las 18 noches están reservadas, así que esto ya cubre el viaje entero). */
 function hotelForNight(dayDate){
   if(!dayDate) return null;
-  return state.places.find(p => isBookedHotel(p) && p.checkIn && p.checkOut &&
-    dayDate >= p.checkIn && dayDate < p.checkOut) || null;
+  const real = state.places.find(p => isBookedHotel(p) && p.checkIn && p.checkOut &&
+    dayDate >= p.checkIn && dayDate < p.checkOut);
+  return real || nightFromRuta(dayDate);
 }
 /* Los vuelos que salen ESE día, leídos de FLIGHTS (fuente única, la misma que
    lee Confirmado). Cada vuelo cae en su fecha real: el AY0074 sale de Narita
@@ -4003,8 +4040,9 @@ function hotelForNight(dayDate){
 function flightsOn(dayDate){
   return dayDate ? FLIGHTS.filter(f => f.date === dayDate) : [];
 }
-/* La ÚNICA ciudad que REALIDAD puede afirmar de una noche: la de la reserva que
-   la cubre. Sin reserva no hay ciudad — el viaje todavía no lo dice. */
+/* La ciudad que REALIDAD afirma de una noche: la de la reserva que la cubre,
+   sincronizada o (v2) la del alojamiento cerrado de la Ruta. Con las 18 noches
+   reservadas, REALIDAD y Ruta ya coinciden en alojamiento para todo el viaje. */
 function nightCityFor(dayDate){
   const h = hotelForNight(dayDate);
   return h ? (h.region || '') : '';
@@ -4902,6 +4940,8 @@ function renderInicio(){
   // ciudad + check-in/check-out reales + nº de noches. Sustituye a los 3
   // placeholders fijos hotel_tokyo/kyoto/osaka de la semilla, obsoletos desde
   // que la Ruta manda (12.57+): esas 3 ciudades ni siquiera son ya el reparto.
+  // v2: con las 9 reservas cerradas, toReserve siempre está vacío — en vez de
+  // dejar la sección en blanco, se afirma el éxito explícitamente.
   const toReserve = NIGHTS.filter(n => n[2] === 'res' || n[2] === 'amp');
   const pendingCards = toReserve.map(n => {
     const [, city, status, note, checkIn, checkOut, nights] = n;
@@ -4917,7 +4957,12 @@ function renderInicio(){
   });
   $('#hotelPending').innerHTML = pendingCards.length
     ? `<div class="pending-head">Aún por reservar · planificación</div>${pendingCards.join('')}`
-    : '';
+    : `<div class="m-foil" style="padding:14px;display:flex;gap:12px;align-items:center">
+        <div class="emoji" style="font-size:24px">✅</div>
+        <div><b>Alojamiento completo:</b> 18 noches del 9 al 27 de abril, sin huecos.
+          <div style="font-size:12.5px;color:var(--muted)">~€1.451 en total (~€484 por persona).</div>
+        </div>
+      </div>`;
 
   // Prioridad 3 (fase de viaje): teaser de la Booking Timeline en el Inicio
   // (misma lógica que Guía, resumida a lo más urgente) — enlaza a la sección

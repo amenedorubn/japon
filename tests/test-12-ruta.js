@@ -86,12 +86,16 @@ const OMITTED_TWINS = {
   nihonbashi: 'un puente historico bajo una autopista: 2 min de foto que no sostienen parada',
   jimbocho: 'librerias de viejo en japones: nicho; su hueco lo ganan Tsukiji y Hamarikyu',
   kakiya: 'cambiado por anago-meshi: la otra especialidad de Miyajima, decision de criterio',
+  // v2 (alojamiento confirmado, traslado Osaka->Tokio movido al 25): el 24 pasa
+  // a ser dia completo en Osaka y pierde la noche de Ginza/Kabuki-za en Tokio;
+  // no hay otro dia con hueco para reubicarlo.
+  kabukiza: 'la noche de Ginza en Tokio desaparece del 24 al mover el traslado al 25 (v2)',
 };
 const rutaIds = api.itineraryPlaceIds('ruta');
 const missing = api.TWIN_GROUPS.filter(g =>
   !api.groupIdsOf(g.anchor).some(id => rutaIds.has(id)));
-check('ruta: 55 de 60 gemelos con parada; los que faltan son EXACTAMENTE los 5 descartes documentados',
-  missing.length === 5 && missing.every(g => g.anchor in OMITTED_TWINS));
+check('ruta: 54 de 60 gemelos con parada; los que faltan son EXACTAMENTE los 6 descartes documentados',
+  missing.length === 6 && missing.every(g => g.anchor in OMITTED_TWINS));
 check('ruta: los descartes son de verdad (ninguno tiene parada)',
   Object.keys(OMITTED_TWINS).every(id => !rutaIds.has(id)));
 check('ruta: a cambio entran Himeji y Tsukiji por criterio (v2)',
@@ -125,9 +129,11 @@ api.setItinMode('ruta');
 const html = els['#dayPanel'].innerHTML;
 check('render: la vista Ruta pinta sus días con filas plantables', html.includes('La Ruta 21 días') &&
   html.includes('b-plant') && html.includes('Kenroku-en'));
-check('render: las noches reservadas se respetan (Louis House 9-12, APA 25-27)',
+check('render: las noches reservadas se respetan (Louis House 9-12, Osaka 21-24, APA 25-27)',
   R.slice(1, 4).every(d => /Louis House/.test(d.stay || '')) &&
-  R.slice(17, 19).every(d => /APA/.test(d.stay || '')) && /AMPLIAR/.test(R[16].stay || ''));
+  R.slice(17, 19).every(d => /APA/.test(d.stay || '')) &&
+  // v2: el 24 ya no amplia el APA, pasa a ser la 4a noche de Osaka (traslado al 25).
+  /Twilight Osaka Inn/.test(R[16].stay || ''));
 check('render: el documento hora a hora se ofrece solo en la Ruta',
   els['#btnRutaDoc'].style.display === '' && api.RUTA_DOC_URL.endsWith('.docx'));
 
@@ -183,10 +189,12 @@ check('catálogo: anago-meshi existe, es de Miyajima y no es marisco crudo',
   !!api.placeById('anago_meshi') && api.placeView(api.placeById('anago_meshi')).zone === 'miyajima');
 
 // ================= 9) LA WEB DOCUMENTA NOCHES / TRANSPORTES / PRECIOS / DESCARTES =================
-check('noches: las 20 noches con Louis House y APA marcadas RESERVADO (ok)',
-  api.NIGHTS.length === 12 && // 12 tramos (algunos multi-noche)
+check('noches: las 18 noches (v2), alojamiento completo, todas RESERVADO (ok)',
+  api.NIGHTS.length === 11 && // 11 tramos (algunos multi-noche)
+  api.NIGHTS.filter(n => n[2] !== 'vuelo').every(n => n[2] === 'ok') &&
   api.NIGHTS.some(n => /Louis House/.test(n[1]) && n[2] === 'ok') &&
-  api.NIGHTS.some(n => /APA/.test(n[1]) && n[2] === 'amp'));
+  api.NIGHTS.some(n => /APA/.test(n[1]) && n[2] === 'ok') &&
+  api.NIGHTS.some(n => /Twilight Osaka Inn/.test(n[1]) && n[6] === 4));
 check('transportes: hay reservas obligatorias (Kagayaki, buses Nouhi) y recomendadas (Nozomi)',
   api.TRANSPORT.some(t => t[0] === 'obl' && /Kagayaki/.test(t[3])) &&
   api.TRANSPORT.some(t => t[0] === 'obl' && /Nouhi/.test(t[3])) &&

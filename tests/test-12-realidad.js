@@ -92,13 +92,19 @@ check('hotelForNight: cubre las noches 9, 10 y 11 de abril',
   ['2027-04-09', '2027-04-10', '2027-04-11'].every(x => api.hotelForNight(x) === louis));
 check('hotelForNight: el 12 ya no (checkOut excluido)', api.hotelForNight('2027-04-12') !== louis);
 check('nightCityFor: la ciudad sale de la reserva, no del día', api.nightCityFor('2027-04-09') === 'Tokio');
-check('nightCityFor: una noche sin reserva no tiene ciudad', api.nightCityFor('2027-04-17') === '');
+// v2: con las 18 noches del viaje reservadas (NIGHTS), el 17 ya cae en la
+// reserva de Kioto (aunque no viaje como nodo propio en state.places); solo un
+// día sin check-in alguno (el vuelo de ida) queda de verdad sin ciudad.
+check('nightCityFor: v2 cae a la reserva de la Ruta si no hay nodo propio (Kioto, 17-abr)',
+  api.nightCityFor('2027-04-17') === 'Kioto');
+check('nightCityFor: un día sin check-in alguno no tiene ciudad', api.nightCityFor('2027-04-08') === '');
 
 api.zoomToDay(dayIdx('2027-04-09'));
 check('REALIDAD: la noche reservada aparece con su hotel', panel().includes('Louis House'));
 check('REALIDAD: y la ciudad de esa noche se afirma (viene de la reserva)', panel().includes('🛏 Tokio'));
 api.zoomToDay(dayIdx('2027-04-17'));
-check('REALIDAD: una noche sin reserva no afirma ciudad', !panel().includes('🛏 '));
+// v2: el 17 ya cae en la reserva de Kioto (fallback a NIGHTS, sin nodo propio).
+check('REALIDAD: v2, una noche sin nodo propio igual afirma ciudad vía NIGHTS', panel().includes('🛏 Kioto'));
 
 // ---- 5) el Cord se apoya en lo real ----
 api.renderCord();
