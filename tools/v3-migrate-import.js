@@ -167,18 +167,30 @@ function addMinutosHHMM(horaHHMM, minutos){
   return `${pad2(Math.floor(total / 60) % 24)}:${pad2(total % 60)}`;
 }
 
-/* Hora de check-in REALMENTE documentada en las notas de la reserva
-   (import/live.json -> places[].notes), verificada a mano contra el texto
-   una a una (2026-09-16, encargo del usuario). Solo entra aquí una reserva
-   si el texto da una hora de APERTURA del check-in, no un límite de
-   llegada: "Check-in hasta las 00:00" (Nakasu Inn) es un tope, no una
-   apertura, así que se deja fuera a propósito -- no se inventa una hora
-   de inicio que el texto no da. Del resto de las 9 reservas confirmadas
-   (Louis House, Sunshine Kinugawa, INOVA Kanazawa, Kuwataniya, Vessel
-   Hiroshima, Nakasu Inn, Twilight Osaka, APA Asakusabashi) ninguna nota
-   menciona una hora de check-in: siguen sin hora en el bloque del día. */
+/* Hora de check-in de las 9 reservas confirmadas, 2026-09-16. Dos fuentes
+   distintas, marcadas con `estandar` para que la UI las distinga:
+   - id_kyoto_guesthouse: SIN `estandar` -- viene de las notas de ESTA
+     reserva ("Check-in solo de 16:00 a 19:00."), no es un dato genérico.
+   - El resto con `estandar:true`: hora de check-in ESTÁNDAR del hotel,
+     buscada en su web oficial o ficha de reserva (encargo 2026-09-16), NO
+     la hora real de esta reserva concreta -- por eso llevan `fuente`.
+   Dos de las 9 se quedan sin hora a propósito, no se inventa nada:
+   - id_louis_otsuka_nishi: no se encontró una ficha oficial de ESTA
+     Louis House concreta (Ōtsuka-Nishi); solo aparecieron otras
+     direcciones de la misma cadena (Shibuya, Ueno), con horas distintas
+     entre sí -- no es dato de esta reserva.
+   - id_nakasu_inn: fuentes contradictorias (14:00 vs 15:00) y una de ellas
+     mezclaba "Hotel Hakata Nakasu Inn" con un hotel de nombre parecido
+     pero DISTINTO ("Vessel Inn Hakata Nakasu"). Su nota ya documentada
+     ("Check-in hasta las 00:00") es un tope de llegada, no una apertura. */
 const HOTEL_CHECKIN_HORA = {
-  id_kyoto_guesthouse: '16:00' // notes: "Check-in solo de 16:00 a 19:00."
+  id_kyoto_guesthouse: { hora: '16:00' },
+  id_sunshine_kinugawa: { hora: '15:00', estandar: true, fuente: 'https://www.sunshine-kinugawa.co.jp/translation/en.html' },
+  id_inova_kanazawa: { hora: '15:00', estandar: true, fuente: 'https://www.ikyu.com/en-us/00050650/' },
+  id_kuwataniya: { hora: '14:00', estandar: true, fuente: 'https://www.jtb.co.jp/kokunai-hotel/htl/5475A21/' },
+  id_vessel_hiroshima: { hora: '14:00', estandar: true, fuente: 'https://www.booking.com/hotel/jp/vessel-hiroshima-peace-blvg.html' },
+  id_twilight_osaka: { hora: '14:00', estandar: true, fuente: 'https://www.booking.com/hotel/jp/xiao-twilight-osaka-inn-no-3.id.html' },
+  apa_asakusabashi: { hora: '15:00', estandar: true, fuente: 'https://www3.apahotel.com/hotel/syutoken/tokyo/asakusabashi-ekimae/' }
 };
 
 function transform(livePlaces, v2Baked){
@@ -190,7 +202,7 @@ function transform(livePlaces, v2Baked){
 
   // 1) CONFIRMADO — hoteles reservados (más alto en la precedencia).
   for (const p of livePlaces.filter(isBookedHotel)) {
-    const horaCheckin = HOTEL_CHECKIN_HORA[p.id];
+    const checkin = HOTEL_CHECKIN_HORA[p.id];
     // OJO: `fin` sigue siendo el checkOut de la ESTANCIA (fecha pelada, sin
     // hora) -- bases.js lo usa para el rango [checkIn, checkOut) de noches.
     // Solo `inicio` gana hora, y fechaDe() de bases.js recorta con slice(0,10)
@@ -200,12 +212,15 @@ function transform(livePlaces, v2Baked){
       procedencia: provenanceOf(p), estado: 'confirmado',
       noche: null, // una reserva de hotel cubre varias noches; el UI de Fase 4 lo deriva por rango
       fechaHora: {
-        inicio: p.checkIn ? (horaCheckin ? `${p.checkIn}T${horaCheckin}` : p.checkIn) : null,
+        inicio: p.checkIn ? (checkin ? `${p.checkIn}T${checkin.hora}` : p.checkIn) : null,
         fin: p.checkOut || null,
         zona: 'Asia/Tokyo'
       },
       ubicacion: (p.lat != null && p.lng != null) ? { lat: p.lat, lng: p.lng } : null,
-      acciones: []
+      acciones: [],
+      // La UI distingue "hora de ESTA reserva" (Kioto) de "hora estándar del
+      // hotel" (el resto, buscada en su web/ficha oficial, no en la reserva).
+      nota: (checkin && checkin.estandar) ? `Hora de check-in estándar del hotel (fuente: ${checkin.fuente}), no la hora de esta reserva.` : null
     });
     consumed.add(p.id);
   }

@@ -76,9 +76,11 @@
   .actions{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
   .countdown-big{font-size:1.7rem; font-weight:700; line-height:1.05; white-space:nowrap;}
   .countdown-unit{font-size:.7rem; color:var(--muted); display:block;}
-  .fecha-corta{font-size:.76rem; color:var(--muted); margin-top:6px; white-space:nowrap;}
+  .fecha-corta{font-size:.76rem; color:var(--muted); margin-top:6px; max-width:100%; overflow-wrap:break-word;}
   .fecha-corta.warn{color:var(--warn);}
-  .hora-jst{font-size:.66rem; color:var(--muted); opacity:.8; white-space:nowrap; margin-top:2px;}
+  .fecha-corta.hora-linea{margin-top:0;}
+  .hora-jst{font-size:.66rem; color:var(--muted); opacity:.8; margin-top:2px; max-width:100%; overflow-wrap:break-word;}
+  .hora-jst.hora-linea{margin-top:0;}
   button, a.btn{font:inherit; font-size:.78rem; padding:5px 10px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; text-decoration:none; display:inline-block;}
   button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
   button.link{border:none; padding:2px 0; text-decoration:underline; color:var(--accent);}
@@ -108,6 +110,8 @@
   .bloque .cuerpo p{margin:2px 0 0; font-size:.82rem; color:var(--muted);}
   .bloque.transporte{background:var(--card); border-radius:10px; padding:10px 12px; border-bottom:none; margin-bottom:10px; border:1px solid var(--line);}
   .bloque.transporte .cuerpo h3{font-weight:700;}
+  .bloque.hito{background:var(--card); border-radius:10px; padding:10px 12px; border-bottom:none; margin-bottom:10px; border:1px dashed var(--line);}
+  .bloque.hito .cuerpo h3{font-weight:700; color:var(--muted);}
   .badge.tag{color:var(--warn); border-color:var(--warn);}
   .detalle{display:none; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:6px; font-size:.85rem;}
   .detalle.abierto{display:block;}
@@ -309,11 +313,14 @@
         rightHTML = '<div class="countdown-big">' + esc(c.big) + '<span class="countdown-unit">' + esc(c.unit) + '</span></div>';
         if (entry.accion.horaConfirmada && entry.horas) {
           var md = entry.horas['Europe/Madrid'].split(' '), jst = entry.horas['Asia/Tokyo'].split(' ');
-          rightHTML += '<div class="fecha-corta">' + formatFechaCorta(md[0]) + ' · ' + md[1] + '</div>' +
-            '<div class="hora-jst">' + formatFechaCorta(jst[0]) + ' · ' + jst[1] + ' JST</div>';
+          rightHTML += '<div class="fecha-corta">' + formatFechaCorta(md[0]) + '</div>' +
+            '<div class="fecha-corta hora-linea">' + md[1] + '</div>' +
+            '<div class="hora-jst">' + formatFechaCorta(jst[0]) + '</div>' +
+            '<div class="hora-jst hora-linea">' + jst[1] + ' JST</div>';
         } else {
           var mdW = entry.horas['Europe/Madrid'].split(' '), jstW = entry.horas['Asia/Tokyo'].split(' ');
-          rightHTML += '<div class="fecha-corta warn">' + formatFechaCorta(mdW[0]) + ' · desde ' + mdW[1] + ' ⚠️</div>' +
+          rightHTML += '<div class="fecha-corta warn">' + formatFechaCorta(mdW[0]) + '</div>' +
+            '<div class="fecha-corta warn hora-linea">desde ' + mdW[1] + ' ⚠️</div>' +
             '<div class="hora-jst">' + formatFechaCorta(jstW[0]) + ' JST</div>';
         }
       }
@@ -364,6 +371,38 @@
       if (item.tipo === 'vuelo') return '✈️';
       if (item.nota && /bus/i.test(item.nota)) return '🚌';
       return '🚆';
+    }
+
+    // Punto de SALIDA de un día (corrección 2026-09-16: el mapa trazaba la
+    // ruta desde el hotel de ESTA noche, al que aún no se ha llegado). Es
+    // el hotel de la noche anterior -- salvo el 9-abr, que es un hecho real
+    // y documentado (llegada a Japón ese día, se sale del aeropuerto, no de
+    // un hotel) y no algo que hotelDeAnoche() pueda derivar de los datos.
+    var SALIDA_EXCEPCIONES = {
+      '2027-04-09': { nombre: 'Aeropuerto de Narita', ubicacion: { lat: 35.772, lng: 140.3929 }, icono: '✈️' }
+    };
+    function salidaDelDia(fecha){
+      if (SALIDA_EXCEPCIONES[fecha]) return SALIDA_EXCEPCIONES[fecha];
+      var h = hotelDeAnoche(HOTELES, DATA.dias, fecha);
+      return h ? { nombre: h.nombre, ubicacion: h.ubicacion, icono: '🏨' } : null;
+    }
+
+    function bloqueSalida(salida){
+      return '<div class="bloque hito"><div class="franja">sin hora</div>' +
+        '<div class="cuerpo"><h3>' + salida.icono + ' Salida desde ' + esc(salida.nombre) + '</h3></div></div>';
+    }
+
+    // Punto de LLEGADA (hotel de ESTA noche), SIEMPRE el último bloque del
+    // día -- tanto si hoy es el día real de check-in (con su hora real si
+    // la reserva la documenta, p.ej. Kyoto Guesthouse) como si es una noche
+    // siguiente de una estancia de varias noches (sin evento de check-in
+    // ese día: no se le pone una hora que no existe).
+    function bloqueLlegada(hotelHoy, fecha){
+      var esHoyCheckin = fechaDe(hotelHoy) === fecha;
+      var hora = esHoyCheckin ? horaDe(hotelHoy) : null;
+      var notaHTML = (esHoyCheckin && hotelHoy.nota) ? '<p>' + esc(hotelHoy.nota) + '</p>' : '';
+      return '<div class="bloque hito"><div class="franja">' + (esHoyCheckin ? (hora || 'sin hora') : '') + '</div>' +
+        '<div class="cuerpo"><h3>🏨 ' + esc(hotelHoy.nombre) + '</h3>' + notaHTML + '<span class="badge">✅ confirmado</span></div></div>';
     }
 
     // "Mismo dato que Pendientes, sin recalcular": reutiliza las MISMAS
@@ -419,6 +458,7 @@
       var diaInfo = DATA.dias.find(function(d){ return d.fecha === fecha; });
       var hotel = hotelParaFecha(HOTELES, fecha);
       var itemsDia = itemsDeFecha(items, fecha);
+      var salida = salidaDelDia(fecha);
 
       document.getElementById('tituloPantalla').textContent = 'Japón 2027 · ' + formatFechaCorta(fecha);
 
@@ -426,12 +466,30 @@
         ? '🏨 ' + esc(hotel.nombre) + ' <span class="badge">✅ confirmado</span>'
         : '<span class="badge warn">⚠️ sin base confirmada esta noche</span>';
 
+      // El check-in de hoy, si existe como ítem real de este día, se pinta
+      // con el estilo de llegada (bloqueLlegada) EN SU SITIO: si tiene hora
+      // real (de la reserva o estándar del hotel) se intercala cronológicamente
+      // como cualquier otra parada -- ordenarDia ya lo garantiza (corrección
+      // 2026-09-16); si no tiene hora, ordenarDia lo manda al final del
+      // "resto" del día, nunca al principio.
       var numParada = 0;
       var bloquesHTML = itemsDia.map(function(it, i){
-        if (it.tipo !== 'trayecto' && it.tipo !== 'vuelo') numParada++;
+        if (it.tipo === 'alojamiento') return bloqueLlegada(it, fecha);
+        if (it.tipo === 'lugar') numParada++;
         return bloqueItem(it, i, numParada);
       }).join('');
 
+      // Estancias de varias noches (p.ej. 17-18 abr en Kioto): el check-in
+      // real solo existe como ítem el día de la llegada, así que en las
+      // noches siguientes no hay nada en itemsDia que lo represente -- se
+      // añade aquí, al final, solo para rellenar ese hueco real.
+      var hayAlojamientoHoy = itemsDia.some(function(it){ return it.tipo === 'alojamiento'; });
+      var salidaHTML = salida ? bloqueSalida(salida) : '';
+      var llegadaHTML = (hotel && !hayAlojamientoHoy) ? bloqueLlegada(hotel, fecha) : '';
+
+      // El recuento honesto ("sin hora/sin duración") sigue mirando TODOS
+      // los ítems reales del día, check-in incluido -- solo cambia DÓNDE se
+      // pinta el check-in, no si cuenta para la tabla ya reportada.
       var conteo = contarSinDatos(itemsDia);
       var notaHTML = '';
       if (conteo.sinHora || conteo.sinDuracion || conteo.desplazamientosSinDefinir) {
@@ -443,7 +501,7 @@
         '<div class="dia-header"><p class="fecha">' + esc(diaSemana(fecha)) + ' ' + esc(formatFechaCorta(fecha)) + ' · ' + esc(diaInfo ? diaInfo.ciudad : '') + '</p>' +
         '<p class="base">' + baseHTML + '</p></div>' +
         '<div id="mapaDia"></div>' +
-        '<div class="agenda">' + (bloquesHTML || '<p class="empty">Sin paradas este día.</p>') + '</div>' +
+        '<div class="agenda">' + salidaHTML + (bloquesHTML || (salidaHTML || llegadaHTML ? '' : '<p class="empty">Sin paradas este día.</p>')) + llegadaHTML + '</div>' +
         notaHTML;
 
       main.querySelectorAll('[data-detalle]').forEach(function(el){
@@ -461,12 +519,17 @@
         });
       });
 
-      // Mapa: solo pines de paradas con coordenadas, numerados con el MISMO
-      // número que en la agenda (no una renumeración 1..N del subconjunto).
+      // Mapa (corrección 2026-09-16): pin 0 = salida (hotel de anoche, o el
+      // aeropuerto el 9-abr), pines numerados = paradas reales en el MISMO
+      // orden y número que la agenda, último pin = hotel de esta noche --
+      // geográficamente el día siempre "acaba" ahí, sea cual sea la hora del
+      // check-in (que en la agenda sí puede ir intercalada). La línea sigue
+      // exactamente ese orden -- ya no empieza en un hotel al que todavía no
+      // se ha llegado.
       var conNumero = [];
       var n = 0;
       itemsDia.forEach(function(it){
-        if (it.tipo === 'trayecto' || it.tipo === 'vuelo') return;
+        if (it.tipo !== 'lugar') return;
         n++;
         if (it.ubicacion) conNumero.push({ num: n, item: it });
       });
@@ -474,14 +537,27 @@
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19, attribution: '&copy; Esri'
       }).addTo(mapa);
+      var pinHito = function(html, color){
+        return L.divIcon({ className: '', html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color + ';color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + html + '</div>', iconSize: [22, 22], iconAnchor: [11, 11] });
+      };
+      var puntos = [];
+      if (salida && salida.ubicacion) {
+        puntos.push([salida.ubicacion.lat, salida.ubicacion.lng]);
+        L.marker([salida.ubicacion.lat, salida.ubicacion.lng], { icon: pinHito('🚪', '#6b675f') }).addTo(mapa).bindPopup('Salida: ' + esc(salida.nombre));
+      }
       conNumero.forEach(function(p){
+        puntos.push([p.item.ubicacion.lat, p.item.ubicacion.lng]);
         L.marker([p.item.ubicacion.lat, p.item.ubicacion.lng], {
           icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50%;background:#b23a2e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + p.num + '</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
         }).addTo(mapa).bindPopup(esc(p.item.nombre));
       });
-      if (conNumero.length > 1) L.polyline(conNumero.map(function(p){ return [p.item.ubicacion.lat, p.item.ubicacion.lng]; }), { color: '#b23a2e', weight: 2, dashArray: '4,4' }).addTo(mapa);
+      if (hotel && hotel.ubicacion) {
+        puntos.push([hotel.ubicacion.lat, hotel.ubicacion.lng]);
+        L.marker([hotel.ubicacion.lat, hotel.ubicacion.lng], { icon: pinHito('🏨', '#3a7d44') }).addTo(mapa).bindPopup('Esta noche: ' + esc(hotel.nombre));
+      }
+      if (puntos.length > 1) L.polyline(puntos, { color: '#b23a2e', weight: 2, dashArray: '4,4' }).addTo(mapa);
       mapa.invalidateSize();
-      if (conNumero.length) mapa.fitBounds(L.latLngBounds(conNumero.map(function(p){ return [p.item.ubicacion.lat, p.item.ubicacion.lng]; })).pad(0.25), { maxZoom: 16 });
+      if (puntos.length) mapa.fitBounds(L.latLngBounds(puntos).pad(0.25), { maxZoom: 16 });
       else mapa.setView([35.68, 139.76], 9);
     }
 

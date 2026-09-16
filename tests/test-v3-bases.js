@@ -1,7 +1,7 @@
 // v3 · bases derivadas de hoteles CONFIRMADOS (Fase 4, Decisión 2026-09-16
 // punto 1). No depende de index.html: prueba directamente v3/lib/bases.js.
 const path = require('path');
-const { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha } = require(path.join(__dirname, '..', 'v3', 'lib', 'bases.js'));
+const { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha, hotelDeAnoche } = require(path.join(__dirname, '..', 'v3', 'lib', 'bases.js'));
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };
@@ -91,6 +91,44 @@ const hoteles = [
   check('itemsDeFecha: solo trae los ítems de esa fecha exacta (3, no el del 17)', dia16.length === 3);
   check('itemsDeFecha: mismo orden que ordenarDia (trayecto primero, luego por hora)',
     dia16[0].id === 'trayecto-x' && dia16[1].id === 'parada_manana' && dia16[2].id === 'parada_tarde');
+}
+
+// --- Corrección 2026-09-16: un ítem sin hora (p.ej. un check-in de hotel
+// sin franja documentada) NUNCA sale antes que uno con hora real, aunque
+// 'YYYY-MM-DD' sea lexicográficamente "menor" que 'YYYY-MM-DDTHH:MM'
+// (bug real: el check-in salía el primero del día en vez del último). ---
+{
+  const items = [
+    hotel('h_vessel', 'Vessel Hotel Hiroshima', '2027-04-19', '2027-04-20'), // sin hora de check-in
+    parada('fushimi', 'Fushimi Inari', 'lugar', '2027-04-19T07:30'),
+    parada('okonomimura', 'Okonomimura', 'lugar', '2027-04-19T20:00')
+  ];
+  const dia19 = itemsDeFecha(items, '2027-04-19');
+  check('ordenarDia: el check-in sin hora va AL FINAL, no al principio',
+    dia19[dia19.length - 1].id === 'h_vessel');
+  check('ordenarDia: los ítems con hora real se ordenan cronológicamente entre sí, delante del sin-hora',
+    dia19[0].id === 'fushimi' && dia19[1].id === 'okonomimura');
+}
+
+// --- hotelDeAnoche (Bloque 3, punto de SALIDA de un día): el hotel de la
+// noche ANTERIOR a la fecha, nunca el de esta noche. Fixture con la forma
+// real de DATA.dias (solo necesita `.fecha`). ---
+{
+  const hotelesViaje = [
+    hotel('h_kioto', 'Kyoto Guesthouse', '2027-04-16', '2027-04-19'),
+    hotel('h_hiroshima', 'Vessel Hotel Hiroshima', '2027-04-19', '2027-04-20')
+  ];
+  const dias = ['2027-04-16', '2027-04-17', '2027-04-18', '2027-04-19', '2027-04-20']
+    .map(fecha => ({ fecha }));
+
+  check('hotelDeAnoche: 19-abr (Hiroshima) sale del hotel de Kioto (noche del 18)',
+    hotelDeAnoche(hotelesViaje, dias, '2027-04-19').id === 'h_kioto');
+  check('hotelDeAnoche: 17-abr (segunda noche en Kioto) también sale del mismo Guesthouse',
+    hotelDeAnoche(hotelesViaje, dias, '2027-04-17').id === 'h_kioto');
+  check('hotelDeAnoche + hotelParaFecha: 17-abr empieza y acaba en el mismo hotel (Kyoto Guesthouse)',
+    hotelDeAnoche(hotelesViaje, dias, '2027-04-17').id === hotelParaFecha(hotelesViaje, '2027-04-17').id);
+  check('hotelDeAnoche: el primer día del viaje no tiene noche anterior que consultar (null)',
+    hotelDeAnoche(hotelesViaje, dias, '2027-04-16') === null);
 }
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');

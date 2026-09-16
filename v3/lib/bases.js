@@ -55,10 +55,24 @@ function buildBases(hotels, items){
    incoherencia real) también necesita este mismo orden en su propia
    pantalla — Fase 4, Bloque 3. */
 const ES_TRANSPORTE = tipo => tipo === 'trayecto' || tipo === 'vuelo';
+/* Un ítem sin hora (p.ej. un check-in de hotel sin franja documentada) NO
+   puede sonar antes que uno con hora real solo porque 'YYYY-MM-DD' sea más
+   corto que 'YYYY-MM-DDTHH:MM' (bug real, 2026-09-16: el check-in salía el
+   primero del día). Con hora conocida se ordena cronológicamente entre
+   sí; sin hora, siempre al final, en el orden en que ya venían (no hay
+   ningún otro criterio real que inventar). */
+function tieneHora(item){
+  return !!(item.fechaHora.inicio && item.fechaHora.inicio.indexOf('T') !== -1);
+}
 function ordenarDia(paradas){
   const transporte = paradas.filter(p => ES_TRANSPORTE(p.tipo));
   const resto = paradas.filter(p => !ES_TRANSPORTE(p.tipo))
-    .sort((a, b) => (a.fechaHora.inicio || '') < (b.fechaHora.inicio || '') ? -1 : 1);
+    .sort((a, b) => {
+      const ha = tieneHora(a), hb = tieneHora(b);
+      if (ha !== hb) return ha ? -1 : 1;
+      if (!ha) return 0;
+      return a.fechaHora.inicio < b.fechaHora.inicio ? -1 : 1;
+    });
   return transporte.concat(resto);
 }
 
@@ -75,6 +89,20 @@ function itemsDeFecha(items, fecha){
   return ordenarDia(items.filter(it => fechaDe(it) === fecha));
 }
 
+/* Punto de SALIDA de un día (Fase 4, Bloque 3, corrección 2026-09-16): el
+   hotel confirmado que cubre la noche ANTERIOR a `fecha`, para que la
+   agenda y el mapa empiecen desde donde de verdad se ha dormido, no desde
+   el hotel de ESTA noche (al que aún no se ha llegado). `diasOrdenados` es
+   la lista de días del viaje ordenada por fecha (DATA.dias); el primer día
+   del viaje no tiene noche anterior que consultar -> null (excepciones
+   reales como "llega en avión" se resuelven en la UI, no aquí: esta
+   función solo sabe de hoteles confirmados). */
+function hotelDeAnoche(hoteles, diasOrdenados, fecha){
+  const idx = diasOrdenados.findIndex(d => d.fecha === fecha);
+  if (idx <= 0) return null;
+  return hotelParaFecha(hoteles, diasOrdenados[idx - 1].fecha);
+}
+
 function addDiaISO(fechaISO){
   const [y, m, d] = fechaISO.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -84,5 +112,5 @@ function addDiaISO(fechaISO){
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha };
+  module.exports = { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha, hotelDeAnoche };
 }
