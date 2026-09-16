@@ -167,31 +167,61 @@ function addMinutosHHMM(horaHHMM, minutos){
   return `${pad2(Math.floor(total / 60) % 24)}:${pad2(total % 60)}`;
 }
 
-/* Hora de check-in de las 9 reservas confirmadas, 2026-09-16. Dos fuentes
-   distintas, marcadas con `estandar` para que la UI las distinga:
-   - id_kyoto_guesthouse: SIN `estandar` -- viene de las notas de ESTA
-     reserva ("Check-in solo de 16:00 a 19:00."), no es un dato genérico.
-   - El resto con `estandar:true`: hora de check-in ESTÁNDAR del hotel,
-     buscada en su web oficial o ficha de reserva (encargo 2026-09-16), NO
-     la hora real de esta reserva concreta -- por eso llevan `fuente`.
-   Dos de las 9 se quedan sin hora a propósito, no se inventa nada:
-   - id_louis_otsuka_nishi: no se encontró una ficha oficial de ESTA
-     Louis House concreta (Ōtsuka-Nishi); solo aparecieron otras
-     direcciones de la misma cadena (Shibuya, Ueno), con horas distintas
-     entre sí -- no es dato de esta reserva.
-   - id_nakasu_inn: fuentes contradictorias (14:00 vs 15:00) y una de ellas
-     mezclaba "Hotel Hakata Nakasu Inn" con un hotel de nombre parecido
-     pero DISTINTO ("Vessel Inn Hakata Nakasu"). Su nota ya documentada
-     ("Check-in hasta las 00:00") es un tope de llegada, no una apertura. */
-const HOTEL_CHECKIN_HORA = {
-  id_kyoto_guesthouse: { hora: '16:00' },
-  id_sunshine_kinugawa: { hora: '15:00', estandar: true, fuente: 'https://www.sunshine-kinugawa.co.jp/translation/en.html' },
-  id_inova_kanazawa: { hora: '15:00', estandar: true, fuente: 'https://www.ikyu.com/en-us/00050650/' },
-  id_kuwataniya: { hora: '14:00', estandar: true, fuente: 'https://www.jtb.co.jp/kokunai-hotel/htl/5475A21/' },
-  id_vessel_hiroshima: { hora: '14:00', estandar: true, fuente: 'https://www.booking.com/hotel/jp/vessel-hiroshima-peace-blvg.html' },
-  id_twilight_osaka: { hora: '14:00', estandar: true, fuente: 'https://www.booking.com/hotel/jp/xiao-twilight-osaka-inn-no-3.id.html' },
-  apa_asakusabashi: { hora: '15:00', estandar: true, fuente: 'https://www3.apahotel.com/hotel/syutoken/tokyo/asakusabashi-ekimae/' }
+/* Franja de check-in REAL de las 9 reservas confirmadas + llegada estimada al
+   hotel el día de check-in, 2026-09-16 -- sustituye a las horas "estándar del
+   hotel" buscadas por web en el commit 48c8319 (ver HANDOFF-V3.md §3). Dos
+   cosas distintas por hotel, que la UI nunca debe mezclar:
+   - franjaDesde/franjaHasta/franjaConfirmada: la ventana de ESTA reserva.
+     `franjaConfirmada:false` en las 3 que el usuario aún no ha verificado al
+     100% con el hotel (Louis House, Kyoto Guesthouse, Twilight Osaka).
+   - llegadaHora/llegadaTexto: ESTIMACIÓN del asistente de cuándo se llega de
+     verdad al hotel ese día, dado el resto del itinerario del día -- nunca un
+     dato de la reserva. Se muestra SIEMPRE con "≈" en la UI (regla 2026-09-16:
+     ninguna hora calculada por el asistente se pinta como dato cierto).
+   `huecoAntesCheckin` solo existe cuando se llega a la CIUDAD antes de que
+   abra la franja (hoy, solo Kioto 16-abr: se llega sobre las 14:20 pero el
+   check-in no abre hasta las 16:00) -- se pinta como bloque aparte, sin
+   inventar si el hotel guarda maletas o no (eso lo confirma el usuario, ver
+   la acción 'preguntarMaletas' más abajo).
+   avisoLlegada (ver debeAvisarLlegada): franja sin confirmar, o llegada antes
+   de apertura, o margen hasta el cierre < 1h. Nikkō (12-abr) NO lo lleva a
+   propósito -- franja confirmada y margen amplio (~2h15). */
+const HOTEL_CHECKIN = {
+  id_louis_otsuka_nishi: { franjaDesde: '15:00', franjaHasta: '00:00', franjaConfirmada: false,
+    llegadaHora: '16:00', llegadaTexto: '≈ 16:00 (Narita → Ōtsuka, ~90 min)' },
+  id_sunshine_kinugawa: { franjaDesde: '15:00', franjaHasta: '18:00', franjaConfirmada: true,
+    llegadaHora: '15:45', llegadaTexto: '≈ 15:45–16:00' },
+  id_inova_kanazawa: { franjaDesde: '15:00', franjaHasta: '21:00', franjaConfirmada: true,
+    llegadaHora: '15:25', llegadaTexto: '≈ 15:25' },
+  id_kuwataniya: { franjaDesde: '14:00', franjaHasta: '22:00', franjaConfirmada: true,
+    llegadaHora: '14:50', llegadaTexto: '≈ 14:50–15:00 (llegada del tren)' },
+  id_kyoto_guesthouse: { franjaDesde: '16:00', franjaHasta: '19:00', franjaConfirmada: false,
+    llegadaHora: '16:00', llegadaTexto: '≈ 16:00',
+    huecoAntesCheckin: { desde: '14:20', hasta: '16:00' } },
+  id_vessel_hiroshima: { franjaDesde: '14:00', franjaHasta: '23:00', franjaConfirmada: true,
+    llegadaHora: '18:30', llegadaTexto: '≈ 18:30' },
+  id_nakasu_inn: { franjaDesde: '15:00', franjaHasta: '00:00', franjaConfirmada: true,
+    llegadaHora: '19:00', llegadaTexto: '≈ 19:00' },
+  id_twilight_osaka: { franjaDesde: '15:00', franjaHasta: '00:00', franjaConfirmada: false,
+    llegadaHora: '18:20', llegadaTexto: '≈ 18:20' },
+  apa_asakusabashi: { franjaDesde: '15:00', franjaHasta: '00:00', franjaConfirmada: true,
+    llegadaHora: '21:00', llegadaTexto: '≈ 21:00' }
 };
+
+function minutosDesdeMedianoche(hhmm){
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+/* '00:00' como cierre de franja significa "sin límite práctico esa noche"
+   (medianoche o más tarde), nunca "cierra a las 0h ya pasadas" -- se trata
+   como 24:00 para que el margen salga grande, no negativo. */
+function margenCierreMinutos(entry){
+  const cierre = entry.franjaHasta === '00:00' ? 24 * 60 : minutosDesdeMedianoche(entry.franjaHasta);
+  return cierre - minutosDesdeMedianoche(entry.llegadaHora);
+}
+function debeAvisarLlegada(entry){
+  return !entry.franjaConfirmada || !!entry.huecoAntesCheckin || margenCierreMinutos(entry) < 60;
+}
 
 function transform(livePlaces, v2Baked){
   const { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel } = v2Baked;
@@ -202,25 +232,48 @@ function transform(livePlaces, v2Baked){
 
   // 1) CONFIRMADO — hoteles reservados (más alto en la precedencia).
   for (const p of livePlaces.filter(isBookedHotel)) {
-    const checkin = HOTEL_CHECKIN_HORA[p.id];
+    const checkin = HOTEL_CHECKIN[p.id];
     // OJO: `fin` sigue siendo el checkOut de la ESTANCIA (fecha pelada, sin
     // hora) -- bases.js lo usa para el rango [checkIn, checkOut) de noches.
-    // Solo `inicio` gana hora, y fechaDe() de bases.js recorta con slice(0,10)
-    // así que seguir derivando las noches a partir de aquí no se rompe.
+    // `inicio` gana la hora de LLEGADA ESTIMADA (no la de apertura de franja):
+    // es lo que ordenarDia (v3/lib/bases.js) usa para intercalar el bloque de
+    // check-in en su sitio cronológico real del día -- bug real corregido
+    // 2026-09-16 (19-abr salía a las 14:00, antes de Himeji, que está de
+    // camino desde Kioto). fechaDe() de bases.js recorta con slice(0,10), así
+    // que seguir derivando las noches a partir de aquí no se rompe.
     items.push({
       id: p.id, nombre: p.name || p.id, tipo: 'alojamiento',
       procedencia: provenanceOf(p), estado: 'confirmado',
       noche: null, // una reserva de hotel cubre varias noches; el UI de Fase 4 lo deriva por rango
       fechaHora: {
-        inicio: p.checkIn ? (checkin ? `${p.checkIn}T${checkin.hora}` : p.checkIn) : null,
+        inicio: p.checkIn ? (checkin ? `${p.checkIn}T${checkin.llegadaHora}` : p.checkIn) : null,
         fin: p.checkOut || null,
         zona: 'Asia/Tokyo'
       },
       ubicacion: (p.lat != null && p.lng != null) ? { lat: p.lat, lng: p.lng } : null,
-      acciones: [],
-      // La UI distingue "hora de ESTA reserva" (Kioto) de "hora estándar del
-      // hotel" (el resto, buscada en su web/ficha oficial, no en la reserva).
-      nota: (checkin && checkin.estandar) ? `Hora de check-in estándar del hotel (fuente: ${checkin.fuente}), no la hora de esta reserva.` : null
+      // Única reserva 2026-09-16 que necesita una acción propia: el hueco de
+      // Kioto antes de que abra el check-in (ver HOTEL_CHECKIN arriba). Nivel
+      // 4 de Pendientes a propósito (sin abreEn/reglaApertura de venta): no es
+      // una reserva con ventana, es una pregunta al hotel "cuando puedas".
+      // `recomendacion`, NO `reglaApertura`: esta última hace que
+      // precisionLevel() (v3/lib/model.js) lea la acción como nivel 3
+      // "vigilar apertura" (hay CUALQUIER reglaApertura => nivel 3). Es
+      // nivel 4 a propósito -- sin abreEn ni reglaApertura, "reservar ya, sin
+      // fecha" es en realidad "preguntar cuando puedas", no hay nada que
+      // vigilar ni ninguna apertura que esperar.
+      acciones: (checkin && checkin.huecoAntesCheckin) ? [{
+        id: 'preguntarMaletas', necesaria: true, hecho: false, dondeReservar: null, abreEn: null,
+        reglaApertura: null,
+        recomendacion: `Llegáis a la ciudad sobre las ${checkin.huecoAntesCheckin.desde} y el check-in no abre hasta las ${checkin.huecoAntesCheckin.hasta}: preguntar al hotel si guardan las maletas antes de esa hora.`,
+        horaConfirmada: false, fuente: null, verificadoEl: '2026-09-16'
+      }] : [],
+      // Franja real de la reserva (para la UI), separada de la llegada
+      // estimada de arriba -- nunca se pisan entre sí.
+      franjaCheckIn: checkin ? { desde: checkin.franjaDesde, hasta: checkin.franjaHasta, confirmada: checkin.franjaConfirmada } : null,
+      llegadaEstimadaTexto: checkin ? checkin.llegadaTexto : null,
+      avisoLlegada: checkin ? debeAvisarLlegada(checkin) : false,
+      huecoAntesCheckin: (checkin && checkin.huecoAntesCheckin) || null,
+      nota: null
     });
     consumed.add(p.id);
   }
@@ -377,8 +430,8 @@ function citiesInRange(desde, hasta, rutaDays, inclusive){
     .map(d => d.city).filter(c => c && !EXCURSION_CITIES.has(c)));
 }
 
-// fechaHora.inicio de un hotel puede llevar hora real (check-in documentado,
-// ver HOTEL_CHECKIN_HORA) pero estas comparaciones son de NOCHES (fechas de
+// fechaHora.inicio de un hotel puede llevar hora real (llegada estimada, ver
+// HOTEL_CHECKIN) pero estas comparaciones son de NOCHES (fechas de
 // calendario, no instantes) -- mismo criterio que fechaDe() en v3/lib/bases.js:
 // siempre recortar a 'YYYY-MM-DD' antes de comparar contra day.date.
 const soloFecha = f => f.slice(0, 10);

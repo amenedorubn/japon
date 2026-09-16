@@ -112,6 +112,8 @@
   .bloque.transporte .cuerpo h3{font-weight:700;}
   .bloque.hito{background:var(--card); border-radius:10px; padding:10px 12px; border-bottom:none; margin-bottom:10px; border:1px dashed var(--line);}
   .bloque.hito .cuerpo h3{font-weight:700; color:var(--muted);}
+  .bloque.hueco{background:var(--card); border-radius:10px; padding:10px 12px; border-bottom:none; margin-bottom:10px; border:1px dashed var(--warn);}
+  .bloque.hueco .cuerpo h3{font-weight:700; color:var(--warn);}
   .badge.tag{color:var(--warn); border-color:var(--warn);}
   .detalle{display:none; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:6px; font-size:.85rem;}
   .detalle.abierto{display:block;}
@@ -170,7 +172,7 @@
       });
     }
 
-    var ACCION_LABELS = { entrada: 'Entrada', expressPass: 'Express Pass (opcional)', checkin: 'Check-in', reserva: 'Reserva', equipaje: 'Equipaje' };
+    var ACCION_LABELS = { entrada: 'Entrada', expressPass: 'Express Pass (opcional)', checkin: 'Check-in', reserva: 'Reserva', equipaje: 'Equipaje', preguntarMaletas: 'Maletas' };
     function etiquetaAccion(accionId){ return ACCION_LABELS[accionId] || (accionId.charAt(0).toUpperCase() + accionId.slice(1)); }
 
     // ================================================================
@@ -303,6 +305,7 @@
       var titulo = esGrupo ? etiquetaAccion(entry.accionId) : (etiquetaAccion(entry.accionId) + ' · ' + entry.nombre);
       var tramosHTML = esGrupo ? '<ul class="tramos">' + entry.tramos.map(function(t){ return '<li>' + esc(t.nombre) + '</li>'; }).join('') + '</ul>' : '';
       var reglaHTML = entry.accion.reglaApertura ? '<p class="regla">' + esc(entry.accion.reglaApertura) + '</p>' : '';
+      var recomendacionHTML = entry.accion.recomendacion ? '<p class="regla">' + esc(entry.accion.recomendacion) + '</p>' : '';
       var url = entry.accion.dondeReservar || entry.accion.fuente;
       var linkHTML = url ? '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Ir a reservar ↗</a>' : '';
       var accionHTML = '<button class="primary" data-idx="' + entry._idx + '">Marcar como hecho</button>';
@@ -324,7 +327,7 @@
             '<div class="hora-jst">' + formatFechaCorta(jstW[0]) + ' JST</div>';
         }
       }
-      return '<div class="card"><div class="card-left"><h3>' + esc(titulo) + '</h3>' + tramosHTML + badge + reglaHTML +
+      return '<div class="card"><div class="card-left"><h3>' + esc(titulo) + '</h3>' + tramosHTML + badge + reglaHTML + recomendacionHTML +
         '<div class="actions">' + linkHTML + accionHTML + '</div></div><div class="card-right">' + rightHTML + '</div></div>';
     }
 
@@ -381,6 +384,14 @@
     var SALIDA_EXCEPCIONES = {
       '2027-04-09': { nombre: 'Aeropuerto de Narita', ubicacion: { lat: 35.772, lng: 140.3929 }, icono: '✈️' }
     };
+
+    // Huecos locales sin tramo documentado en TRANSPORT (v2.1 raíz está
+    // congelado, no se puede tocar): Nikkō → Kinugawa Onsen (12-abr) y el
+    // salto local dentro de Fukuoka (20-abr). Decisión 2026-09-16: se cuentan
+    // como "desplazamiento sin definir" igual que cualquier otro tramo sin
+    // duración, en vez de quedar invisibles -- sin inventar hora ni modo de
+    // transporte que no está documentado en ningún sitio.
+    var GAPS_LOCALES_SIN_TRAMO = { '2027-04-12': 1, '2027-04-20': 1 };
     function salidaDelDia(fecha){
       if (SALIDA_EXCEPCIONES[fecha]) return SALIDA_EXCEPCIONES[fecha];
       var h = hotelDeAnoche(HOTELES, DATA.dias, fecha);
@@ -397,12 +408,40 @@
     // la reserva la documenta, p.ej. Kyoto Guesthouse) como si es una noche
     // siguiente de una estancia de varias noches (sin evento de check-in
     // ese día: no se le pone una hora que no existe).
+    // Hueco entre llegar a la ciudad y que abra el check-in (hoy, solo Kioto
+    // 16-abr): se pinta ANTES del bloque de llegada, sin inventar si el hotel
+    // guarda maletas o no -- esa pregunta vive en Pendientes (acción
+    // 'preguntarMaletas', horneada en tools/v3-migrate-import.js).
+    function bloqueHueco(hueco){
+      return '<div class="bloque hueco"><div class="franja">' + esc(hueco.desde) + '</div>' +
+        '<div class="cuerpo"><h3>🧳 Hueco ' + esc(hueco.desde) + '–' + esc(hueco.hasta) + ' · maletas</h3>' +
+        '<p>El check-in aún no ha abierto. No consta si el hotel guarda el equipaje antes de esa hora (pendiente de preguntar).</p>' +
+        '<span class="badge warn">⚠️ hueco sin resolver</span></div></div>';
+    }
+
+    // Franja real de la reserva + llegada ESTIMADA al hotel (regla
+    // 2026-09-16: toda hora calculada por el asistente se pinta con "≈",
+    // nunca como dato cierto) -- distinta de la franja, que sí es un dato de
+    // la reserva. `avisoLlegada` ya viene calculado del importador (franja
+    // sin confirmar, llegada antes de apertura, o margen al cierre < 1h).
     function bloqueLlegada(hotelHoy, fecha){
       var esHoyCheckin = fechaDe(hotelHoy) === fecha;
       var hora = esHoyCheckin ? horaDe(hotelHoy) : null;
+      var franja = hotelHoy.franjaCheckIn;
+      var detalleHTML = '';
+      if (esHoyCheckin && franja) {
+        detalleHTML += '<p>Franja de check-in: ' + esc(franja.desde) + '–' + esc(franja.hasta) +
+          (franja.confirmada ? '' : ' <strong>⚠️ por confirmar</strong>') + '</p>';
+        if (hotelHoy.llegadaEstimadaTexto) {
+          detalleHTML += '<p>Llegada estimada al hotel: ' + esc(hotelHoy.llegadaEstimadaTexto) + '</p>';
+        }
+      }
       var notaHTML = (esHoyCheckin && hotelHoy.nota) ? '<p>' + esc(hotelHoy.nota) + '</p>' : '';
-      return '<div class="bloque hito"><div class="franja">' + (esHoyCheckin ? (hora || 'sin hora') : '') + '</div>' +
-        '<div class="cuerpo"><h3>🏨 ' + esc(hotelHoy.nombre) + '</h3>' + notaHTML + '<span class="badge">✅ confirmado</span></div></div>';
+      var avisoHTML = (esHoyCheckin && hotelHoy.avisoLlegada) ? ' <span class="badge warn">⚠️ revisar llegada/franja</span>' : '';
+      var huecoHTML = (esHoyCheckin && hotelHoy.huecoAntesCheckin) ? bloqueHueco(hotelHoy.huecoAntesCheckin) : '';
+      return huecoHTML + '<div class="bloque hito"><div class="franja">' + (esHoyCheckin ? (hora ? '≈ ' + hora : 'sin hora') : '') + '</div>' +
+        '<div class="cuerpo"><h3>🏨 ' + esc(hotelHoy.nombre) + '</h3>' + detalleHTML + notaHTML +
+        '<span class="badge">✅ confirmado</span>' + avisoHTML + '</div></div>';
     }
 
     // "Mismo dato que Pendientes, sin recalcular": reutiliza las MISMAS
@@ -491,10 +530,11 @@
       // los ítems reales del día, check-in incluido -- solo cambia DÓNDE se
       // pinta el check-in, no si cuenta para la tabla ya reportada.
       var conteo = contarSinDatos(itemsDia);
+      var desplazamientosSinDefinir = conteo.desplazamientosSinDefinir + (GAPS_LOCALES_SIN_TRAMO[fecha] || 0);
       var notaHTML = '';
-      if (conteo.sinHora || conteo.sinDuracion || conteo.desplazamientosSinDefinir) {
+      if (conteo.sinHora || conteo.sinDuracion || desplazamientosSinDefinir) {
         notaHTML = '<div class="nota-final">Este día: ' + conteo.sinHora + ' actividad(es) sin hora, ' +
-          conteo.sinDuracion + ' sin duración, ' + conteo.desplazamientosSinDefinir + ' desplazamiento(s) sin definir.</div>';
+          conteo.sinDuracion + ' sin duración, ' + desplazamientosSinDefinir + ' desplazamiento(s) sin definir.</div>';
       }
 
       main.innerHTML =
