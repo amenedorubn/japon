@@ -16,7 +16,11 @@ fs.writeFileSync(appJs, m[1]);
 execFileSync('node', ['--check', appJs], { stdio: 'inherit' });
 console.log('SYNTAX OK\n');
 
-const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-10a-catalog.js', 'test-10b-consolidation.js', 'test-10c-sw.js', 'test-8a-map.js', 'test-8b-platform.js', 'test-12-provenance.js', 'test-12-cord.js', 'test-12-confirmed.js', 'test-12-axis.js', 'test-12-seasons.js', 'test-12-hotels.js', 'test-12-twins.js', 'test-12-pipelines.js', 'test-12-dani-import.js', 'test-12-docx-import.js', 'test-12-realidad.js', 'test-12-maria.js', 'test-12-zones.js', 'test-12-ruta.js', 'test-12-travel-agenda.js', 'test-12-auth.js'];
+const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-10a-catalog.js', 'test-10b-consolidation.js', 'test-10c-sw.js', 'test-8a-map.js', 'test-8b-platform.js', 'test-12-provenance.js', 'test-12-cord.js', 'test-12-confirmed.js', 'test-12-axis.js', 'test-12-seasons.js', 'test-12-hotels.js', 'test-12-twins.js', 'test-12-pipelines.js', 'test-12-dani-import.js', 'test-12-docx-import.js', 'test-12-realidad.js', 'test-12-maria.js', 'test-12-zones.js', 'test-12-ruta.js', 'test-12-travel-agenda.js', 'test-12-auth.js',
+  // v3 (Fase 1, V3-DESIGN.md): módulos independientes bajo v3/lib/, no leen
+  // el appJs extraído de index.html (reciben la misma ruta por argv[2] que
+  // el resto de suites, pero no la usan).
+  'test-v3-timezone.js', 'test-v3-model.js'];
 let failed = 0;
 for (const s of suites) {
   console.log('=== ' + s + ' ===');
