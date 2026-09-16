@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Japón 2027 · maqueta Paso B</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{
+    --bg:#f7f5f0; --card:#ffffff; --ink:#1c1a17; --muted:#6b675f;
+    --line:#e3ded3; --accent:#b23a2e; --warn:#a9670d; --ok:#3a7d44;
+    --menu-bg:#1c1a17; --menu-ink:#efece5; --menu-muted:#a49d8d; --menu-active:#e2685a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#15130f; --card:#211e19; --ink:#efece5; --muted:#a49d8d;
+      --line:#3a352c; --accent:#e2685a; --warn:#e0a03c; --ok:#6fbf7a;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+
+  .aviso-maqueta{
+    background:var(--accent); color:#fff; text-align:center; font-size:.78rem;
+    padding:6px 10px; position:sticky; top:0; z-index:20;
+  }
+
+  header{
+    display:flex; align-items:center; gap:10px; padding:14px 16px;
+    position:sticky; top:26px; background:var(--bg); z-index:10; border-bottom:1px solid var(--line);
+  }
+  #btnMenu{
+    font-size:1.3rem; line-height:1; background:none; border:none; cursor:pointer;
+    padding:4px 8px; border-radius:8px; color:var(--ink);
+  }
+  #btnMenu:hover{background:var(--line);}
+  header h1{font-size:1rem; margin:0;}
+  header .sub{font-size:.76rem; color:var(--muted); margin:0;}
+
+  /* Menú lateral tipo Zara: overlay + panel deslizante */
+  #overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:29;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  #overlay.abierto{opacity:1; pointer-events:auto;}
+  #menu{
+    position:fixed; top:0; bottom:0; left:0; width:82%; max-width:320px;
+    background:var(--menu-bg); color:var(--menu-ink); z-index:30;
+    transform:translateX(-100%); transition:transform .25s ease; overflow-y:auto;
+    padding:20px 0 40px;
+  }
+  #menu.abierto{transform:translateX(0);}
+  #menu .cabecera{padding:0 20px 16px; font-size:1.3rem; font-weight:700; border-bottom:1px solid #3a352c; margin-bottom:8px;}
+  #menu .seccion > button{
+    width:100%; text-align:left; background:none; border:none; color:var(--menu-ink);
+    font:inherit; font-size:1rem; padding:14px 20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+  }
+  #menu .seccion > button:hover{background:#2a271f;}
+  #menu .dias{padding:0 0 8px;}
+  #menu .base-header{
+    padding:10px 20px 4px; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--menu-muted);
+  }
+  #menu .dia-chip{
+    display:block; padding:8px 20px 8px 32px; font-size:.9rem; color:var(--menu-ink);
+    text-decoration:none; border-left:3px solid transparent;
+  }
+  #menu .dia-chip:hover{background:#2a271f;}
+  #menu .dia-chip.activo{border-left-color:var(--menu-active); color:var(--menu-active); font-weight:600; background:#2a271f;}
+  #menu .dia-chip .ciudad{color:var(--menu-muted); font-weight:400;}
+  #menu .dia-chip.activo .ciudad{color:var(--menu-active);}
+
+  main{max-width:520px; margin-inline:auto; padding:0 14px 40px;}
+
+  .dia-header{padding:16px 4px 12px; border-bottom:1px solid var(--line); margin-bottom:14px;}
+  .dia-header .fecha{font-size:1.3rem; font-weight:700; margin:0;}
+  .dia-header .base{font-size:.88rem; color:var(--muted); margin:4px 0 0; display:flex; align-items:center; gap:6px;}
+
+  #mapaDia{height:200px; border-radius:12px; margin-bottom:16px; border:1px solid var(--line);}
+
+  .agenda{position:relative; padding-left:0;}
+  .bloque{
+    display:flex; gap:10px; margin-bottom:2px; padding:10px 0; border-bottom:1px dashed var(--line);
+  }
+  .bloque:last-child{border-bottom:none;}
+  .bloque .franja{flex-shrink:0; width:52px; text-align:right; font-size:.8rem; color:var(--muted); padding-top:2px;}
+  .bloque .franja .dur{display:block; font-size:.68rem; opacity:.8;}
+  .bloque .cuerpo{flex:1; min-width:0;}
+  .bloque .cuerpo h3{margin:0; font-size:.94rem; display:flex; align-items:center; gap:6px;}
+  .bloque .cuerpo .num{
+    display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+    border-radius:50%; background:var(--line); font-size:.68rem; flex-shrink:0;
+  }
+  .bloque .cuerpo p{margin:2px 0 0; font-size:.82rem; color:var(--muted);}
+  .bloque.trayecto{background:var(--card); border-radius:10px; padding:10px 12px; border-bottom:none; margin-bottom:10px; border:1px solid var(--line);}
+  .bloque.trayecto .cuerpo h3{font-weight:700;}
+  .bloque.hueco{opacity:.7;}
+  .bloque.hueco .cuerpo h3{font-style:italic; font-weight:400; color:var(--muted);}
+  .badge{font-size:.7rem; padding:1px 6px; border-radius:999px; border:1px solid var(--line);}
+  .badge.tag{color:var(--warn); border-color:var(--warn);}
+
+  .detalle{
+    display:none; background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:12px; margin-top:6px; font-size:.85rem;
+  }
+  .detalle.abierto{display:block;}
+  .detalle .regla{color:var(--muted); margin:4px 0;}
+  .bloque.clicable{cursor:pointer;}
+  .bloque.clicable:hover{background:var(--card);}
+
+  .nota-final{font-size:.78rem; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-top:14px;}
+</style>
+</head>
+<body>
+  <div class="aviso-maqueta">MAQUETA ESTÁTICA — datos reales del 12 abr, sin conectar a Pendientes/Ruta todavía</div>
+
+  <header>
+    <button id="btnMenu" aria-label="Abrir menú">🇯🇵</button>
+    <div>
+      <h1>Japón 2027</h1>
+      <p class="sub">v3 · Paso B, maqueta</p>
+    </div>
+  </header>
+
+  <div id="overlay"></div>
+  <nav id="menu">
+    <div class="cabecera">🇯🇵 Japón 2027</div>
+    <div class="seccion"><button>Pendientes</button></div>
+    <div class="seccion">
+      <button id="btnRuta">Ruta <span id="flechaRuta">▾</span></button>
+      <div class="dias" id="listaDias"></div>
+    </div>
+    <div class="seccion"><button>Reservas</button></div>
+    <div class="seccion"><button>Más</button></div>
+  </nav>
+
+  <main>
+    <div class="dia-header">
+      <p class="fecha">Lun 12 abr</p>
+      <p class="base">🏨 Hotel Sunshine Kinugawa, Kinugawa Onsen <span class="badge">✅ confirmado</span></p>
+    </div>
+
+    <div id="mapaDia"></div>
+
+    <div class="agenda" id="agenda"></div>
+
+    <div class="nota-final">
+      <strong>Sin inventar nada:</strong> este día tiene <strong>0 actividades sin hora</strong> (las 6 paradas de
+      RUTA_DAYS traen hora y duración) y <strong>1 desplazamiento sin definir</strong> — la vuelta de Kanmangafuchi
+      al hotel (bus + tren + 650 m a pie) solo existe como texto libre en la nota del día, sin hora ni duración
+      estructuradas. Se deja como hueco, no se calcula un horario que no está en los datos.
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    'use strict';
+
+    // --- Menú lateral ---
+    var btnMenu = document.getElementById('btnMenu');
+    var overlay = document.getElementById('overlay');
+    var menu = document.getElementById('menu');
+    function abrirMenu(){ overlay.classList.add('abierto'); menu.classList.add('abierto'); }
+    function cerrarMenu(){ overlay.classList.remove('abierto'); menu.classList.remove('abierto'); }
+    btnMenu.addEventListener('click', abrirMenu);
+    overlay.addEventListener('click', cerrarMenu);
+
+    // --- 21 días reales (RUTA_DAYS), agrupados por base ---
+    var BASES = [
+      { hotel: 'Louis House Otsuka Nishi', dias: [['09-abr','vie','Tokio'],['10-abr','sab','Tokio'],['11-abr','dom','Tokio']] },
+      { hotel: 'Hotel Sunshine Kinugawa', dias: [['12-abr','lun','Nikkō']] },
+      { hotel: 'INOVA Kanazawa', dias: [['13-abr','mar','Kanazawa'],['14-abr','mié','Kanazawa']] },
+      { hotel: 'Minshuku Kuwataniya', dias: [['15-abr','jue','Takayama']] },
+      { hotel: 'Kyoto Guesthouse', dias: [['16-abr','vie','Kioto'],['17-abr','sáb','Kioto'],['18-abr','dom','Kioto']] },
+      { hotel: 'Vessel Hotel Hiroshima', dias: [['19-abr','lun','Hiroshima']] },
+      { hotel: 'Hotel Hakata Nakasu Inn', dias: [['20-abr','mar','Fukuoka']] },
+      { hotel: 'Twilight Osaka Inn', dias: [['21-abr','mié','Osaka'],['22-abr','jue','Osaka'],['23-abr','vie','Osaka'],['24-abr','sáb','Osaka']] },
+      { hotel: 'APA Asakusabashi', dias: [['25-abr','dom','Kamakura (excursión)'],['26-abr','lun','Monte Fuji (excursión)'],['27-abr','mar','Tokio']] }
+    ];
+    var DIA_ACTIVO = '12-abr';
+    var listaDias = document.getElementById('listaDias');
+    var html = '<div class="dia-chip' + (false ? ' activo' : '') + '" style="padding-left:20px;font-weight:600;">8 abr <span class="ciudad">· Vuelo de ida</span></div>';
+    BASES.forEach(function(b){
+      html += '<div class="base-header">' + b.hotel + '</div>';
+      b.dias.forEach(function(d){
+        var activo = d[0] === DIA_ACTIVO;
+        html += '<a class="dia-chip' + (activo ? ' activo' : '') + '" href="#">' +
+          d[1].charAt(0).toUpperCase() + d[1].slice(1) + ' ' + d[0] + ' <span class="ciudad">· ' + d[2] + '</span></a>';
+      });
+    });
+    html += '<div class="dia-chip" style="padding-left:20px;font-weight:600;">28 abr <span class="ciudad">· Vuelo de vuelta</span></div>';
+    listaDias.innerHTML = html;
+
+    // Abre "Ruta" ya desplegada y con el día activo a la vista (maqueta: siempre abierto).
+    document.getElementById('btnRuta').addEventListener('click', function(){
+      listaDias.style.display = listaDias.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // --- Agenda del día (datos reales de RUTA_DAYS, 2027-04-12) ---
+    var PARADAS = [
+      { num: 1, hora: '09:25', dur: 20, nombre: 'Estación Tōbu-Nikkō', nota: 'Consigna de maletas en la estación (o ya en el ryokan).', estado: 'propuesta', lat: 36.7471, lng: 139.619 },
+      { num: 2, hora: '10:00', dur: 20, nombre: 'Puente Shinkyō', nota: 'El puente rojo sagrado sobre el Daiya.', estado: 'propuesta', lat: 36.7542, lng: 139.6049 },
+      { num: 3, hora: '10:30', dur: 105, nombre: 'Santuario Tōshōgū', nota: 'La joya de Ieyasu: puerta Yōmeimon, el gato dormido, los 3 monos. Entrada online.', estado: 'propuesta', pendiente: true, lat: 36.7581, lng: 139.5989,
+        detalle: { regla: 'Entrada online con antelación; ninguna fuente oficial da una regla de "X días/meses antes" exacta', accion: '👀 Vigilar apertura', fuente: null } },
+      { num: 4, hora: '12:30', dur: 30, nombre: 'Santuario Futarasan', nota: 'El santuario tranquilo de al lado, favorito de Dani.', estado: 'propuesta', lat: 36.7589, lng: 139.5953 },
+      { num: 5, hora: '13:10', dur: 40, nombre: 'Templo Rinnō-ji', nota: 'Los tres budas dorados de Rinnō-ji.', estado: 'propuesta', lat: 36.7554, lng: 139.6004 },
+      { num: 6, hora: '15:00', dur: 45, nombre: 'Abismo de Kanmangafuchi', nota: 'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.', estado: 'propuesta', lat: 36.7527, lng: 139.5894 }
+    ];
+    var TRAYECTO_INICIAL = {
+      modo: '🚆', texto: 'Tren · Asakusa → Tōbu-Nikkō', horaInicio: '07:30', horaFin: '09:25', dur: 115,
+      pendiente: true,
+      detalle: { regla: 'Tobu: venta desde las 9:00 del mismo día del mes anterior (oficial; la web no dice "JST" explícito)', accion: '🎫 Reserva · abre 12 mar, desde 01:00 Madrid ⚠️', fuente: 'https://www.tobu.co.jp/en/express_info/purchase/' }
+    };
+
+    function estadoBadge(p){
+      if (p.pendiente) return '<span class="badge tag">🎫 requiere reserva</span>';
+      return '<span class="badge">🟡 propuesta</span>';
+    }
+
+    function bloqueParada(p){
+      return '<div class="bloque clicable" data-detalle="detalle-' + p.num + '">' +
+        '<div class="franja">' + p.hora + '<span class="dur">' + p.dur + ' min</span></div>' +
+        '<div class="cuerpo">' +
+          '<h3><span class="num">' + p.num + '</span>' + p.nombre + '</h3>' +
+          '<p>' + p.nota + '</p>' +
+          estadoBadge(p) +
+          (p.detalle ? '<div class="detalle" id="detalle-' + p.num + '">' +
+            '<p class="regla">' + p.detalle.regla + '</p>' +
+            '<p><strong>' + p.detalle.accion + '</strong></p>' +
+            (p.detalle.fuente ? '<a href="' + p.detalle.fuente + '" target="_blank" rel="noopener">Fuente ↗</a>' : '') +
+            '</div>' : '') +
+        '</div></div>';
+    }
+
+    var agenda = document.getElementById('agenda');
+    var out = '<div class="bloque trayecto clicable" data-detalle="detalle-trayecto">' +
+      '<div class="franja">' + TRAYECTO_INICIAL.horaInicio + '<span class="dur">' + TRAYECTO_INICIAL.dur + ' min</span></div>' +
+      '<div class="cuerpo"><h3>' + TRAYECTO_INICIAL.modo + ' ' + TRAYECTO_INICIAL.texto + '</h3>' +
+      '<p>Llegada ' + TRAYECTO_INICIAL.horaFin + '</p>' +
+      '<span class="badge tag">🎫 requiere reserva</span>' +
+      '<div class="detalle" id="detalle-trayecto">' +
+        '<p class="regla">' + TRAYECTO_INICIAL.detalle.regla + '</p>' +
+        '<p><strong>' + TRAYECTO_INICIAL.detalle.accion + '</strong></p>' +
+        '<a href="' + TRAYECTO_INICIAL.detalle.fuente + '" target="_blank" rel="noopener">Fuente ↗</a>' +
+      '</div></div></div>';
+    out += PARADAS.map(bloqueParada).join('');
+    out += '<div class="bloque hueco"><div class="franja">? <span class="dur">? min</span></div>' +
+      '<div class="cuerpo"><h3>🚌🚆🚶 Desplazamiento sin definir</h3>' +
+      '<p>Kanmangafuchi → hotel: bus a Tōbu-Nikkō, tren a Shimo-Imaichi, línea de Kinugawa, 650 m a pie. ' +
+      'Solo existe como texto libre en la nota del día — llegada prevista ~17:15, sin hora/duración estructuradas.</p></div></div>';
+    agenda.innerHTML = out;
+
+    document.querySelectorAll('[data-detalle]').forEach(function(el){
+      el.addEventListener('click', function(){
+        document.getElementById(el.getAttribute('data-detalle')).classList.toggle('abierto');
+      });
+    });
+
+    // --- Mapa del día: pines numerados + línea de ruta ---
+    var mapa = L.map('mapaDia', { zoomControl: false });
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, attribution: '&copy; Esri'
+    }).addTo(mapa);
+    var puntos = PARADAS.map(function(p){ return [p.lat, p.lng]; });
+    PARADAS.forEach(function(p){
+      L.marker([p.lat, p.lng], {
+        icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50%;background:#b23a2e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + p.num + '</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+      }).addTo(mapa).bindPopup(p.nombre);
+    });
+    L.polyline(puntos, { color: '#b23a2e', weight: 2, dashArray: '4,4' }).addTo(mapa);
+    mapa.fitBounds(L.latLngBounds(puntos).pad(0.25), { maxZoom: 15 });
+  </script>
+</body>
+</html>
