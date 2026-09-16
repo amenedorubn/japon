@@ -8,10 +8,11 @@
    (`ours`/`dani`/`maria`/`instagram`/`ai`) se mantiene como campo **secundario**, histórico e
    inmutable — nunca se trata como estado.
 3. **`Intl` sin librería, también en los tests** (nada de dependencia dev-time para timezone).
-4. **Una pasada más de verificación** (máx. 30 min, solo fuentes oficiales) sobre lo que quedó
-   `horaConfirmada: false`. Lo que siga dudoso tras esa pasada: se queda en `horaConfirmada: false`
-   y gana un **pendiente automático "vigilar apertura"** unos días antes de la fecha estimada (ver
-   §C, nueva regla 7).
+4. **Segunda pasada de verificación HECHA** (máx. 30 min, solo fuentes oficiales, ver §E). Corrigió
+   un dato erróneo (USJ era "3 meses", no "2") y confirmó reglas de día exacto para Nouhi/Tobu/JR
+   East 3 meses/USJ+Express Pass (faltaba solo la hora, ya no la regla). Lo que siguió sin ninguna
+   fecha verificable (Tōshōgū, teamLab): queda en `horaConfirmada: false` con el aviso automático
+   **"vigilar apertura"** (§C regla 7).
 5. **Sin `/v2.1/` en el corte final.** El backup es el tag `v2.1` + rama `archive/v2.1`; no se sirve
    una copia viva de v2.1 en una subruta de Pages.
 6. **Fase 1 arranca al cerrar el punto 4** (modelo de datos + zonas horarias, con tests).
@@ -118,29 +119,37 @@ siempre, por encargo explícito de este documento.
 `pendientesView(items, ahora)`:
 
 1. Filtra `items` con `reserva && reserva.necesaria && !reserva.hecho`.
-2. Para cada uno, si `reserva.abreEn` existe: calcula el instante JST real (ver §D) y lo muestra en
-   **Europe/Madrid** y **Asia/Tokyo** simultáneamente, más cuenta atrás (`Intl.RelativeTimeFormat`
-   o cálculo propio en ms).
-3. Si `reserva.abreEn` es `null` (sin regla de apertura conocida, como el ryokan de Takayama o el
-   templo ninja de Kanazawa en el `BOOKINGS` actual): va en un bloque separado **"Reservar ya, sin
-   fecha de apertura"**, sin inventar una cuenta atrás.
-4. Si `reserva.horaConfirmada === false`: badge ⚠️ "hora sin confirmar — revisar antes de la
-   fecha", visible con icono, no solo color (regla F de accesibilidad).
+2. Cuatro niveles de precisión, de más a menos exacto (§E ya tiene ejemplos reales de cada uno):
+   1. **Día + hora + zona confirmados** (`abreEn.fecha` + `abreEn.hora` + `abreEn.zona`, todo
+      `horaConfirmada: true` — ej. smartEX, Kagayaki, check-in Finnair): cuenta atrás exacta al
+      minuto (`Intl.RelativeTimeFormat` o cálculo propio en ms), en Europe/Madrid y Asia/Tokyo
+      simultáneas (ver §D).
+   2. **Día exacto confirmado, hora/zona sin confirmar** (`abreEn.fecha` existe, `abreEn.hora` o
+      `abreEn.zona` es `null`, `horaConfirmada: false` — ej. Nouhi, Tobu, JR East 3 meses, USJ +
+      Express Pass): cuenta atrás **al día** (sin hora), con badge ⚠️ "hora exacta sin confirmar —
+      revisa esa mañana", icono+texto, nunca solo color.
+   3. **Sin fecha exacta pero con ventana de venta que se sabe que existirá** (ninguna fuente da
+      un día/mes concreto, pero el ítem SÍ se vende con antelación tarde o temprano — ej. Tōshōgū,
+      teamLab): aviso **"👀 Vigilar apertura"** (regla 7, más abajo) en vez de cuenta atrás o "reservar ya".
+   4. **Sin ventana de venta programada, disponibilidad simplemente decreciente** (ryokan de
+      Takayama, templo ninja por teléfono): bloque separado **"📌 Reservar ya, sin fecha de
+      apertura"**, sin cuenta atrás ni aviso de vigilancia — aquí antes vale más que después, no hay
+      "apertura" que esperar.
+3. (fusionado con el nivel 4 anterior.)
+4. El badge ⚠️ de horaConfirmada=false (nivel 2) es siempre icono+texto, nunca solo color (regla F
+   de accesibilidad).
 5. Estado pendiente/hecho es el único campo editable a mano de este bloque (marcar "ya reservado" ⇒
    `reserva.hecho = true`); todo lo demás (fecha, texto, cuenta atrás) es 100% derivado.
-6. Orden: primero lo que abre antes (cuenta atrás ascendente), luego "reservar ya sin fecha", luego
-   lo ya hecho (colapsado, prueba de que hay progreso — regla 7 del modo ADHD: hacer visible el
-   trabajo terminado).
-7. **Regla nueva (Decisión 4, 2026-09-16) — "vigilar apertura".** Para una reserva con
-   `horaConfirmada: false` pero con una estimación aproximada conocida (p.ej. "~2 meses antes", sin
-   día/hora exacto verificable oficialmente): en vez de omitirla o inventar una fecha exacta,
-   `pendientesView` genera un aviso **"👀 Vigilar apertura"** que aparece unos días antes de la
-   fecha estimada (la propia estimación menos un margen, p.ej. 5–7 días, configurable por ítem vía
-   `reserva.vigilarDesde`), con el texto literal de `reglaApertura` y el link a `fuente`/
-   `dondeReservar` — nunca una cuenta atrás con hora, porque no hay hora que contar. Distinto
-   visualmente del bloque con cuenta atrás exacta (§F, boceto 1): mismo icono de alerta que el
-   badge ⚠️ de horaConfirmada=false, pero como su propia entrada, no un aviso pegado a una fecha
-   falsa.
+6. Orden: nivel 1 y 2 juntos por cuenta atrás ascendente, luego nivel 3 ("vigilar"), luego nivel 4
+   ("reservar ya"), luego lo ya hecho (colapsado, prueba de que hay progreso — regla 7 del modo
+   ADHD: hacer visible el trabajo terminado).
+7. **Regla "vigilar apertura" (Decisión 4, 2026-09-16), nivel 3 de arriba.** Para una reserva SIN
+   día/mes exacto verificable oficialmente pero que sí tendrá una ventana de venta (Tōshōgū,
+   teamLab): `pendientesView` genera el aviso **"👀 Vigilar apertura"** que aparece unos días antes
+   de una fecha estimada a mano si la hay (`reserva.vigilarDesde`, opcional, nunca inventada sin que
+   alguien la ponga a mano tras investigar más), con el texto literal de `reglaApertura` y el link a
+   `fuente`/`dondeReservar` — nunca una cuenta atrás con hora, porque no hay ni día que contar. Si
+   no hay `vigilarDesde`, el aviso aparece siempre, sin cuenta atrás de ningún tipo.
 
 ---
 
@@ -191,23 +200,39 @@ Ya verificado dentro del código (`BOOKINGS`, `TRANSPORT` de `index.html`, no re
 | USJ + Nintendo World | Sin regla documentada en el código actual | — | false |
 | Bus Shinjuku↔Kawaguchiko | Sin regla documentada | highway-buses.jp | false |
 
-**Verificado con fuente oficial el 2026-09-16** (investigación dedicada, sin inventar plazos):
+**Primera pasada, verificada el 2026-09-16** (investigación dedicada, sin inventar plazos):
 
 | Reserva | Regla de apertura | Fuente | verificadoEl | horaConfirmada |
 |---|---|---|---|---|
 | Shinkansen Tōkaidō/Sanyō/Kyūshū (smartEX) — Nagoya→Kioto, Kioto→Himeji→Hiroshima→Hakata→Shin-Osaka, Shin-Osaka→Tokio (25-abr) | Desde las 10:00 JST de 1 mes antes (mismo día del mes), hasta 4 min antes de salida | [smart-ex.jp FAQ](https://smart-ex.jp/en/faq/category/detail/?id=459) | 2026-09-16 | **true** — ⚠️ contradicción descartada: un resultado de búsqueda decía "hasta 1 año antes"; la FAQ oficial lo desmiente, es 1 mes. No usar la cifra de 1 año. |
-| Shinkansen JR East — **Yamabiko** (Utsunomiya→Ōmiya) | Regla estándar 1 mes antes hasta 23:40 JST de 3 días antes; DESDE el 31-oct-2025 admite además reserva anticipada a 3 meses vista (apertura ~14:00, zona no confirmada explícita en fuente) porque Yamabiko SÍ está en la lista de líneas con ese servicio nuevo | regla estándar: [JR East FAQ](https://www.jreast.co.jp/en/multi/faq/) · lista de líneas: [traicy.com](https://en.traicy.com/posts/2025092528252/) | 2026-09-16 | true para la regla y la inclusión de Yamabiko; **false** para la hora/zona exacta del servicio de 3 meses |
-| Shinkansen JR East — **Kagayaki** (Ōmiya→Kanazawa) | Regla estándar únicamente: 1 mes antes, hasta 23:40 JST de 3 días antes. Kagayaki **NO** está en la lista de líneas con reserva a 3 meses (verificado explícitamente para no asumir que aplica) | mismas fuentes que arriba | 2026-09-16 | true |
-| Tobu Limited Express (SPACIA/Revaty) Asakusa→Tōbu-Nikkō | Venta desde las 9:00 del mismo día del mes anterior (ej. viaje 12-abr → venta desde 12-mar); reserva sin comprar caduca a los 7 días | [tobu.co.jp — purchase info](https://www.tobu.co.jp/en/express_info/purchase/) | 2026-09-16 | true para la regla; **false** para la zona horaria exacta (la web no dice "JST" literal, se asume por ser hora local de Tobu) |
-| USJ — entrada con fecha (USJ + Nintendo World) | Regla oficial vigente (post-Expo, aplica a abril 2027): venta "aproximadamente 2 meses antes" de la visita, sin hora exacta publicada | [usj.co.jp — anuncio oficial](https://www.usj.co.jp/company/company_e/news/2025/0421/) | 2026-09-16 | **false** — falta hora/zona exacta en la fuente oficial |
-| USJ — Universal Express Pass | Ninguna fuente oficial publica un plazo fijo; fuentes de terceros dicen "~2 meses, normalmente a mitad del mes anterior" pero se contradicen en el día exacto | sin fuente oficial verificable | 2026-09-16 | **false** — no inventar cifra, mostrar como "vigilar la web ~2 meses antes" |
-| Super Nintendo World / Mario Kart — timed entry | Desde el 5-ene-2026 exige "Area Timed Entry Ticket" (Advance Booking de pago, o Standby/Timed Entry gratis el mismo día por app), independiente de la entrada general; SIN regla de antelación fija — depende de disponibilidad diaria | [usj.co.jp — Super Nintendo World](https://www.usj.co.jp/web/en/us/areas/super-nintendo-world) | 2026-09-16 | **false** |
+| Shinkansen JR East — **Kagayaki** (Ōmiya→Kanazawa) | Regla estándar únicamente: 1 mes antes, hasta 23:40 JST de 3 días antes. Kagayaki **NO** está en la lista de líneas con reserva a 3 meses (verificado explícitamente para no asumir que aplica) | [JR East FAQ](https://www.jreast.co.jp/en/multi/faq/) + [lista de líneas](https://en.traicy.com/posts/2025092528252/) | 2026-09-16 | **true** |
 | Check-in online Finnair (Helsinki–Haneda/Narita) | Abre 36 horas antes de la salida (la ventana de 24h es solo para vuelos hacia/desde EE.UU., no aplica aquí) | [finnair.com — check-in](https://www.finnair.com/en/check-in-for-finnair-flights) | 2026-09-16 | **true** |
 
-Con esto, de las reglas nuevas investigadas, solo **Tōkaidō/Sanyō smartEX**, **Kagayaki (regla
-estándar)** y **check-in Finnair** tienen `horaConfirmada: true` de extremo a extremo (regla + hora
-+ zona). El resto entra en Pendientes con el badge ⚠️ de §C punto 4, nunca con una cuenta atrás
-inventada.
+**Segunda pasada (Decisión 4, máx. 30 min, solo fuentes oficiales), 2026-09-16.** Corrige un dato
+de la primera pasada — **la cifra de USJ era incorrecta (2 meses → en realidad 3)** — y confirma
+reglas de día exacto que antes eran solo aproximaciones del propio código, aunque siga faltando la
+hora/zona en varias:
+
+| Reserva | Regla de apertura | Fuente | verificadoEl | horaConfirmada |
+|---|---|---|---|---|
+| Shinkansen JR East — servicio de reserva a 3 meses (**Yamabiko** sí, **Kagayaki** no) | Desde 31-oct-2025, apertura confirmada a las **14:00** del día correspondiente (dato oficial, no de blog); zona horaria SIGUE sin decirse explícita en ningún texto oficial hallado (asumible JST, no confirmado) | anuncio oficial JR East/eki-net (sep-2025); páginas jreast.co.jp/eki-net.com devuelven 403 a fetch directo, dato tomado de resumen de búsqueda sobre esas mismas fuentes | 2026-09-16 | **false** — falta solo la zona explícita, la hora ya está confirmada |
+| Bus Nouhi (Kanazawa–Shirakawa-gō–Takayama) | Confirmado LITERAL en la fuente oficial: "1ヶ月前より予約可能" (reservable desde 1 mes antes). Sin hora del día. | [nouhibus.co.jp/highwaybus/](https://www.nouhibus.co.jp/highwaybus/) | 2026-09-16 | **false** — regla de día ya no es aproximación nuestra, es texto oficial; falta solo la hora |
+| Tobu Limited Express (SPACIA/Revaty) Asakusa→Tōbu-Nikkō | Confirmado LITERAL: "9:00 am... one month prior to the travel date" (mismo día del mes). La página NUNCA dice JST/Japan Standard Time explícitamente pese a revisarla a propósito para esto. | [tobu.co.jp — purchase info](https://www.tobu.co.jp/en/express_info/purchase/) | 2026-09-16 | **false** — hora (9:00) y regla (1 mes, mismo día) confirmadas; falta solo la zona explícita |
+| **USJ — entrada con fecha (USJ + Nintendo World) — CORRECCIÓN** | El press release oficial dice LITERAL: venta desde **3 meses antes** de la visita (no 2, como decía la primera pasada — dato descartado). Sin hora exacta del día. | [usj.co.jp — anuncio oficial](https://www.usj.co.jp/company/company_e/news/2025/0421/) | 2026-09-16 | **false** — regla de 3 meses confirmada oficial; falta la hora |
+| **USJ — Universal Express Pass — CORRECCIÓN** | El mismo press release dice explícitamente que el Express Pass sigue la MISMA regla de 3 meses que la entrada general (antes se creía sin regla oficial: era un error de la primera pasada, no de esta) | mismo [press release](https://www.usj.co.jp/company/company_e/news/2025/0421/) | 2026-09-16 | **false** — regla confirmada; falta la hora |
+| Santuario Tōshōgū (Nikko) | Sin regla de antelación tipo "X días/meses antes" en ninguna fuente oficial encontrada (toshogu.jp ni el sistema de venta anticipada); parece compra anticipada sin ventana estricta, no venta programada | toshogu.jp (sin página con la regla) | 2026-09-16 | **false** — sin regla, no solo sin hora |
+| teamLab Biovortex (Kioto) | Sin regla de antelación en la FAQ oficial ([teamlab.art/faq/kyoto/](https://www.teamlab.art/faq/kyoto/)) | teamlab.art | 2026-09-16 | **false** — sin regla |
+| Myōryū-ji "templo ninja" (Kanazawa) | No investigado en esta pasada (baja prioridad explícita del encargo); sigue como estaba: solo teléfono, sin web en inglés | — | — | **false**, sin cambios |
+| Super Nintendo World / Mario Kart — timed entry | Sin cambios respecto a la primera pasada: Area Timed Entry Ticket desde 5-ene-2026, sin regla de antelación fija (depende de disponibilidad diaria) | [usj.co.jp — Super Nintendo World](https://www.usj.co.jp/web/en/us/areas/super-nintendo-world) | 2026-09-16 | **false** |
+| Bus Shinjuku↔Kawaguchiko | No investigado, sin cambios | highway-buses.jp | — | **false** |
+
+**Cómo se traduce esto al modelo de §C:** las reglas con `horaConfirmada: true` de extremo a
+extremo (regla + hora + zona) son solo **Tōkaidō/Sanyō smartEX**, **Kagayaki** y **check-in
+Finnair** → cuenta atrás exacta. Las que tienen DÍA exacto confirmado pero falta hora o zona
+(JR East 3 meses, Nouhi, Tobu, USJ + Express Pass) → cuenta atrás **al día**, con el badge ⚠️ de
+§C.4 avisando de que la hora exacta no está confirmada, NO el aviso "vigilar apertura" de §C.7 (ese
+queda reservado para Tōshōgū, teamLab y todo lo que siga sin ni siquiera un día/mes exacto
+conocido).
 
 ---
 
