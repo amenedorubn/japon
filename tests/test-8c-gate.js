@@ -3,7 +3,13 @@
 // and payload shape is checked against the v2-only policy.
 const fs = require('fs');
 const appJs = fs.readFileSync(process.argv[2], 'utf8');
-const livePayload = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+const livePayloadRaw = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+// Desde Fase 12.75 (Google Sign-In + aprobación) el curl anónimo viejo ya no
+// funciona (401): el volcado se exporta a mano desde la consola de Firebase,
+// que trae el árbol completo (raíz 'proyectos' con 'viaje-japon' anidado
+// dentro) en vez del recorte que daba el curl (raíz = el propio nodo). Este
+// gate asumía la forma vieja -- 2026-09-16, arreglado para aceptar las dos.
+const livePayload = livePayloadRaw.proyectos ? livePayloadRaw.proyectos['viaje-japon'] : livePayloadRaw;
 
 const els = {};
 const mkEl = () => ({
@@ -43,20 +49,24 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const localBefore = api.state.places.length;
   const res = api.adoptRemote(livePayload);
   check('live: adoptRemote consumes production payload without throwing', !!res);
-  // Fase 10a: adoptar un remoto sin fusionar (v9, 220 lugares) re-ejecuta la
-  // fusión en el acto: 220 + 92 curados = 312, listos para subir a la nube.
-  check('live: remote places adopted and re-fused (220 -> 312)', api.state.places.length === 312 && res.changed === true);
+  // 2026-09-16: conteos refrescados contra un volcado real (476 lugares ya
+  // fusionados en producción -- el 220->312 de la Fase 10a era una foto fija
+  // de cuando el catálogo tenía muchas menos reservas/lugares que ahora).
+  // Sigue habiendo un `changed:true` real (adoptRemote detecta diferencias
+  // más allá del recuento de lugares), y ningún lugar se pierde ni se
+  // inventa en la re-fusión (476 antes, 476 después).
+  check('live: remote places adopted and re-fused (476 -> 476, sin pérdidas)', api.state.places.length === 476 && res.changed === true);
   check('live: fused catalog keeps every remote id and adds curated ones',
     (() => { const ids = new Set(api.state.places.map(p => p.id));
       return ids.has('catalog_sensoji') && ids.has('dani_fushimi_inari') && ids.has('nakamise') && ids.has('kagetsudo'); })());
-  check('live: catalog version stamped current after re-fusion', api.state.catalogVersion === 'sitios-japon-2026-07-07-v10-fusion');
+  check('live: catalog version stamped current after re-fusion', api.state.catalogVersion === 'sitios-japon-2026-07-19-v14-ruta4');
   check('live: original days mirrored to origDays (21)', api.state.origDays.length === 21 &&
     api.state.origDays.every(d => d.label && d.date));
   check('live: v2 detected (not missing)', res.v2Missing === false);
   check('live: v2 days restored with arrays repaired', Array.isArray(api.state.days) && api.state.days.length === 21 &&
     api.state.days.every(d => Array.isArray(d.stops) && Array.isArray(d.trans)));
   check('live: tripTitle adopted', api.state.tripTitle === livePayload.tripTitle);
-  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 301);
+  check('live: seed count was ' + localBefore + ', no data invented', localBefore === 476);
   // Fase 10b: la consolidación única corre al adoptar el payload real
   check('live: original model consolidated exactly once (migratedOrig set)', !!api.state.migratedOrig);
   check('live: no transfers mirror kept in the local model', !('transfers' in api.state));
@@ -76,7 +86,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   api.pushRemote();
   check('policy: pushRemote targets state/v2 only', writes.length === 1 && writes[0].node === 'NODE:state/v2');
   const v2keys = Object.keys(writes[0].payload).sort();
-  check('policy: v2 payload = {check,days,migratedOrig,rate,seedRetired,updatedAt,v} exactly', JSON.stringify(v2keys) === JSON.stringify(['check','days','migratedOrig','rate','seedRetired','updatedAt','v']));
+  // 2026-09-16: 'lastEditedBy' se sumó en una fase posterior (atribución de
+  // quién tocó el plan por última vez) -- aditivo, no toca la política
+  // v2-only (comprobado aparte, abajo: nunca places/transfers/tripTitle).
+  check('policy: v2 payload = {check,days,lastEditedBy,migratedOrig,rate,seedRetired,updatedAt,v} exactly',
+    JSON.stringify(v2keys) === JSON.stringify(['check', 'days', 'lastEditedBy', 'migratedOrig', 'rate', 'seedRetired', 'updatedAt', 'v']));
   check('policy: v2 payload has NO places/transfers/tripTitle/origDays',
     !('places' in writes[0].payload) && !('transfers' in writes[0].payload) &&
     !('tripTitle' in writes[0].payload) && !('origDays' in writes[0].payload));
@@ -84,7 +98,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   writes.length = 0;
   api.pushPlaces(); await sleep(900); // debounced 800ms
   check('policy: pushPlaces targets state/places only', writes.length === 1 && writes[0].node === 'NODE:state/places');
-  check('policy: pushPlaces sends the places array as-is (fused, 312)', Array.isArray(writes[0].payload) && writes[0].payload.length === 312);
+  check('policy: pushPlaces sends the places array as-is (fused, 476)', Array.isArray(writes[0].payload) && writes[0].payload.length === 476);
 
   writes.length = 0;
   api.state.tripTitle = 'Gate 8c';
