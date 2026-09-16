@@ -6431,11 +6431,18 @@ function openTransferEdit(dayIdx, gap){
 ================================================================ */
 let map = null, mapLayers = [], mapDay = null;
 /* R1 · Teselas claro/oscuro sincronizadas con el tema, mismo mecanismo que
-   la app original (applyMapTheme intercambia la capa de teselas). El tema
-   claro conserva las teselas Voyager actuales; el oscuro usa CARTO dark. */
+   la app original (applyMapTheme intercambia la capa de teselas).
+   2026-09-16: CARTO (basemaps.cartocdn.com) empezó a exigir API key sin
+   avisar — el mapa se quedaba con el cartel "API KEY REQUIRED" en vez de
+   teselas. Cambio mínimo: Esri World Street Map, sin API key, con nombres
+   en alfabeto latino/rōmaji (verificado en Tokio y Kioto). Esri no tiene un
+   estilo oscuro de una sola URL sin key equivalente a CARTO dark_all (el
+   suyo exige una segunda capa de etiquetas aparte); para no ampliar el
+   cambio, claro y oscuro usan la MISMA URL — el filtro CSS de
+   `.leaflet-container` en tema oscuro sigue aplicándose igual que antes. */
 const MAP_TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+  light: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  dark: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
 };
 /* Teselas por instancia de mapa (plan, ideas, mini): cada mapa recuerda su
    capa actual para intercambiarla al cambiar de tema sin apilar teselas. */
@@ -6445,7 +6452,7 @@ function applyMapTheme(targetMap){
   if(!targetMap) return;
   const layer = L.tileLayer(MAP_TILES[currentThemeName()], {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
+    attribution: '&copy; <a href="https://www.esri.com">Esri</a> · rutas <a href="http://project-osrm.org/">OSRM</a>'
   });
   const prev = _tileLayers.get(targetMap);
   if(prev) targetMap.removeLayer(prev);

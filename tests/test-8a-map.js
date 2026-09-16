@@ -109,7 +109,12 @@ const markersByTag = tag => layersOfType('marker').filter(l => l._icon && l._ico
   api._reseedDays(); // Realidad necesita días con paradas (fixture)
   api.showTab('itinerario');
   await sleep(1500);
-  check('R1: initial tiles are light (voyager)', tileUrls.length === 1 && tileUrls[0].includes('voyager'));
+  // 2026-09-16: CARTO exigió API key sin avisar; MAP_TILES pasó a Esri World
+  // Street Map (sin key, nombres en latín). Esri no tiene un oscuro de una
+  // sola URL sin key equivalente a CARTO dark_all, así que claro y oscuro
+  // comparten la MISMA url a propósito (ver comentario junto a MAP_TILES) —
+  // lo que importa aquí sigue siendo que nunca se apilan capas de teselas.
+  check('R1: initial tiles are the Esri basemap', tileUrls.length === 1 && tileUrls[0].includes('arcgisonline.com'));
   check('12.56: por defecto el itinerario activo es Realidad (ours)', api.getItinMode() === 'ours');
   check('12.56: el mapa arranca en "Todos" (todo el itinerario, no un día)', api.getMapDay() === -1);
 
@@ -179,10 +184,11 @@ const markersByTag = tag => layersOfType('marker').filter(l => l._icon && l._ico
 
   // R1: theme switch swaps the tile layer without stacking
   api.setTheme('dark');
-  check('R1: dark tiles applied', tileUrls.length === 2 && tileUrls[1].includes('dark_all'));
+  check('R1: theme swap still swaps the layer instance (no stale layer left behind)',
+    tileUrls.length === 2 && tileUrls[1].includes('arcgisonline.com'));
   check('R1: exactly one tile layer on the map', layersOfType('tileLayer').length === 1);
   api.setTheme('light');
-  check('R1: back to light, still one tile layer', tileUrls[2].includes('voyager') && layersOfType('tileLayer').length === 1);
+  check('R1: back to light, still one tile layer', tileUrls[2].includes('arcgisonline.com') && layersOfType('tileLayer').length === 1);
 
   // no leaks: re-render keeps the map layer count stable
   const before = api.getMap()._layers.size;
