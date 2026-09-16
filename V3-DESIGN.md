@@ -1,5 +1,26 @@
 # V3-DESIGN.md — Propuesta de diseño (Fase 0, sin implementar)
 
+## Decisiones tomadas (2026-09-16, respuesta a §I)
+
+1. **5 pestañas aprobadas.** La 5ª pasa a llamarse **"Más"** = Ideas (catálogo Exploración) +
+   contenido editorial de Guía que no encajaba en ninguna otra pestaña.
+2. **`estado` de 3 valores aprobado** (`confirmado`/`propuesta`/`idea`). `procedencia`
+   (`ours`/`dani`/`maria`/`instagram`/`ai`) se mantiene como campo **secundario**, histórico e
+   inmutable — nunca se trata como estado.
+3. **`Intl` sin librería, también en los tests** (nada de dependencia dev-time para timezone).
+4. **Una pasada más de verificación** (máx. 30 min, solo fuentes oficiales) sobre lo que quedó
+   `horaConfirmada: false`. Lo que siga dudoso tras esa pasada: se queda en `horaConfirmada: false`
+   y gana un **pendiente automático "vigilar apertura"** unos días antes de la fecha estimada (ver
+   §C, nueva regla 7).
+5. **Sin `/v2.1/` en el corte final.** El backup es el tag `v2.1` + rama `archive/v2.1`; no se sirve
+   una copia viva de v2.1 en una subruta de Pages.
+6. **Fase 1 arranca al cerrar el punto 4** (modelo de datos + zonas horarias, con tests).
+
+Cambio adicional decidido en la misma respuesta: el prefijo de caché de `/v3/sw.js` pasa de
+`japon27-v3-dev` a **`jp27v3-dev`** (no empieza por `japon27-`), para que el filtro de limpieza
+del SW raíz de v2.1 no pueda alcanzarlo nunca, ni aunque el raíz se reactive algún día. Aplicado
+solo en `v3/sw.js`, cero cambios en `sw.js` raíz.
+
 > Documento de PROPUESTA. Nada de lo descrito aquí está implementado todavía (salvo el
 > placeholder de `/v3/` y el nodo Firebase vacío `proyectos/viaje-japon-v3`, que no se ha escrito
 > aún — se crea solo/a al primer `fb.set` de un futuro importador). Espera aprobación explícita,
@@ -29,12 +50,14 @@ respondes tú explícitamente en la lista de decisiones al final (§I).
 | **Ruta** | Planificación (una sola, ya no Realidad/Ruta/Dani/María separadas) | Itinerario agrupado por noche/hotel, no por "día 1..21" suelto. |
 | **Mapa** | Transversal | Igual que hoy: pines por categoría, filtro por día/noche. |
 | **Reservas** | Confirmado | Hoteles (9) + vuelos Finnair + cualquier otra reserva ya cerrada. Sustituye a la pestaña "Hoteles" de v2.1, ampliada a todo lo confirmado. |
-| **Ideas** | Exploración | Catálogo antiguo María/Dani/Instagram/IA fuera de la ruta — lo que hoy vive disperso en "Todos"/pestañas por procedencia. |
+| **Más** | Exploración + editorial | Catálogo antiguo María/Dani/Instagram/IA fuera de la ruta (antes "Ideas") + el contenido de Guía que no es accionable (consejos, referencias, lo que no encaja en Pendientes). |
+
+*(Decisión 2026-09-16: la 5ª pestaña se llama "Más", no "Ideas" — mismo contenido de Exploración
+más lo que sobra de Guía, ver Decisión 1 arriba.)*
 
 Pestañas que desaparecen respecto a v2.1: **Itinerarios** (con sus 4 sub-vistas Realidad/Ruta/
 Dani/María) se consolida en una sola **Ruta**; **Confirmado** y **Hoteles** se fusionan en
-**Reservas**; **Guía** se reparte entre **Pendientes** (lo accionable) y algo de contenido
-editorial que de momento no tiene hueco claro — pregunta abierta en §I.
+**Reservas**; **Guía** se reparte entre **Pendientes** (lo accionable) y **Más** (lo editorial).
 
 ---
 
@@ -77,13 +100,13 @@ sustituye a `days` + `places` + `bookedHotels` + `FLIGHTS` como fuentes separada
 }
 ```
 
-**Cambio de forma respecto a v2, explícito para que lo apruebes o lo rechaces:** v2 tiene DOS ejes
+**Cambio de forma respecto a v2, APROBADO 2026-09-16 (Decisión 2):** v2 tiene DOS ejes
 independientes — `provenance` (historia) y un estado binario `planificado`/`confirmado` (implícito:
-"está en `state.days`" y `confirmed` explícito). Esta propuesta consolida ese binario en un
-**`estado` de tres valores que mapea 1:1 con las tres capas de PRODUCT.md** (`confirmado` =
-Confirmado, `propuesta` = Planificación tal y como hoy se vive en la Ruta/Realidad, `idea` =
-Exploración). `procedencia` se mantiene tal cual, separada, histórica e inmutable — no se toca el
-invariante §12.13.
+"está en `state.days`" y `confirmed` explícito). v3 consolida ese binario en un **`estado` de tres
+valores que mapea 1:1 con las tres capas de PRODUCT.md** (`confirmado` = Confirmado, `propuesta` =
+Planificación tal y como hoy se vive en la Ruta/Realidad, `idea` = Exploración). `procedencia` se
+mantiene como campo **secundario**, separado, histórico e inmutable — nunca se trata como estado;
+no se toca el invariante §12.13.
 
 Hoteles (9) y vuelos Finnair entran con `tipo: 'alojamiento'|'vuelo'` y `estado: 'confirmado'`
 siempre, por encargo explícito de este documento.
@@ -108,6 +131,16 @@ siempre, por encargo explícito de este documento.
 6. Orden: primero lo que abre antes (cuenta atrás ascendente), luego "reservar ya sin fecha", luego
    lo ya hecho (colapsado, prueba de que hay progreso — regla 7 del modo ADHD: hacer visible el
    trabajo terminado).
+7. **Regla nueva (Decisión 4, 2026-09-16) — "vigilar apertura".** Para una reserva con
+   `horaConfirmada: false` pero con una estimación aproximada conocida (p.ej. "~2 meses antes", sin
+   día/hora exacto verificable oficialmente): en vez de omitirla o inventar una fecha exacta,
+   `pendientesView` genera un aviso **"👀 Vigilar apertura"** que aparece unos días antes de la
+   fecha estimada (la propia estimación menos un margen, p.ej. 5–7 días, configurable por ítem vía
+   `reserva.vigilarDesde`), con el texto literal de `reglaApertura` y el link a `fuente`/
+   `dondeReservar` — nunca una cuenta atrás con hora, porque no hay hora que contar. Distinto
+   visualmente del bloque con cuenta atrás exacta (§F, boceto 1): mismo icono de alerta que el
+   badge ⚠️ de horaConfirmada=false, pero como su propia entrada, no un aviso pegado a una fecha
+   falsa.
 
 ---
 
@@ -305,18 +338,17 @@ Total aproximado: 2–3 semanas de trabajo efectivo, sin contar el tiempo de tu 
 
 ---
 
-## I. Decisiones que necesito de ti (una por una)
+## I. Decisiones — CERRADAS (2026-09-16, ver arriba)
 
-1. ¿Apruebas el reparto de 5 pestañas de §A tal cual, o cambias algo? (En particular: ¿dónde va el
-   contenido editorial de "Guía" que hoy no tiene hueco claro?)
-2. ¿Apruebas colapsar `provenance` + estado binario de v2 en el `estado` de tres valores
-   (`confirmado`/`propuesta`/`idea`) de §B, o prefieres mantener los dos ejes separados como en v2?
-3. Zona horaria: ¿confirmas que basta con `Intl` + `timeZone` sin librería, o prefieres evaluar una
-   dependencia dev-time solo para tests (nunca en runtime)?
-4. Inventario de reservas (§E): ¿espero a que vuelva la verificación con fuentes oficiales antes de
-   aprobar el documento entero, o apruebas ya el resto y el inventario se cierra aparte?
-5. Corte final (§G): ¿quieres un backup VIVO de v2.1 en una subruta de Pages (p.ej. `/v2.1/`) además
-   del tag+rama, por si hay que volver atrás sin re-desplegar? Tiene coste (mantener dos apps
-   sirviendo a la vez un tiempo) — dime si compensa.
-6. ¿Arrancamos ya con la Fase 1 (modelo de datos + timezone) en cuanto apruebes esto, o prefieres
-   revisar el documento primero y decidir fase a fase?
+Las 6 preguntas de esta sección quedaron respondidas en el bloque "Decisiones tomadas" al inicio
+del documento. Se deja el historial de las preguntas originales por trazabilidad:
+
+1. ~~¿Apruebas el reparto de 5 pestañas de §A tal cual, o cambias algo?~~ → Aprobado, 5ª = "Más".
+2. ~~¿Colapsar `provenance` + estado binario en `estado` de tres valores, o mantener los dos ejes?~~
+   → Colapsado, `procedencia` queda como campo secundario.
+3. ~~¿`Intl` sin librería, o dependencia dev-time para tests?~~ → `Intl` sin librería, en todo.
+4. ~~¿Esperar la verificación completa del inventario, o cerrar el documento ya?~~ → Una pasada más
+   acotada (máx. 30 min, solo fuentes oficiales), con regla "vigilar apertura" para lo que siga
+   dudoso (§C.7).
+5. ~~¿Backup vivo de v2.1 en `/v2.1/`?~~ → No, basta tag + rama `archive/v2.1`.
+6. ~~¿Arrancar Fase 1 ya?~~ → Sí, en cuanto cierre el punto 4.

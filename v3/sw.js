@@ -1,11 +1,13 @@
 /* ================================================================
    JAPÓN 2027 · v3 · Service worker de desarrollo, scope /v3/
    Aislado a propósito del SW raíz de v2.1 (scope /): nombre de caché
-   con prefijo propio 'japon27-v3-' para que ninguno de los dos borre
-   la caché del otro en su limpieza de 'activate'.
+   con prefijo 'jp27v3-', que NO empieza por 'japon27-' a propósito.
+   El SW raíz borra en su 'activate' cualquier caché que empiece por
+   'japon27-' salvo la suya; con este prefijo distinto no puede
+   alcanzar la caché de v3 aunque el raíz se reactive algún día.
 ================================================================ */
 'use strict';
-const CACHE = 'japon27-v3-dev';
+const CACHE = 'jp27v3-dev';
 const SHELL = ['./'];
 
 self.addEventListener('install', e => {
@@ -15,7 +17,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys
-      .filter(k => k.startsWith('japon27-v3-') && k !== CACHE)
+      .filter(k => k.startsWith('jp27v3-') && k !== CACHE)
       .map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
