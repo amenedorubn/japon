@@ -7,7 +7,7 @@ while ($listener.IsListening) {
   try {
     $ctx = $listener.GetContext()
     $path = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath)
-    if ($path -eq '/') { $path = '/index.html' }
+    if ($path.EndsWith('/')) { $path = $path + 'index.html' }
     $file = Join-Path $root ($path.TrimStart('/') -replace '/', '\')
     if ((Test-Path $file) -and (Get-Item $file).PSIsContainer -eq $false) {
       $bytes = [IO.File]::ReadAllBytes($file)

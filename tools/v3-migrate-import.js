@@ -38,6 +38,7 @@ const path = require('path');
 const { mergeV3State } = require(path.join(__dirname, '..', 'v3', 'lib', 'merge.js'));
 const { zonedTimeToUtc, utcToZonedParts } = require(path.join(__dirname, '..', 'v3', 'lib', 'timezone.js'));
 const { normalizeNameForTwins, groupCanonical, residualDuplicates, applyManualMerges, filterRejected } = require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
+const { RESERVATION_RULES, attachReservationRules } = require(path.join(__dirname, '..', 'v3', 'lib', 'reservation-rules.js'));
 
 const liveJsonPath = process.argv[2];
 const v3JsonPath = process.argv[3];
@@ -278,7 +279,14 @@ const { items: nivel1, merges } = groupCanonical(imported, v2Baked.TWIN_GROUPS, 
 // "nada aprobado ni rechazado" y el importador solo informa.
 const manualMergesPath = path.join(__dirname, '..', 'import', 'v3-manual-merges.json');
 const manualMerges = fs.existsSync(manualMergesPath) ? JSON.parse(fs.readFileSync(manualMergesPath, 'utf8')) : { aprobadas: [], rechazadas: [] };
-const { items: canonical, aplicadas, omitidas } = applyManualMerges(nivel1, manualMerges.aprobadas);
+const { items: nivel3, aplicadas, omitidas } = applyManualMerges(nivel1, manualMerges.aprobadas);
+
+// Reglas de reserva verificadas (V3-DESIGN.md §E) que enganchan una `accion`
+// a un RouteItem YA existente (usj, toshogu, teamlab_kyoto) — sin esto se
+// quedan con `acciones: []` y nunca aparecen en Pendientes, aunque tengan
+// una fecha de apertura real y verificada (bug encontrado 2026-09-16: solo
+// los vuelos tenían acciones, por eso Pendientes solo enseñaba check-ins).
+const { items: canonical, noEncontrados: reglasNoEncontradas } = attachReservationRules(nivel3, RESERVATION_RULES);
 
 // Lo que sigue suelto tras nivel 1 + nivel 3 aprobado. Se anula `ubicacion`
 // de los ids excluidos SOLO para este cálculo (misma exclusión que el nivel
@@ -313,6 +321,8 @@ console.log(`Ítems importados (antes del nivel 1): ${imported.length} ` +
 console.log(`Nivel 1 — fusiones automáticas: ${merges.length} grupos (${merges.reduce((n, m) => n + m.idsOriginales.length, 0)} ids originales colapsados)`);
 console.log(`Nivel 3 — fusiones manuales aprobadas: ${aplicadas.length} (import/v3-manual-merges.json)` +
   (omitidas.length ? ` — ${omitidas.length} OMITIDAS por contradicción (ver detalle abajo)` : ''));
+console.log(`Reglas de reserva verificadas (§E) enganchadas: ${RESERVATION_RULES.length - reglasNoEncontradas.length}/${RESERVATION_RULES.length}` +
+  (reglasNoEncontradas.length ? ` — sin RouteItem: ${reglasNoEncontradas.join(', ')}` : ''));
 console.log(`Ítems tras nivel 1 + nivel 3 aprobado: ${canonical.length} ` +
   `(confirmado: ${porEstado(canonical, 'confirmado')}, propuesta: ${porEstado(canonical, 'propuesta')}, idea: ${porEstado(canonical, 'idea')})`);
 console.log(`Nivel 3 — candidatos sueltos con al menos un lado propuesta/confirmado: ${paraRevisionManual.length} (NUNCA fusionados; revisión manual)`);

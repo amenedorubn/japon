@@ -107,6 +107,35 @@ check('pendientesView: el vuelo tiene 2 acciones, una pendiente (checkin) y otra
   view.hechos.some(h => h.itemId === 'vuelo-1' && h.accionId === 'equipaje') &&
   !view.hechos.some(h => h.itemId === 'vuelo-1' && h.accionId === 'checkin'));
 
+// Regresión (2026-09-16): el orden de Pendientes es SIEMPRE por fecha real
+// ascendente, nunca "primero por precisión y luego por fecha". Un ítem de
+// nivel 2 (USJ, enero, sin hora confirmada) con fecha ANTES que uno de
+// nivel 1 (check-in Finnair, abril, hora exacta) debe salir PRIMERO — el
+// nivel solo cambia el badge ⚠️, nunca la posición.
+{
+  const itemsOrden = [
+    { // nivel 1: check-in de vuelo, abril, hora exacta
+      id: 'vuelo-1', nombre: 'Madrid (MAD) → Helsinki (HEL)', tipo: 'vuelo', procedencia: 'ours', estado: 'confirmado',
+      acciones: [accion('checkin', {
+        abreEn: { fecha: '2027-04-06', hora: '22:15', zona: 'Europe/Madrid' },
+        reglaApertura: '36h antes de la salida', horaConfirmada: true
+      })]
+    },
+    { // nivel 2: USJ, ENERO (mucho antes), hora sin confirmar
+      id: 'usj_entrada', nombre: 'USJ + Nintendo World', tipo: 'lugar', procedencia: 'ai', estado: 'propuesta',
+      acciones: [accion('entrada', {
+        abreEn: { fecha: '2027-01-23', hora: null, zona: null },
+        reglaApertura: '~3 meses antes de la visita (oficial, sin hora exacta)', horaConfirmada: false
+      })]
+    }
+  ];
+  const viewOrden = model.pendientesView(itemsOrden, Date.UTC(2026, 8, 16));
+  check('REGRESIÓN orden: USJ (enero, nivel 2) sale ANTES que el check-in (abril, nivel 1)',
+    viewOrden.conFecha[0].itemId === 'usj_entrada' && viewOrden.conFecha[1].itemId === 'vuelo-1');
+  check('REGRESIÓN orden: USJ conserva su nivel 2 (badge ⚠️), no se "asciende" a nivel 1 por ir primero',
+    viewOrden.conFecha[0].nivel === 2);
+}
+
 // Shibuya Sky abre 00:00 JST 27-mar-2027; comprobamos con el helper de zonas
 // que la hora en Madrid mostrada coincide con la conversión real (CEST, +2).
 {
