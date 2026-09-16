@@ -39,6 +39,7 @@ const { mergeV3State } = require(path.join(__dirname, '..', 'v3', 'lib', 'merge.
 const { zonedTimeToUtc, utcToZonedParts } = require(path.join(__dirname, '..', 'v3', 'lib', 'timezone.js'));
 const { normalizeNameForTwins, groupCanonical, residualDuplicates, applyManualMerges, filterRejected } = require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
 const { RESERVATION_RULES, attachReservationRules } = require(path.join(__dirname, '..', 'v3', 'lib', 'reservation-rules.js'));
+const { buildTrayectoItems } = require(path.join(__dirname, '..', 'v3', 'lib', 'trayectos.js'));
 
 const liveJsonPath = process.argv[2];
 const v3JsonPath = process.argv[3];
@@ -99,7 +100,7 @@ function loadV2Baked(){
 
   const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
     '"use strict";' + appJs + `
-    ;return { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel, hotelPlaceholderBase, TWIN_GROUPS };`);
+    ;return { RUTA_DAYS, FLIGHTS, TRANSPORT, canonicalPid, provenanceOf, isBookedHotel, hotelPlaceholderBase, TWIN_GROUPS };`);
 
   return boot(documentStub, {}, localStorageStub, { hash: '', href: '' }, { pushState(){}, replaceState(){} },
     L, fetchStub, () => 0, () => true);
@@ -249,7 +250,12 @@ const livePlaces = (live.state && live.state.places) || [];
 const v2Baked = loadV2Baked();
 const livePlacesById = new Map(livePlaces.filter(p => p && p.id).map(p => [p.id, p]));
 
-const { items: imported, avisos } = transform(livePlaces, v2Baked);
+const { items: importedPlaces, avisos: avisosPlaces } = transform(livePlaces, v2Baked);
+// Fase 4: TRANSPORT de v2 entra como RouteItem tipo 'trayecto', estado
+// 'propuesta' (Decisión 2026-09-16: ninguno tiene billete comprado todavía).
+const { items: trayectoItems, avisos: avisosTrayectos } = buildTrayectoItems(v2Baked.TRANSPORT, 2027);
+const imported = importedPlaces.concat(trayectoItems);
+const avisos = avisosPlaces.concat(avisosTrayectos);
 
 /* Nivel 2 (Decisión 2026-09-16, punto 2): quién queda fuera del lado de
    "coordenadas" del emparejamiento automático — hoteles confirmados y
@@ -287,6 +293,82 @@ const { items: nivel3, aplicadas, omitidas } = applyManualMerges(nivel1, manualM
 // una fecha de apertura real y verificada (bug encontrado 2026-09-16: solo
 // los vuelos tenían acciones, por eso Pendientes solo enseñaba check-ins).
 const { items: canonical, noEncontrados: reglasNoEncontradas } = attachReservationRules(nivel3, RESERVATION_RULES);
+
+/* Fase 4, Decisión 2026-09-16 punto 1: las bases (noche/hotel) de la Ruta
+   se derivan de los 9 hoteles CONFIRMADOS, nunca del campo `noche` de una
+   propuesta. Aquí solo se DETECTA la incoherencia (RUTA_DAYS dice una
+   ciudad que no coincide con la única base activa esa noche) — nunca se
+   mueve la parada para "arreglarla" a ciegas.
+
+   Dos correcciones tras la primera corrida real (2026-09-16), ambas para no
+   avisar de un falso positivo:
+   1. La "ciudad" de un hotel se deriva de RUTA_DAYS, pero `day.city` a veces
+      es el DESTINO DE UNA EXCURSIÓN del día (p.ej. "Kamakura"/"Monte Fuji"
+      durmiendo en Tokio esas noches), no la ciudad base. Si los días
+      cubiertos por un hotel traen ciudades DISTINTAS entre sí, la señal es
+      ambigua a propósito: se desactiva el chequeo de ciudad para ESE hotel
+      (se queda `null`) en vez de adivinar cuál de las dos es la "de verdad".
+   2. El último día antes de un vuelo de vuelta (duerme en el avión, no en
+      tierra) puede tener paradas de día completo sin que ninguna base cubra
+      esa noche — eso es esperado, no una incoherencia; se detecta mirando
+      si el día SIGUIENTE es un día de vuelo (`city === 'Vuelo'`). */
+// Destinos de excursión de un día conocidos en ESTA ruta (se duerme en la
+// base, no ahí): al derivar la ciudad de un hotel se ignoran, para no leer
+// "Kamakura"/"Monte Fuji" como si fueran la ciudad base de Tokio.
+const EXCURSION_CITIES = new Set(['Kamakura', 'Monte Fuji']);
+
+function citiesInRange(desde, hasta, rutaDays, inclusive){
+  return new Set(rutaDays
+    .filter(d => d.date >= desde && (inclusive ? d.date <= hasta : d.date < hasta))
+    .map(d => d.city).filter(c => c && !EXCURSION_CITIES.has(c)));
+}
+
+function deriveCityOfHotels(hoteles, rutaDays){
+  const cityOfHotel = new Map();
+  for (const h of hoteles) {
+    let ciudades = citiesInRange(h.fechaHora.inicio, h.fechaHora.fin, rutaDays, false);
+    // Fallback: si TODOS los días de estancia son excursión (p.ej. APA
+    // Asakusabashi: Kamakura + Monte Fuji), prueba incluyendo la mañana de
+    // check-out — a veces es el único día sin excursión de por medio.
+    if (ciudades.size !== 1) ciudades = citiesInRange(h.fechaHora.inicio, h.fechaHora.fin, rutaDays, true);
+    cityOfHotel.set(h.id, ciudades.size === 1 ? [...ciudades][0] : null);
+  }
+  return cityOfHotel;
+}
+
+function checkIncoherenciasCiudad(canonicalItems, rutaDays){
+  const hoteles = canonicalItems.filter(it => it.tipo === 'alojamiento' && it.estado === 'confirmado');
+  const cityOfHotel = deriveCityOfHotels(hoteles, rutaDays);
+  const incoherencias = [];
+  for (let i = 0; i < rutaDays.length; i++) {
+    const day = rutaDays[i];
+    if (!day.stops || !day.stops.length) continue; // días de vuelo, sin paradas: no aplica
+    const siguiente = rutaDays[i + 1];
+    const hotel = hoteles.find(h => day.date >= h.fechaHora.inicio && day.date < h.fechaHora.fin);
+    if (!hotel) {
+      if (siguiente && siguiente.city === 'Vuelo') continue; // último día, duerme en el avión: esperado
+      incoherencias.push(`${day.date} (${day.city}): sin ninguna base confirmada que cubra esta noche`);
+      continue;
+    }
+    if (EXCURSION_CITIES.has(day.city)) continue; // día de excursión conocido: se duerme en la base, no ahí
+    const hotelCity = cityOfHotel.get(hotel.id);
+    if (hotelCity && hotelCity !== day.city) {
+      incoherencias.push(`${day.date}: RUTA_DAYS dice "${day.city}" pero la base activa esos días es "${hotel.nombre}" en "${hotelCity}"`);
+    }
+  }
+  return incoherencias;
+}
+const incoherenciasCiudad = checkIncoherenciasCiudad(canonical, v2Baked.RUTA_DAYS);
+
+/* La Ruta (Fase 4) necesita mostrar "ciudad + hotel" en la cabecera de cada
+   base sin repetir esta derivación en el cliente: se hornea `ciudadBase` en
+   cada hotel confirmado aquí mismo, UNA sola vez. `null` si es ambigua
+   (ver deriveCityOfHotels) — la UI entonces enseña solo el nombre del hotel. */
+{
+  const hotelesCanonical = canonical.filter(it => it.tipo === 'alojamiento' && it.estado === 'confirmado');
+  const cityOfHotelFinal = deriveCityOfHotels(hotelesCanonical, v2Baked.RUTA_DAYS);
+  for (const h of hotelesCanonical) h.ciudadBase = cityOfHotelFinal.get(h.id) || null;
+}
 
 // Lo que sigue suelto tras nivel 1 + nivel 3 aprobado. Se anula `ubicacion`
 // de los ids excluidos SOLO para este cálculo (misma exclusión que el nivel
@@ -329,7 +411,15 @@ console.log(`Nivel 3 — candidatos sueltos con al menos un lado propuesta/confi
 console.log(`Candidatos dudosos que quedan SOLO entre ideas (no se muestran, no bloquean nada): ${soloEntreIdeas}`);
 console.log(`Fusión con v3 ${v3JsonPath ? 'existente (' + v3JsonPath + ')' : '(nodo vacío, siembra)'}: ` +
   `${stats.nuevos} nuevos, ${stats.actualizados} actualizados, ${stats.soloEnV3Conservados} conservados solo-en-v3`);
+console.log(`Trayectos (Fase 4, TRANSPORT como RouteItem): ${trayectoItems.length} filas, ` +
+  `${trayectoItems.filter(t => t.acciones.length).length} con acción de reserva investigada`);
+console.log(`Incoherencias ciudad/base (Fase 4, punto 1): ${incoherenciasCiudad.length}` +
+  (incoherenciasCiudad.length ? ' — ver detalle abajo' : ''));
 if (avisos.length) { console.log('\nAvisos (alcance de esta fase, no errores):'); avisos.forEach(a => console.log('- ' + a)); }
+if (incoherenciasCiudad.length) {
+  console.log('\n=== Incoherencias ciudad/base (ninguna parada se movió) ===');
+  incoherenciasCiudad.forEach(i => console.log('- ' + i));
+}
 if (omitidas.length) {
   console.log('\n=== Nivel 3: fusiones aprobadas que NO se aplicaron (contradicción con los datos reales) ===');
   omitidas.forEach(o => console.log(`- ${JSON.stringify(o.regla)}: ${o.motivo}`));

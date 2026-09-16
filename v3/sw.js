@@ -8,7 +8,7 @@
 ================================================================ */
 'use strict';
 const CACHE = 'jp27v3-dev';
-const SHELL = ['./', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js'];
+const SHELL = ['./', './ruta.html', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js', './lib/bases.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -22,9 +22,16 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+/* import/*.json es DATO VIVO (el volcado que escribe tools/v3-migrate-import.js
+   cada vez que se re-ejecuta), no shell estático: va SIEMPRE por red, nunca
+   cache-first — mismo criterio que v2 con RTDB/Nominatim/OSRM. Sin esto, el
+   cache-first de abajo sirve un volcado antiguo mientras refresca en
+   segundo plano, y cada recarga durante desarrollo enseña datos de la
+   corrida anterior del importador (bug real, encontrado 2026-09-16). */
 self.addEventListener('fetch', e => {
   const req = e.request;
   if(req.method !== 'GET') return;
+  if(new URL(req.url).pathname.includes('/import/')) return; // deja pasar, sin respondWith: red directa
   e.respondWith(caches.open(CACHE).then(async cache => {
     const hit = await cache.match(req);
     const refresh = fetch(req).then(res => {

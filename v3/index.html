@@ -26,6 +26,8 @@
     display:flex; align-items:center; justify-content:space-between;
     padding:16px 4px; position:sticky; top:0; background:var(--bg); z-index:2;
   }
+  header nav a{color:var(--muted); font-size:.8rem; text-decoration:none; margin-left:10px;}
+  header nav a.activo{color:var(--accent); font-weight:600;}
   h1{font-size:1.05rem; margin:0;}
   .sub{color:var(--muted); font-size:.78rem; margin:2px 0 0;}
   section{margin-top:18px;}
@@ -80,6 +82,7 @@
       <h1>Japón 2027 · Pendientes</h1>
       <p class="sub">v3 · en construcción</p>
     </div>
+    <nav><a href="./index.html" class="activo">Pendientes</a><a href="./ruta.html">Ruta</a></nav>
   </header>
   <main id="app">
     <p class="sub">Cargando…</p>
