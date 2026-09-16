@@ -87,17 +87,29 @@ sustituye a `days` + `places` + `bookedHotels` + `FLIGHTS` como fuentes separada
   },
   ubicacion: {lat: 36.56, lng: 137.19} | null,  // zona derivada en runtime, igual que v2 (nunca persistida)
 
-  reserva: null | {
-    necesaria: true,
-    dondeReservar: 'https://www.usj.co.jp/web/en/us',
-    abreEn: {fecha: '2027-01-23', hora: '10:00', zona: 'Asia/Tokyo'} | null,  // null = sin regla conocida
-    reglaApertura: '1 mes antes a las 10:00 JST',
-    horaConfirmada: true,               // false si la fuente no da hora exacta o hay contradicción
-    fuente: 'https://www.usj.co.jp/...',
-    verificadoEl: '2026-09-16',
-    recomendacion: 'Reservar el mismo día que abre; el Express Pass vuela.',
-    hecho: false                        // true = ya reservado, sale de Pendientes
-  }
+  notas: null | 'texto libre que escribe un usuario',  // editable a mano, el importador nunca lo pisa
+  estadoManual: false,  // true si un usuario cambió `estado` a mano (§G: el importador ya no lo toca)
+
+  // Decisión C (2026-09-16): `reserva` (singular) se generaliza a `acciones[]`.
+  // Un mismo ítem puede tener MÁS de una acción pendiente sin ser dos ítems
+  // (p.ej. un vuelo con su propio check-in). Cada acción lleva un `id` propio
+  // y estable ('reserva', 'checkin'...) para poder marcarla como hecha sin
+  // ambigüedad y para que la fusión del importador (§G) empareje por id, no
+  // por posición.
+  acciones: [
+    {
+      id: 'reserva',                        // o 'checkin', o el que corresponda
+      necesaria: true,
+      dondeReservar: 'https://www.usj.co.jp/web/en/us',
+      abreEn: {fecha: '2027-01-23', hora: '10:00', zona: 'Asia/Tokyo'} | null,  // null = sin regla conocida
+      reglaApertura: '1 mes antes a las 10:00 JST',
+      horaConfirmada: true,               // false si la fuente no da hora exacta o hay contradicción
+      fuente: 'https://www.usj.co.jp/...',
+      verificadoEl: '2026-09-16',
+      recomendacion: 'Reservar el mismo día que abre; el Express Pass vuela.',
+      hecho: false                        // true = ya reservado/hecho, sale de Pendientes
+    }
+  ]
 }
 ```
 
@@ -110,7 +122,16 @@ mantiene como campo **secundario**, separado, histórico e inmutable — nunca s
 no se toca el invariante §12.13.
 
 Hoteles (9) y vuelos Finnair entran con `tipo: 'alojamiento'|'vuelo'` y `estado: 'confirmado'`
-siempre, por encargo explícito de este documento.
+siempre, por encargo explícito de este documento. El check-in de un vuelo NO es un ítem aparte ni un
+campo suelto (Decisión C, 2026-09-16): es una `acción` más dentro del propio ítem `vuelo` — ver §E
+para la regla real de Finnair (36h antes, por billete/reserva, no por tramo) y §G para cómo se
+reparte entre los 4 tramos de FLIGHTS.
+
+**Precedencia única por id (Decisión A, 2026-09-16):** un mismo sitio nunca genera dos `RouteItem`.
+Si aparece en más de una fuente, gana la más avanzada: `confirmado` (hoteles/vuelos) > `propuesta`
+(está en `RUTA_DAYS`, con `noche`/`fechaHora` de ahí) > `idea` (resto del catálogo, incluida
+procedencia `'ours'` de `Itinerario.docx` que no llegó a la Ruta — es una lista de deseos, no todo
+entra). `procedencia` viaja aparte y nunca se pisa, esté el ítem en el estado que esté.
 
 ---
 
@@ -118,7 +139,11 @@ siempre, por encargo explícito de este documento.
 
 `pendientesView(items, ahora)`:
 
-1. Filtra `items` con `reserva && reserva.necesaria && !reserva.hecho`.
+1. Hace `flatMap` de `item.acciones` de TODOS los ítems (Decisión C, 2026-09-16: ya no es un
+   `reserva` singular por ítem) y filtra las que tienen `necesaria && !hecho`. Un ítem con dos
+   acciones pendientes (p.ej. un vuelo con check-in y equipaje) aparece **dos veces**, nunca
+   fusionado; cada entrada de salida referencia `{itemId, accionId}` para poder marcar esa acción
+   concreta como hecha sin ambigüedad.
 2. Cuatro niveles de precisión, de más a menos exacto (§E ya tiene ejemplos reales de cada uno):
    1. **Día + hora + zona confirmados** (`abreEn.fecha` + `abreEn.hora` + `abreEn.zona`, todo
       `horaConfirmada: true` — ej. smartEX, Kagayaki, check-in Finnair): cuenta atrás exacta al
@@ -139,14 +164,15 @@ siempre, por encargo explícito de este documento.
 4. El badge ⚠️ de horaConfirmada=false (nivel 2) es siempre icono+texto, nunca solo color (regla F
    de accesibilidad).
 5. Estado pendiente/hecho es el único campo editable a mano de este bloque (marcar "ya reservado" ⇒
-   `reserva.hecho = true`); todo lo demás (fecha, texto, cuenta atrás) es 100% derivado.
+   esa `accion.hecho = true`, emparejada por `accion.id`); todo lo demás (fecha, texto, cuenta
+   atrás) es 100% derivado.
 6. Orden: nivel 1 y 2 juntos por cuenta atrás ascendente, luego nivel 3 ("vigilar"), luego nivel 4
    ("reservar ya"), luego lo ya hecho (colapsado, prueba de que hay progreso — regla 7 del modo
    ADHD: hacer visible el trabajo terminado).
-7. **Regla "vigilar apertura" (Decisión 4, 2026-09-16), nivel 3 de arriba.** Para una reserva SIN
+7. **Regla "vigilar apertura" (Decisión 4, 2026-09-16), nivel 3 de arriba.** Para una acción SIN
    día/mes exacto verificable oficialmente pero que sí tendrá una ventana de venta (Tōshōgū,
    teamLab): `pendientesView` genera el aviso **"👀 Vigilar apertura"** que aparece unos días antes
-   de una fecha estimada a mano si la hay (`reserva.vigilarDesde`, opcional, nunca inventada sin que
+   de una fecha estimada a mano si la hay (`accion.vigilarDesde`, opcional, nunca inventada sin que
    alguien la ponga a mano tras investigar más), con el texto literal de `reglaApertura` y el link a
    `fuente`/`dondeReservar` — nunca una cuenta atrás con hora, porque no hay ni día que contar. Si
    no hay `vigilarDesde`, el aviso aparece siempre, sin cuenta atrás de ningún tipo.
@@ -320,15 +346,33 @@ Estado con icono+texto siempre (nunca solo color, ya es requisito explícito): �
 
 ## G. Migración y corte final
 
-**Migración (mientras v2.1 sigue siendo LA app):**
-1. Importador de solo lectura `tools/v3-migrate-import.js`: lee `proyectos/viaje-japon` (nunca
-   escribe ahí), transforma `state.places` + `bookedHotels` + `FLIGHTS` + `BOOKINGS` al esquema de
-   §B, escribe en `proyectos/viaje-japon-v3` (nodo nuevo, vacío hasta este primer `fb.set`).
-2. Ids canónicos se preservan literalmente (mismo invariante que v2, §12.2 de PROJECT.md): un
-   `id_sunshine_kinugawa` sigue siendo el mismo string en v3.
-3. Migración repetible e idempotente (como `foldCurated` en v2): correrla dos veces da el mismo
-   resultado, nunca duplica.
-4. `/v3/` se desarrolla y se prueba en su propia URL (`https://amenedorubn.github.io/japon/v3/`)
+**Migración (mientras v2.1 sigue siendo LA app), implementada en Fase 2 (2026-09-16):**
+1. `tools/v3-migrate-import.js` — **de solo lectura de v2**: lee un volcado local de
+   `proyectos/viaje-japon` (`live.json`, el mismo que ya usa `tests/run-all.js live.json`; nunca
+   escribe ahí) y las constantes horneadas de `index.html` (`RUTA_DAYS`, `FLIGHTS`,
+   `canonicalPid`/`provenanceOf`/`isBookedHotel`, extraídas con el mismo mecanismo que los tests,
+   para no duplicar esas reglas en v3). Transforma todo a `RouteItem` (esquema §B) con la
+   precedencia de estado de la Decisión A (confirmado > propuesta > idea, un id nunca sale dos veces).
+2. **Informe de duplicados (Decisión 2, `v3/lib/dedupe.js`), nunca fusión automática**: candidatos
+   por nombre normalizado o coordenadas a <150 m se listan en `import/v3-duplicates-report.json`
+   para que decidas caso a caso — el importador nunca los fusiona por su cuenta.
+3. **Fusión segura, no `fb.set` a ciegas (Decisión B, `v3/lib/merge.js`)**: si el nodo v3 está
+   vacío, siembra entero; si ya tiene datos (pasados como `[v3-actual.json]` opcional en esta fase,
+   sin red todavía — ver punto 5), fusiona por id: el importador manda en lo derivado de v2, el
+   nodo v3 manda en `notas`, `hecho` de cada acción y `estado` si el ítem tiene `estadoManual: true`.
+   Un ítem que solo existe en v3 (creado por un usuario) **nunca se borra** (Decisión 3). Probado en
+   `tests/test-v3-merge.js`: sembrar → simular edición → reimportar → la edición sigue.
+4. Ids canónicos se preservan literalmente (mismo invariante que v2, §12.2 de PROJECT.md): un
+   `id_sunshine_kinugawa` sigue siendo el mismo string en v3. Migración repetible e idempotente
+   (como `foldCurated` en v2): correrla dos veces da el mismo resultado, nunca duplica.
+5. **Alcance deliberado de esta fase, para que lo confirmes**: el importador escribe SIEMPRE a
+   ficheros locales (`import/v3-migrated-preview.json` + el informe de duplicados), **nunca hace un
+   `fb.set` real todavía**. Motivo: las reglas de `proyectos/viaje-japon-v3` no están desplegadas
+   (deny por defecto hoy), y el patrón ya establecido en v2 es que el `fb.set` real lo hace la APP
+   en el navegador con sesión autenticada (p.ej. `ensureHotelFixes()`), no un script de dev-time.
+   El seed/fusión en vivo se conecta cuando exista el runtime de v3 con auth (Fase 6): su arranque
+   leería este mismo JSON de vista previa y haría el `fb.set` real desde el navegador.
+6. `/v3/` se desarrolla y se prueba en su propia URL (`https://amenedorubn.github.io/japon/v3/`)
    todo el tiempo que haga falta, sin tocar la experiencia real de los tres viajeros.
 
 **Corte final (cuando v3 tenga paridad + tu aprobación explícita, no antes):**
