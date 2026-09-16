@@ -35,11 +35,18 @@ node tests/run-all.js                      # suite completa (obligatorio antes d
 node tests/run-all.js live.json            # + suite 8c (gate de paridad contra un volcado real)
 ```
 
-El volcado en vivo NUNCA se versiona (está en `.gitignore`); se obtiene con:
+El volcado en vivo NUNCA se versiona (está en `.gitignore`). El `curl` anónimo que se documentaba
+aquí **ya no funciona**: desde la Fase 12.75 (Google Sign-In + aprobación) el acceso de lectura al
+nodo `proyectos/viaje-japon` exige un usuario autenticado y aprobado — un `curl` sin sesión devuelve
+`401 Permission denied`. Para obtener el volcado hay que **exportarlo a mano desde la consola de
+Firebase** (Realtime Database → nodo `proyectos/viaje-japon` → ⋮ → Export JSON) y guardarlo como
+`live.json` en la raíz del repo.
 
-```bash
-curl https://viaje-japon-8748a-default-rtdb.firebaseio.com/proyectos/viaje-japon.json > live.json
-```
+Nota de formato: una exportación de la consola puede traer el árbol completo (`proyectos` como raíz,
+con `viaje-japon` anidado dentro) en vez del recorte que daba el `curl` viejo (raíz = el propio nodo
+`viaje-japon`). `tools/v3-migrate-import.js` ya acepta las dos formas. `tests/test-8c-gate.js`
+**todavía asume la forma del `curl` viejo** (pendiente de arreglar si hace falta correr la suite 8c
+contra una exportación de consola — no se ha tocado en esta corrección porque no era el encargo).
 
 **Ejecutar UNA sola suite** tiene truco: los `tests/test-*.js` no leen `index.html`, reciben por
 `argv[2]` la ruta del JS ya extraído. `run-all.js` lo escribe en
