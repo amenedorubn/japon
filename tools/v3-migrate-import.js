@@ -35,9 +35,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const { findPotentialDuplicates } = require(path.join(__dirname, '..', 'v3', 'lib', 'dedupe.js'));
 const { mergeV3State } = require(path.join(__dirname, '..', 'v3', 'lib', 'merge.js'));
 const { zonedTimeToUtc, utcToZonedParts } = require(path.join(__dirname, '..', 'v3', 'lib', 'timezone.js'));
+const { normalizeNameForTwins, groupCanonical, residualDuplicates } = require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
 
 const liveJsonPath = process.argv[2];
 const v3JsonPath = process.argv[3];
@@ -98,7 +98,7 @@ function loadV2Baked(){
 
   const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
     '"use strict";' + appJs + `
-    ;return { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel };`);
+    ;return { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel, hotelPlaceholderBase, TWIN_GROUPS };`);
 
   return boot(documentStub, {}, localStorageStub, { hash: '', href: '' }, { pushState(){}, replaceState(){} },
     L, fetchStub, () => 0, () => true);
@@ -246,29 +246,75 @@ const liveRaw = JSON.parse(fs.readFileSync(liveJsonPath, 'utf8'));
 const live = (liveRaw.proyectos && liveRaw.proyectos['viaje-japon']) || liveRaw;
 const livePlaces = (live.state && live.state.places) || [];
 const v2Baked = loadV2Baked();
+const livePlacesById = new Map(livePlaces.filter(p => p && p.id).map(p => [p.id, p]));
 
 const { items: imported, avisos } = transform(livePlaces, v2Baked);
-const rawDuplicates = findPotentialDuplicates(imported);
-// v3/lib/dedupe.js es genérico (no sabe qué es "procedencia"): se enriquece
-// aquí, en el importador, solo para que el informe sea legible de un vistazo.
-const byImportedId = new Map(imported.map(it => [it.id, it]));
-const duplicates = rawDuplicates.map(d => Object.assign({}, d, {
-  procedenciaA: (byImportedId.get(d.a) || {}).procedencia || null,
-  procedenciaB: (byImportedId.get(d.b) || {}).procedencia || null
-}));
+
+/* Nivel 2 (Decisión 2026-09-16, punto 2): quién queda fuera del lado de
+   "coordenadas" del emparejamiento automático — hoteles confirmados y
+   marcadores de centro de ciudad (categoría real 'zona' cuyo nombre ES
+   literalmente el nombre de una ciudad del viaje, tomado de RUTA_DAYS para
+   no mantener una lista aparte a mano). Los hoteles/vuelos (ids 'vuelo-*')
+   no tienen ficha en livePlaces: nunca están excluidos porque nunca podrían
+   emparejar por coordenadas contra nada (no comparten `ubicacion` real). */
+const cityNames = new Set(
+  (v2Baked.RUTA_DAYS || []).map(d => normalizeNameForTwins(d.city || '')).filter(Boolean)
+);
+function isExcludedFromCoordMatch(id){
+  const raw = livePlacesById.get(id);
+  if (!raw) return false;
+  if (v2Baked.isBookedHotel(raw)) return true;
+  if (v2Baked.hotelPlaceholderBase(raw)) return true;
+  if (raw.category === 'zona' && cityNames.has(normalizeNameForTwins(raw.name || ''))) return true;
+  return false;
+}
+
+// Nivel 1: agrupación automática (TWIN_GROUPS de v2 + nombre Y coordenadas).
+const { items: canonical, merges } = groupCanonical(imported, v2Baked.TWIN_GROUPS, { isExcludedFromCoordMatch });
+
+// Nivel 3: lo que sigue suelto tras el nivel 1. Se anula `ubicacion` de los
+// ids excluidos SOLO para este cálculo (misma exclusión que el nivel 1,
+// aplicada también aquí para no proponer en revisión manual lo mismo que el
+// nivel 2 ya descarta como ruido de coordenadas).
+const byCanonicalId = new Map(canonical.map(it => [it.id, it]));
+const forResidual = canonical.map(it => isExcludedFromCoordMatch(it.id) ? Object.assign({}, it, { ubicacion: null }) : it);
+const rawResidual = residualDuplicates(forResidual);
+const residual = rawResidual.map(d => {
+  const a = byCanonicalId.get(d.a), b = byCanonicalId.get(d.b);
+  return Object.assign({}, d, {
+    procedenciaA: a ? (a.procedencias ? a.procedencias.join('+') : a.procedencia) : null,
+    procedenciaB: b ? (b.procedencias ? b.procedencias.join('+') : b.procedencia) : null,
+    estadoA: a ? a.estado : null, estadoB: b ? b.estado : null
+  });
+});
+const paraRevisionManual = residual.filter(d => d.estadoA !== 'idea' || d.estadoB !== 'idea');
+const soloEntreIdeas = residual.length - paraRevisionManual.length;
+
 const existing = v3JsonPath ? JSON.parse(fs.readFileSync(v3JsonPath, 'utf8')) : [];
-const { items: merged, stats } = mergeV3State(existing, imported);
+const { items: merged, stats } = mergeV3State(existing, canonical);
 
 const outDir = path.join(__dirname, '..', 'import');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'v3-migrated-preview.json'), JSON.stringify(merged, null, 2));
-fs.writeFileSync(path.join(outDir, 'v3-duplicates-report.json'), JSON.stringify(duplicates, null, 2));
+fs.writeFileSync(path.join(outDir, 'v3-duplicates-report.json'), JSON.stringify(residual, null, 2));
 
-const porEstado = e => imported.filter(it => it.estado === e).length;
-console.log('=== Importador v2 → v3 (Fase 2) — vista previa, SIN escribir en Firebase ===');
-console.log(`Ítems importados: ${imported.length} (confirmado: ${porEstado('confirmado')}, propuesta: ${porEstado('propuesta')}, idea: ${porEstado('idea')})`);
+const porEstado = (list, e) => list.filter(it => it.estado === e).length;
+console.log('=== Importador v2 → v3 (Fase 2+dedup) — vista previa, SIN escribir en Firebase ===');
+console.log(`Ítems importados (antes del nivel 1): ${imported.length} ` +
+  `(confirmado: ${porEstado(imported, 'confirmado')}, propuesta: ${porEstado(imported, 'propuesta')}, idea: ${porEstado(imported, 'idea')})`);
+console.log(`Nivel 1 — fusiones automáticas: ${merges.length} grupos (${merges.reduce((n, m) => n + m.idsOriginales.length, 0)} ids originales colapsados)`);
+console.log(`Ítems tras el nivel 1: ${canonical.length} ` +
+  `(confirmado: ${porEstado(canonical, 'confirmado')}, propuesta: ${porEstado(canonical, 'propuesta')}, idea: ${porEstado(canonical, 'idea')})`);
+console.log(`Nivel 3 — candidatos sueltos con al menos un lado propuesta/confirmado: ${paraRevisionManual.length} (NUNCA fusionados; revisión manual)`);
+console.log(`Candidatos dudosos que quedan SOLO entre ideas (no se muestran, no bloquean nada): ${soloEntreIdeas}`);
 console.log(`Fusión con v3 ${v3JsonPath ? 'existente (' + v3JsonPath + ')' : '(nodo vacío, siembra)'}: ` +
   `${stats.nuevos} nuevos, ${stats.actualizados} actualizados, ${stats.soloEnV3Conservados} conservados solo-en-v3`);
-console.log(`Posibles duplicados detectados (NUNCA fusionados a ciegas): ${duplicates.length} — detalle completo en import/v3-duplicates-report.json`);
 if (avisos.length) { console.log('\nAvisos (alcance de esta fase, no errores):'); avisos.forEach(a => console.log('- ' + a)); }
-console.log(`\nEscrito: import/v3-migrated-preview.json (${merged.length} ítems totales) y import/v3-duplicates-report.json`);
+console.log(`\nEscrito: import/v3-migrated-preview.json (${merged.length} ítems totales) y import/v3-duplicates-report.json (${residual.length} candidatos residuales completos)`);
+if (paraRevisionManual.length) {
+  console.log('\n=== Nivel 3: revisión manual (nombre / procedencia / estado / distancia) ===');
+  paraRevisionManual.forEach(d => {
+    console.log(`- ${d.nombreA} [${d.procedenciaA}/${d.estadoA}] (${d.a})  <->  ${d.nombreB} [${d.procedenciaB}/${d.estadoB}] (${d.b})  ` +
+      `razon:${d.razon} dist:${d.distanciaM == null ? '-' : d.distanciaM + 'm'}`);
+  });
+}

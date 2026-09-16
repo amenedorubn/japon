@@ -20,7 +20,7 @@ const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-10a-catalog.js', '
   // v3 (Fase 1, V3-DESIGN.md): módulos independientes bajo v3/lib/, no leen
   // el appJs extraído de index.html (reciben la misma ruta por argv[2] que
   // el resto de suites, pero no la usan).
-  'test-v3-timezone.js', 'test-v3-model.js', 'test-v3-dedupe.js', 'test-v3-merge.js'];
+  'test-v3-timezone.js', 'test-v3-model.js', 'test-v3-dedupe.js', 'test-v3-merge.js', 'test-v3-twins.js'];
 let failed = 0;
 for (const s of suites) {
   console.log('=== ' + s + ' ===');
