@@ -23,12 +23,12 @@
 
   .aviso-maqueta{
     background:var(--accent); color:#fff; text-align:center; font-size:.78rem;
-    padding:6px 10px; position:sticky; top:0; z-index:20;
+    padding:6px 10px; position:sticky; top:0; z-index:5;
   }
 
   header{
     display:flex; align-items:center; gap:10px; padding:14px 16px;
-    position:sticky; top:26px; background:var(--bg); z-index:10; border-bottom:1px solid var(--line);
+    position:sticky; top:26px; background:var(--bg); z-index:5; border-bottom:1px solid var(--line);
   }
   #btnMenu{
     font-size:1.3rem; line-height:1; background:none; border:none; cursor:pointer;
@@ -38,15 +38,19 @@
   header h1{font-size:1rem; margin:0;}
   header .sub{font-size:.76rem; color:var(--muted); margin:0;}
 
-  /* Menú lateral tipo Zara: overlay + panel deslizante */
+  /* Bloque 2 (2026-09-16): el menú lateral SIEMPRE por encima del mapa.
+     Leaflet usa z-index 400-1000 en sus panes/controles internos (dentro de
+     SU PROPIO contexto de apilamiento) — con 2000 sobra margen de sobra
+     para que nunca compita, en vez de ir subiendo el número a ciegas hasta
+     que "parezca que funciona". */
   #overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:29;
+    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:2000;
     opacity:0; pointer-events:none; transition:opacity .2s;
   }
   #overlay.abierto{opacity:1; pointer-events:auto;}
   #menu{
     position:fixed; top:0; bottom:0; left:0; width:82%; max-width:320px;
-    background:var(--menu-bg); color:var(--menu-ink); z-index:30;
+    background:var(--menu-bg); color:var(--menu-ink); z-index:2001;
     transform:translateX(-100%); transition:transform .25s ease; overflow-y:auto;
     padding:20px 0 40px;
   }
@@ -64,12 +68,14 @@
   }
   #menu .dia-chip{
     display:block; padding:8px 20px 8px 32px; font-size:.9rem; color:var(--menu-ink);
-    text-decoration:none; border-left:3px solid transparent;
+    text-decoration:none; border-left:3px solid transparent; background:none; border-top:none; border-right:none; border-bottom:none;
+    width:100%; text-align:left; font:inherit; cursor:pointer;
   }
   #menu .dia-chip:hover{background:#2a271f;}
   #menu .dia-chip.activo{border-left-color:var(--menu-active); color:var(--menu-active); font-weight:600; background:#2a271f;}
   #menu .dia-chip .ciudad{color:var(--menu-muted); font-weight:400;}
   #menu .dia-chip.activo .ciudad{color:var(--menu-active);}
+  #menu .dia-chip[disabled]{opacity:.4; cursor:default;}
 
   main{max-width:520px; margin-inline:auto; padding:0 14px 40px;}
 
@@ -77,6 +83,9 @@
   .dia-header .fecha{font-size:1.3rem; font-weight:700; margin:0;}
   .dia-header .base{font-size:.88rem; color:var(--muted); margin:4px 0 0; display:flex; align-items:center; gap:6px;}
 
+  /* Bloque 2: el mapa vive DENTRO del contenido del día, en flujo normal
+     (nada de fixed/sticky) — hace scroll con la página como cualquier otra
+     tarjeta, y desaparece del DOM en cuanto se sale de la pantalla de día. */
   #mapaDia{height:200px; border-radius:12px; margin-bottom:16px; border:1px solid var(--line);}
 
   .agenda{position:relative; padding-left:0;}
@@ -110,48 +119,33 @@
   .bloque.clicable:hover{background:var(--card);}
 
   .nota-final{font-size:.78rem; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-top:14px;}
+  .placeholder{text-align:center; color:var(--muted); padding:60px 12px;}
 </style>
 </head>
 <body>
-  <div class="aviso-maqueta">MAQUETA ESTÁTICA — datos reales del 12 abr, sin conectar a Pendientes/Ruta todavía</div>
+  <div class="aviso-maqueta">MAQUETA ESTÁTICA — Bloque 2: navegación entre pantallas, mapa solo en el día</div>
 
   <header>
     <button id="btnMenu" aria-label="Abrir menú">🇯🇵</button>
     <div>
       <h1>Japón 2027</h1>
-      <p class="sub">v3 · Paso B, maqueta</p>
+      <p class="sub" id="subtitulo">v3 · Paso B, maqueta</p>
     </div>
   </header>
 
   <div id="overlay"></div>
   <nav id="menu">
     <div class="cabecera">🇯🇵 Japón 2027</div>
-    <div class="seccion"><button>Pendientes</button></div>
+    <div class="seccion"><button id="btnPendientes">Pendientes</button></div>
     <div class="seccion">
       <button id="btnRuta">Ruta <span id="flechaRuta">▾</span></button>
       <div class="dias" id="listaDias"></div>
     </div>
-    <div class="seccion"><button>Reservas</button></div>
-    <div class="seccion"><button>Más</button></div>
+    <div class="seccion"><button disabled style="opacity:.4">Reservas (próximamente)</button></div>
+    <div class="seccion"><button disabled style="opacity:.4">Más (próximamente)</button></div>
   </nav>
 
-  <main>
-    <div class="dia-header">
-      <p class="fecha">Lun 12 abr</p>
-      <p class="base">🏨 Hotel Sunshine Kinugawa, Kinugawa Onsen <span class="badge">✅ confirmado</span></p>
-    </div>
-
-    <div id="mapaDia"></div>
-
-    <div class="agenda" id="agenda"></div>
-
-    <div class="nota-final">
-      <strong>Sin inventar nada:</strong> este día tiene <strong>0 actividades sin hora</strong> (las 6 paradas de
-      RUTA_DAYS traen hora y duración) y <strong>1 desplazamiento sin definir</strong> — la vuelta de Kanmangafuchi
-      al hotel (bus + tren + 650 m a pie) solo existe como texto libre en la nota del día, sin hora ni duración
-      estructuradas. Se deja como hueco, no se calcula un horario que no está en los datos.
-    </div>
-  </main>
+  <main id="main"></main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -166,57 +160,74 @@
     btnMenu.addEventListener('click', abrirMenu);
     overlay.addEventListener('click', cerrarMenu);
 
-    // --- 21 días reales (RUTA_DAYS), agrupados por base ---
-    var BASES = [
-      { hotel: 'Louis House Otsuka Nishi', dias: [['09-abr','vie','Tokio'],['10-abr','sab','Tokio'],['11-abr','dom','Tokio']] },
-      { hotel: 'Hotel Sunshine Kinugawa', dias: [['12-abr','lun','Nikkō']] },
-      { hotel: 'INOVA Kanazawa', dias: [['13-abr','mar','Kanazawa'],['14-abr','mié','Kanazawa']] },
-      { hotel: 'Minshuku Kuwataniya', dias: [['15-abr','jue','Takayama']] },
-      { hotel: 'Kyoto Guesthouse', dias: [['16-abr','vie','Kioto'],['17-abr','sáb','Kioto'],['18-abr','dom','Kioto']] },
-      { hotel: 'Vessel Hotel Hiroshima', dias: [['19-abr','lun','Hiroshima']] },
-      { hotel: 'Hotel Hakata Nakasu Inn', dias: [['20-abr','mar','Fukuoka']] },
-      { hotel: 'Twilight Osaka Inn', dias: [['21-abr','mié','Osaka'],['22-abr','jue','Osaka'],['23-abr','vie','Osaka'],['24-abr','sáb','Osaka']] },
-      { hotel: 'APA Asakusabashi', dias: [['25-abr','dom','Kamakura (excursión)'],['26-abr','lun','Monte Fuji (excursión)'],['27-abr','mar','Tokio']] }
-    ];
-    var DIA_ACTIVO = '12-abr';
-    var listaDias = document.getElementById('listaDias');
-    var html = '<div class="dia-chip' + (false ? ' activo' : '') + '" style="padding-left:20px;font-weight:600;">8 abr <span class="ciudad">· Vuelo de ida</span></div>';
-    BASES.forEach(function(b){
-      html += '<div class="base-header">' + b.hotel + '</div>';
-      b.dias.forEach(function(d){
-        var activo = d[0] === DIA_ACTIVO;
-        html += '<a class="dia-chip' + (activo ? ' activo' : '') + '" href="#">' +
-          d[1].charAt(0).toUpperCase() + d[1].slice(1) + ' ' + d[0] + ' <span class="ciudad">· ' + d[2] + '</span></a>';
-      });
-    });
-    html += '<div class="dia-chip" style="padding-left:20px;font-weight:600;">28 abr <span class="ciudad">· Vuelo de vuelta</span></div>';
-    listaDias.innerHTML = html;
+    // --- Datos de ejemplo: 2 días reales (RUTA_DAYS) + Pendientes-stub, para
+    // poder PROBAR de verdad el cambio de pantalla del Bloque 2. En el
+    // Bloque 3 esto se sustituye por los 21 días reales + pendientesView. ---
+    var DIAS = {
+      'dia-12abr': {
+        fecha: 'Lun 12 abr', ciudad: 'Nikkō', hotel: 'Hotel Sunshine Kinugawa, Kinugawa Onsen',
+        trayecto: { modo: '🚆', texto: 'Tren · Asakusa → Tōbu-Nikkō', horaInicio: '07:30', horaFin: '09:25', dur: 115, pendiente: true,
+          detalle: { regla: 'Tobu: venta desde las 9:00 del mismo día del mes anterior (oficial; la web no dice "JST" explícito)', accion: '🎫 Reserva · abre 12 mar, desde 01:00 Madrid ⚠️', fuente: 'https://www.tobu.co.jp/en/express_info/purchase/' } },
+        paradas: [
+          { num: 1, hora: '09:25', dur: 20, nombre: 'Estación Tōbu-Nikkō', nota: 'Consigna de maletas en la estación (o ya en el ryokan).', lat: 36.7471, lng: 139.619 },
+          { num: 2, hora: '10:00', dur: 20, nombre: 'Puente Shinkyō', nota: 'El puente rojo sagrado sobre el Daiya.', lat: 36.7542, lng: 139.6049 },
+          { num: 3, hora: '10:30', dur: 105, nombre: 'Santuario Tōshōgū', nota: 'La joya de Ieyasu: puerta Yōmeimon, el gato dormido, los 3 monos. Entrada online.', pendiente: true, lat: 36.7581, lng: 139.5989,
+            detalle: { regla: 'Entrada online con antelación; ninguna fuente oficial da una regla de "X días/meses antes" exacta', accion: '👀 Vigilar apertura', fuente: null } },
+          { num: 4, hora: '12:30', dur: 30, nombre: 'Santuario Futarasan', nota: 'El santuario tranquilo de al lado, favorito de Dani.', lat: 36.7589, lng: 139.5953 },
+          { num: 5, hora: '13:10', dur: 40, nombre: 'Templo Rinnō-ji', nota: 'Los tres budas dorados de Rinnō-ji.', lat: 36.7554, lng: 139.6004 },
+          { num: 6, hora: '15:00', dur: 45, nombre: 'Abismo de Kanmangafuchi', nota: 'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.', lat: 36.7527, lng: 139.5894 }
+        ],
+        huecos: [{ texto: 'Kanmangafuchi → hotel: bus a Tōbu-Nikkō, tren a Shimo-Imaichi, línea de Kinugawa, 650 m a pie. Solo existe como texto libre en la nota del día — llegada prevista ~17:15, sin hora/duración estructuradas.' }]
+      },
+      'dia-13abr': {
+        fecha: 'Mar 13 abr', ciudad: 'Kanazawa', hotel: 'INOVA Kanazawa',
+        trayecto: { modo: '🚆', texto: 'Tren · Ōmiya → Kanazawa (Kagayaki)', horaInicio: '—', horaFin: '—', dur: null, pendiente: true,
+          detalle: { regla: 'JR East, regla estándar: 1 mes antes (sin hora exacta oficial). Kagayaki NO tiene el servicio de reserva a 3 meses', accion: '🎫 Reserva · abre 13 mar, desde 16:00 Madrid ⚠️', fuente: 'https://www.jreast.co.jp/en/multi/faq/' } },
+        paradas: [
+          { num: 1, hora: '13:00', dur: 60, nombre: 'Mercado Ōmichō', nota: 'Comida: kaisendon (bol de marisco) en el mercado Ōmichō.', lat: 36.5713, lng: 136.6563 },
+          { num: 2, hora: '14:30', dur: 45, nombre: 'Castillo de Kanazawa', nota: 'El parque del castillo, gratis, camino del jardín.', lat: 36.5657, lng: 136.6588 },
+          { num: 3, hora: '15:30', dur: 90, nombre: 'Jardín Kenroku-en', nota: 'Uno de los tres grandes jardines de Japón; aquí el sakura llega tarde y os espera.', lat: 36.5622, lng: 136.6625 },
+          { num: 4, hora: '17:30', dur: 75, nombre: 'Higashi Chaya', nota: 'El barrio de las casas de té al atardecer + helado con pan de oro.', lat: 36.5726, lng: 136.6668 }
+        ],
+        huecos: []
+      }
+    };
 
-    // Abre "Ruta" ya desplegada y con el día activo a la vista (maqueta: siempre abierto).
+    // --- Menú: lista de días (solo estos 2 tienen pantalla real en la maqueta) ---
+    var listaDias = document.getElementById('listaDias');
+    listaDias.innerHTML =
+      '<div class="base-header">Hotel Sunshine Kinugawa</div>' +
+      '<button class="dia-chip" data-dia="dia-12abr">Lun 12-abr <span class="ciudad">· Nikkō</span></button>' +
+      '<div class="base-header">INOVA Kanazawa</div>' +
+      '<button class="dia-chip" data-dia="dia-13abr">Mar 13-abr <span class="ciudad">· Kanazawa</span></button>' +
+      '<div class="base-header" style="margin-top:8px;">Resto de la Ruta</div>' +
+      '<button class="dia-chip" disabled>19 días más (Bloque 3)</button>';
+
     document.getElementById('btnRuta').addEventListener('click', function(){
       listaDias.style.display = listaDias.style.display === 'none' ? 'block' : 'none';
     });
+    document.getElementById('btnPendientes').addEventListener('click', function(){
+      mostrarPantalla('pendientes'); cerrarMenu();
+    });
+    listaDias.addEventListener('click', function(e){
+      var btn = e.target.closest('.dia-chip[data-dia]');
+      if (!btn) return;
+      mostrarPantalla(btn.getAttribute('data-dia')); cerrarMenu();
+    });
 
-    // --- Agenda del día (datos reales de RUTA_DAYS, 2027-04-12) ---
-    var PARADAS = [
-      { num: 1, hora: '09:25', dur: 20, nombre: 'Estación Tōbu-Nikkō', nota: 'Consigna de maletas en la estación (o ya en el ryokan).', estado: 'propuesta', lat: 36.7471, lng: 139.619 },
-      { num: 2, hora: '10:00', dur: 20, nombre: 'Puente Shinkyō', nota: 'El puente rojo sagrado sobre el Daiya.', estado: 'propuesta', lat: 36.7542, lng: 139.6049 },
-      { num: 3, hora: '10:30', dur: 105, nombre: 'Santuario Tōshōgū', nota: 'La joya de Ieyasu: puerta Yōmeimon, el gato dormido, los 3 monos. Entrada online.', estado: 'propuesta', pendiente: true, lat: 36.7581, lng: 139.5989,
-        detalle: { regla: 'Entrada online con antelación; ninguna fuente oficial da una regla de "X días/meses antes" exacta', accion: '👀 Vigilar apertura', fuente: null } },
-      { num: 4, hora: '12:30', dur: 30, nombre: 'Santuario Futarasan', nota: 'El santuario tranquilo de al lado, favorito de Dani.', estado: 'propuesta', lat: 36.7589, lng: 139.5953 },
-      { num: 5, hora: '13:10', dur: 40, nombre: 'Templo Rinnō-ji', nota: 'Los tres budas dorados de Rinnō-ji.', estado: 'propuesta', lat: 36.7554, lng: 139.6004 },
-      { num: 6, hora: '15:00', dur: 45, nombre: 'Abismo de Kanmangafuchi', nota: 'Comida de yuba (especialidad local) antes; luego los 70 jizō del abismo.', estado: 'propuesta', lat: 36.7527, lng: 139.5894 }
-    ];
-    var TRAYECTO_INICIAL = {
-      modo: '🚆', texto: 'Tren · Asakusa → Tōbu-Nikkō', horaInicio: '07:30', horaFin: '09:25', dur: 115,
-      pendiente: true,
-      detalle: { regla: 'Tobu: venta desde las 9:00 del mismo día del mes anterior (oficial; la web no dice "JST" explícito)', accion: '🎫 Reserva · abre 12 mar, desde 01:00 Madrid ⚠️', fuente: 'https://www.tobu.co.jp/en/express_info/purchase/' }
-    };
+    // --- Router de pantallas (Bloque 2): el mapa se CREA al entrar en una
+    // pantalla de día y se DESTRUYE (mapa.remove()) al salir de ella, nunca
+    // se queda vivo de fondo. Nada de reutilizar una instancia oculta con
+    // CSS: eso es justo lo que dejaba el mapa "flotando" en la maqueta
+    // anterior. ---
+    var mapa = null;
+    var pantallaActual = null;
 
-    function estadoBadge(p){
-      if (p.pendiente) return '<span class="badge tag">🎫 requiere reserva</span>';
-      return '<span class="badge">🟡 propuesta</span>';
+    function destruirMapaSiExiste(){
+      if (mapa) { mapa.remove(); mapa = null; }
     }
+
+    function etiquetaAccion(t){ return t.pendiente ? '<span class="badge tag">🎫 requiere reserva</span>' : '<span class="badge">🟡 propuesta</span>'; }
 
     function bloqueParada(p){
       return '<div class="bloque clicable" data-detalle="detalle-' + p.num + '">' +
@@ -224,7 +235,7 @@
         '<div class="cuerpo">' +
           '<h3><span class="num">' + p.num + '</span>' + p.nombre + '</h3>' +
           '<p>' + p.nota + '</p>' +
-          estadoBadge(p) +
+          etiquetaAccion(p) +
           (p.detalle ? '<div class="detalle" id="detalle-' + p.num + '">' +
             '<p class="regla">' + p.detalle.regla + '</p>' +
             '<p><strong>' + p.detalle.accion + '</strong></p>' +
@@ -233,43 +244,72 @@
         '</div></div>';
     }
 
-    var agenda = document.getElementById('agenda');
-    var out = '<div class="bloque trayecto clicable" data-detalle="detalle-trayecto">' +
-      '<div class="franja">' + TRAYECTO_INICIAL.horaInicio + '<span class="dur">' + TRAYECTO_INICIAL.dur + ' min</span></div>' +
-      '<div class="cuerpo"><h3>' + TRAYECTO_INICIAL.modo + ' ' + TRAYECTO_INICIAL.texto + '</h3>' +
-      '<p>Llegada ' + TRAYECTO_INICIAL.horaFin + '</p>' +
-      '<span class="badge tag">🎫 requiere reserva</span>' +
-      '<div class="detalle" id="detalle-trayecto">' +
-        '<p class="regla">' + TRAYECTO_INICIAL.detalle.regla + '</p>' +
-        '<p><strong>' + TRAYECTO_INICIAL.detalle.accion + '</strong></p>' +
-        '<a href="' + TRAYECTO_INICIAL.detalle.fuente + '" target="_blank" rel="noopener">Fuente ↗</a>' +
-      '</div></div></div>';
-    out += PARADAS.map(bloqueParada).join('');
-    out += '<div class="bloque hueco"><div class="franja">? <span class="dur">? min</span></div>' +
-      '<div class="cuerpo"><h3>🚌🚆🚶 Desplazamiento sin definir</h3>' +
-      '<p>Kanmangafuchi → hotel: bus a Tōbu-Nikkō, tren a Shimo-Imaichi, línea de Kinugawa, 650 m a pie. ' +
-      'Solo existe como texto libre en la nota del día — llegada prevista ~17:15, sin hora/duración estructuradas.</p></div></div>';
-    agenda.innerHTML = out;
-
-    document.querySelectorAll('[data-detalle]').forEach(function(el){
-      el.addEventListener('click', function(){
-        document.getElementById(el.getAttribute('data-detalle')).classList.toggle('abierto');
+    function renderDia(id){
+      var d = DIAS[id];
+      var out = '<div class="dia-header"><p class="fecha">' + d.fecha + '</p>' +
+        '<p class="base">🏨 ' + d.hotel + ' <span class="badge">✅ confirmado</span></p></div>' +
+        '<div id="mapaDia"></div>' +
+        '<div class="agenda">' +
+        '<div class="bloque trayecto clicable" data-detalle="detalle-trayecto">' +
+          '<div class="franja">' + d.trayecto.horaInicio + '<span class="dur">' + (d.trayecto.dur ? d.trayecto.dur + ' min' : 'sin duración') + '</span></div>' +
+          '<div class="cuerpo"><h3>' + d.trayecto.modo + ' ' + d.trayecto.texto + '</h3>' +
+          '<p>Llegada ' + d.trayecto.horaFin + '</p>' +
+          etiquetaAccion(d.trayecto) +
+          '<div class="detalle" id="detalle-trayecto">' +
+            '<p class="regla">' + d.trayecto.detalle.regla + '</p>' +
+            '<p><strong>' + d.trayecto.detalle.accion + '</strong></p>' +
+            (d.trayecto.detalle.fuente ? '<a href="' + d.trayecto.detalle.fuente + '" target="_blank" rel="noopener">Fuente ↗</a>' : '') +
+          '</div></div></div>';
+      out += d.paradas.map(bloqueParada).join('');
+      d.huecos.forEach(function(h){
+        out += '<div class="bloque hueco"><div class="franja">? <span class="dur">? min</span></div>' +
+          '<div class="cuerpo"><h3>🚌🚆🚶 Desplazamiento sin definir</h3><p>' + h.texto + '</p></div></div>';
       });
-    });
+      out += '</div>';
+      var sinHora = 0, sinDuracion = 0;
+      out += '<div class="nota-final"><strong>Este día:</strong> ' + sinHora + ' actividades sin hora, ' + sinDuracion +
+        ' sin duración, ' + d.huecos.length + ' desplazamiento(s) sin definir.</div>';
+      document.getElementById('main').innerHTML = out;
 
-    // --- Mapa del día: pines numerados + línea de ruta ---
-    var mapa = L.map('mapaDia', { zoomControl: false });
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19, attribution: '&copy; Esri'
-    }).addTo(mapa);
-    var puntos = PARADAS.map(function(p){ return [p.lat, p.lng]; });
-    PARADAS.forEach(function(p){
-      L.marker([p.lat, p.lng], {
-        icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50%;background:#b23a2e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + p.num + '</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
-      }).addTo(mapa).bindPopup(p.nombre);
-    });
-    L.polyline(puntos, { color: '#b23a2e', weight: 2, dashArray: '4,4' }).addTo(mapa);
-    mapa.fitBounds(L.latLngBounds(puntos).pad(0.25), { maxZoom: 15 });
+      document.querySelectorAll('[data-detalle]').forEach(function(el){
+        el.addEventListener('click', function(){ document.getElementById(el.getAttribute('data-detalle')).classList.toggle('abierto'); });
+      });
+
+      mapa = L.map('mapaDia', { zoomControl: false });
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, attribution: '&copy; Esri'
+      }).addTo(mapa);
+      var puntos = d.paradas.map(function(p){ return [p.lat, p.lng]; });
+      d.paradas.forEach(function(p){
+        L.marker([p.lat, p.lng], {
+          icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50%;background:#b23a2e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + p.num + '</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+        }).addTo(mapa).bindPopup(p.nombre);
+      });
+      L.polyline(puntos, { color: '#b23a2e', weight: 2, dashArray: '4,4' }).addTo(mapa);
+      // invalidateSize antes de fitBounds: el contenedor se acaba de insertar
+      // en el DOM en este mismo render, Leaflet necesita medirlo de nuevo.
+      mapa.invalidateSize();
+      mapa.fitBounds(L.latLngBounds(puntos).pad(0.25), { maxZoom: 15 });
+    }
+
+    function renderPendientes(){
+      document.getElementById('main').innerHTML =
+        '<div class="placeholder"><p><strong>Pendientes</strong></p>' +
+        '<p>(stub del Bloque 2 — la pantalla real ya existe en <code>v3/index.html</code>; ' +
+        'aquí solo demuestra que, al entrar, el mapa del día anterior desaparece del todo.)</p></div>';
+    }
+
+    function mostrarPantalla(id){
+      destruirMapaSiExiste();
+      pantallaActual = id;
+      document.querySelectorAll('.dia-chip[data-dia]').forEach(function(el){
+        el.classList.toggle('activo', el.getAttribute('data-dia') === id);
+      });
+      if (id === 'pendientes') { renderPendientes(); return; }
+      renderDia(id);
+    }
+
+    mostrarPantalla('dia-12abr');
   </script>
 </body>
 </html>
