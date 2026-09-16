@@ -100,7 +100,8 @@ function loadV2Baked(){
 
   const boot = new Function('document', 'window', 'localStorage', 'location', 'history', 'L', 'fetch', 'setInterval', 'confirm',
     '"use strict";' + appJs + `
-    ;return { RUTA_DAYS, FLIGHTS, TRANSPORT, canonicalPid, provenanceOf, isBookedHotel, hotelPlaceholderBase, TWIN_GROUPS };`);
+    ;return { RUTA_DAYS, FLIGHTS, TRANSPORT, canonicalPid, provenanceOf, isBookedHotel, hotelPlaceholderBase, TWIN_GROUPS,
+      TIPS, PHRASES, PRICES, SKIPPED };`);
 
   return boot(documentStub, {}, localStorageStub, { hash: '', href: '' }, { pushState(){}, replaceState(){} },
     L, fetchStub, () => 0, () => true);
@@ -335,7 +336,15 @@ function transform(livePlaces, v2Baked){
       procedencia: provenanceOf(p), estado: 'idea',
       noche: null, fechaHora: null,
       ubicacion: (p.lat != null && p.lng != null) ? { lat: p.lat, lng: p.lng } : null,
-      acciones: []
+      acciones: [],
+      // Fase 5 (Más): filtro por categoría del catálogo -- campo real de
+      // state.places (verificado contra live.json: TODOS los 476 lugares
+      // reales usan `category`, ninguno `cat`, aunque el catálogo fuente en
+      // index.html use `cat` como parámetro posicional de P(); se normaliza
+      // en algún punto de la app antes de llegar a Firebase). `ciudad` se
+      // añade más abajo, tras derivar la ciudad de los 9 hoteles.
+      categoria: p.category || null,
+      ciudad: null
     });
     consumed.add(p.id);
   }
@@ -477,10 +486,36 @@ const incoherenciasCiudad = checkIncoherenciasCiudad(canonical, v2Baked.RUTA_DAY
    base sin repetir esta derivación en el cliente: se hornea `ciudadBase` en
    cada hotel confirmado aquí mismo, UNA sola vez. `null` si es ambigua
    (ver deriveCityOfHotels) — la UI entonces enseña solo el nombre del hotel. */
+const hotelesCanonical = canonical.filter(it => it.tipo === 'alojamiento' && it.estado === 'confirmado');
 {
-  const hotelesCanonical = canonical.filter(it => it.tipo === 'alojamiento' && it.estado === 'confirmado');
   const cityOfHotelFinal = deriveCityOfHotels(hotelesCanonical, v2Baked.RUTA_DAYS);
   for (const h of hotelesCanonical) h.ciudadBase = cityOfHotelFinal.get(h.id) || null;
+}
+
+/* Fase 5 (Más): `ciudad` de una idea = la del hotel confirmado más cercano
+   por coordenadas (haversine sobre los 9 hoteles reales, no una tabla de
+   coordenadas de ciudad inventada a mano). Es un filtro de exploración, no
+   un dato de reserva -- una idea lejos de cualquier base (p.ej. Nagano,
+   descartado de la Ruta) se etiqueta igual con la más cercana aunque no sea
+   muy cercana; no hay umbral de distancia que la deje sin ciudad, a
+   propósito (mejor una etiqueta aproximada que ninguna en un filtro). */
+function haversineM(a, b){
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+{
+  const hotelesConCiudad = hotelesCanonical.filter(h => h.ubicacion && h.ciudadBase);
+  for (const it of canonical) {
+    if (it.estado !== 'idea' || it.tipo !== 'lugar' || !it.ubicacion || !hotelesConCiudad.length) continue;
+    let mejor = null, mejorDist = Infinity;
+    for (const h of hotelesConCiudad) {
+      const d = haversineM(it.ubicacion, h.ubicacion);
+      if (d < mejorDist) { mejorDist = d; mejor = h; }
+    }
+    it.ciudad = mejor ? mejor.ciudadBase : null;
+  }
 }
 
 /* Resumen de los 21 días de RUTA_DAYS (Fase 4, Bloque 3): el menú lateral
@@ -516,7 +551,14 @@ fs.mkdirSync(outDir, { recursive: true });
 // Fase 4, Bloque 3: {items, dias} en vez de un array plano — la Ruta por
 // días necesita el resumen de los 21 días de RUTA_DAYS (ver diasResumen
 // arriba) tanto como los propios RouteItem.
-fs.writeFileSync(path.join(outDir, 'v3-migrated-preview.json'), JSON.stringify({ items: merged, dias: diasResumen }, null, 2));
+// Fase 5 (Más → Guía): TIPS/PHRASES/PRICES/SKIPPED se extraen de index.html
+// (v2Baked) igual que RUTA_DAYS/TRANSPORT -- nunca se retranscriben a mano,
+// una sola fuente de verdad. `bookingTimeline`/CHECKLIST/TRANSPORT NO
+// entran aquí: el primero lo sustituye Pendientes, TRANSPORT ya vive en
+// Ruta como trayectos, y CHECKLIST queda fuera de esta fase (decisión
+// 2026-09-16).
+const guia = { tips: v2Baked.TIPS, phrases: v2Baked.PHRASES, prices: v2Baked.PRICES, skipped: v2Baked.SKIPPED };
+fs.writeFileSync(path.join(outDir, 'v3-migrated-preview.json'), JSON.stringify({ items: merged, dias: diasResumen, guia }, null, 2));
 fs.writeFileSync(path.join(outDir, 'v3-duplicates-report.json'), JSON.stringify(residual, null, 2));
 
 const porEstado = (list, e) => list.filter(it => it.estado === e).length;

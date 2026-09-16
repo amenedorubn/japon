@@ -119,6 +119,31 @@
   .detalle.abierto{display:block;}
   .bloque.clicable{cursor:pointer;}
   .nota-final{font-size:.78rem; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-top:14px;}
+
+  /* --- Reservas (Fase 5) --- */
+  .reservar-box{margin-top:8px; display:flex; flex-direction:column; gap:6px; max-width:100%;}
+  .nota-input{font:inherit; font-size:.82rem; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); max-width:100%;}
+
+  /* --- Más: filtros + lista de Ideas (Fase 5) --- */
+  .filtros{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px;}
+  .filtros select{font:inherit; font-size:.82rem; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); max-width:100%;}
+  .ideas-lista{display:flex; flex-direction:column;}
+  .idea-row{padding:8px 4px; border-bottom:1px dashed var(--line); display:flex; flex-direction:column; gap:2px;}
+  .idea-row:last-child{border-bottom:none;}
+  .idea-nombre{font-size:.9rem; font-weight:600; overflow-wrap:anywhere;}
+  .idea-meta{font-size:.76rem; color:var(--muted);}
+
+  /* --- Más: Guía (Fase 5, horneada de v2.1) --- */
+  .tip-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px;}
+  .tip-card p{margin:4px 0 0; font-size:.85rem; color:var(--muted);}
+  .tip-card small{color:var(--muted); font-weight:400;}
+  .guia-row{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px dashed var(--line);}
+  .guia-row:last-child{border-bottom:none;}
+  .guia-row .precio{flex:none; min-width:96px; font-weight:700; color:var(--accent); font-size:.85rem;}
+  .guia-row small{display:block; color:var(--muted); font-size:.78rem;}
+  .phrases-table{width:100%; border-collapse:collapse; font-size:.88rem;}
+  .phrases-table td{padding:6px 4px; border-bottom:1px dashed var(--line); overflow-wrap:anywhere; vertical-align:top;}
+  .phrases-table td.romaji{color:var(--muted); font-size:.8rem;}
 </style>
 </head>
 <body>
@@ -138,8 +163,8 @@
       <button id="btnRuta">Ruta <span id="flechaRuta">▾</span></button>
       <div id="listaDias"></div>
     </div>
-    <div class="seccion"><button id="btnReservas">Reservas <span style="color:var(--menu-muted); font-size:.75rem;">(Fase 5)</span></button></div>
-    <div class="seccion"><button id="btnMas">Más <span style="color:var(--menu-muted); font-size:.75rem;">(Fase 5)</span></button></div>
+    <div class="seccion"><button id="btnReservas">Reservas</button></div>
+    <div class="seccion"><button id="btnMas">Más</button></div>
   </nav>
 
   <main id="main"><p class="sub" style="padding:16px;">Cargando…</p></main>
@@ -150,6 +175,7 @@
   <script src="./lib/model.js"></script>
   <script src="./lib/storage.js"></script>
   <script src="./lib/hecho-overrides.js"></script>
+  <script src="./lib/estado-overrides.js"></script>
   <script src="./lib/bases.js"></script>
   <script src="./lib/agenda.js"></script>
   <script>
@@ -238,17 +264,33 @@
     var mapa = null;
     function destruirMapaSiExiste(){ if (mapa) { mapa.remove(); mapa = null; } }
 
+    // Pantalla activa (Fase 5): marcarHecho/marcarReservado necesitan volver
+    // a pintar la pantalla desde la que se llamaron (Pendientes O Reservas,
+    // ambas usan cardHTML/entryRegistry), no siempre Pendientes.
+    var pantallaActualId = 'pendientes';
+
     function mostrarPantalla(id){
       destruirMapaSiExiste();
+      pantallaActualId = id;
       actualizarMenuActivo(id);
       if (id === 'pendientes') { document.getElementById('tituloPantalla').textContent = 'Japón 2027 · Pendientes'; renderPendientesScreen(); }
-      else if (id === 'reservas') { document.getElementById('tituloPantalla').textContent = 'Japón 2027 · Reservas'; renderStub('Reservas', 'Próximamente en la Fase 5.'); }
-      else if (id === 'mas') { document.getElementById('tituloPantalla').textContent = 'Japón 2027 · Más'; renderStub('Más', 'Ideas + guía. Próximamente en la Fase 5.'); }
+      else if (id === 'reservas') { document.getElementById('tituloPantalla').textContent = 'Japón 2027 · Reservas'; renderReservasScreen(); }
+      else if (id === 'mas') { document.getElementById('tituloPantalla').textContent = 'Japón 2027 · Más'; renderMasScreen(); }
       else { renderDiaScreen(id); }
     }
 
     function renderStub(titulo, texto){
       main.innerHTML = '<div class="placeholder"><p><strong>' + esc(titulo) + '</strong></p><p>' + esc(texto) + '</p></div>';
+    }
+
+    // Único punto que combina las dos capas de overrides locales (hecho +
+    // estado, Fase 5) sobre los ítems importados -- usado por Pendientes,
+    // Ruta (un día) y Reservas, para que un ítem marcado a mano se vea igual
+    // en las tres pantallas.
+    function itemsConOverrides(){
+      var hecho = storage.getJSON('hechoOverrides', {});
+      var estado = storage.getJSON('estadoOverrides', {});
+      return applyEstadoOverrides(applyOverrides(DATA.items, hecho), estado);
     }
 
     // ================================================================
@@ -290,12 +332,38 @@
 
     function marcarHecho(entry){
       pairsOf(entry).forEach(function(p){ marcarHechoPar(p[0], p[1]); });
-      renderPendientesScreen();
-      showToast('Marcado como hecho', function(){ pairsOf(entry).forEach(function(p){ deshacerPar(p[0], p[1]); }); renderPendientesScreen(); });
+      mostrarPantalla(pantallaActualId);
+      showToast('Marcado como hecho', function(){ pairsOf(entry).forEach(function(p){ deshacerPar(p[0], p[1]); }); mostrarPantalla(pantallaActualId); });
     }
-    function deshacerDesdeHechos(itemId, accionId){ deshacerPar(itemId, accionId); renderPendientesScreen(); }
+    function deshacerDesdeHechos(itemId, accionId){ deshacerPar(itemId, accionId); mostrarPantalla(pantallaActualId); }
 
-    function cardHTML(entry){
+    // "Marcar como reservado" (Fase 5, solo en Reservas): promueve el ÍTEM a
+    // confirmado (estadoOverrides) Y de paso marca su acción como hecha
+    // (hechoOverrides) -- reservar algo también resuelve su pendiente,
+    // deben ir siempre juntos para que Pendientes no lo siga reclamando.
+    function marcarReservado(itemId, accionId, nota){
+      marcarHechoPar(itemId, accionId);
+      var overrides = storage.getJSON('estadoOverrides', {});
+      overrides = markConfirmado(overrides, itemId, accionId, nota || null);
+      storage.setJSON('estadoOverrides', overrides);
+      mostrarPantalla(pantallaActualId);
+      showToast('Marcado como reservado', function(){ deshacerReservado(itemId, accionId); });
+    }
+    function deshacerReservado(itemId, accionId){
+      deshacerPar(itemId, accionId);
+      var overrides = storage.getJSON('estadoOverrides', {});
+      overrides = undoConfirmado(overrides, itemId);
+      storage.setJSON('estadoOverrides', overrides);
+      mostrarPantalla(pantallaActualId);
+    }
+
+    // `opts` (Fase 5, Reservas): {fechaRuta} añade un enlace al día de la
+    // Ruta cuando el ítem tiene fecha; {mostrarReservar:true} sustituye el
+    // botón normal "Marcar como hecho" por la caja de "Marcar como
+    // reservado" (nota opcional + confirmar). Sin `opts`, comportamiento
+    // idéntico al de siempre (Pendientes no pasa nada aquí).
+    function cardHTML(entry, opts){
+      opts = opts || {};
       var badge = '';
       if (entry.nivel === 2) badge = '<span class="badge warn">⚠️ hora sin confirmar</span>';
       if (entry.nivel === 3) badge = '<span class="badge watch">👀 vigilar apertura</span>';
@@ -308,7 +376,17 @@
       var recomendacionHTML = entry.accion.recomendacion ? '<p class="regla">' + esc(entry.accion.recomendacion) + '</p>' : '';
       var url = entry.accion.dondeReservar || entry.accion.fuente;
       var linkHTML = url ? '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Ir a reservar ↗</a>' : '';
-      var accionHTML = '<button class="primary" data-idx="' + entry._idx + '">Marcar como hecho</button>';
+      var rutaHTML = opts.fechaRuta ? '<button class="link" data-ir-dia="' + esc(opts.fechaRuta) + '">Ver en la Ruta → ' + esc(formatFechaCorta(opts.fechaRuta)) + '</button>' : '';
+
+      var accionHTML = '', reservarHTML = '';
+      if (opts.mostrarReservar) {
+        reservarHTML = '<div class="reservar-box">' +
+          '<input type="text" class="nota-input" placeholder="Nota (opcional): localizador, precio…" data-nota-item="' + esc(entry.itemId) + '">' +
+          '<button class="primary" data-reservar-item="' + esc(entry.itemId) + '" data-reservar-accion="' + esc(entry.accionId) + '">Marcar como reservado</button>' +
+          '</div>';
+      } else {
+        accionHTML = '<button class="primary" data-idx="' + entry._idx + '">Marcar como hecho</button>';
+      }
 
       var rightHTML = '';
       if (entry.nivel === 1 || entry.nivel === 2) {
@@ -328,7 +406,26 @@
         }
       }
       return '<div class="card"><div class="card-left"><h3>' + esc(titulo) + '</h3>' + tramosHTML + badge + reglaHTML + recomendacionHTML +
-        '<div class="actions">' + linkHTML + accionHTML + '</div></div><div class="card-right">' + rightHTML + '</div></div>';
+        '<div class="actions">' + linkHTML + accionHTML + rutaHTML + '</div>' + reservarHTML +
+        '</div><div class="card-right">' + rightHTML + '</div></div>';
+    }
+
+    // Delega los clics de "Ver en la Ruta" y "Marcar como reservado" -- se
+    // reutiliza tal cual desde Pendientes, Reservas y cualquier pantalla
+    // futura que pinte cardHTML con `opts`.
+    function wireCardActions(container){
+      container.querySelectorAll('button[data-ir-dia]').forEach(function(btn){
+        btn.addEventListener('click', function(e){ e.stopPropagation(); mostrarPantalla(btn.getAttribute('data-ir-dia')); cerrarMenu(); });
+      });
+      container.querySelectorAll('button[data-reservar-item]').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var itemId = btn.getAttribute('data-reservar-item'), accionId = btn.getAttribute('data-reservar-accion');
+          var card = btn.closest('.card');
+          var input = card ? card.querySelector('.nota-input') : null;
+          marcarReservado(itemId, accionId, input ? input.value.trim() : '');
+        });
+      });
     }
 
     var entryRegistry = [];
@@ -356,14 +453,15 @@
       main.querySelectorAll('button[data-undo-item]').forEach(function(btn){
         btn.addEventListener('click', function(){ deshacerDesdeHechos(btn.getAttribute('data-undo-item'), btn.getAttribute('data-undo-accion')); });
       });
+      wireCardActions(main);
     }
 
     function renderPendientesScreen(){
       if (!DATA) { renderSinDatos(); return; }
-      var overrides = storage.getJSON('hechoOverrides', {});
-      var items = applyOverrides(DATA.items, overrides);
+      var hechoOverrides = storage.getJSON('hechoOverrides', {});
+      var items = itemsConOverrides();
       var view = pendientesView(items, Date.now());
-      view.hechos = view.hechos.map(function(h){ return Object.assign({}, h, { _overridden: isOverridden(overrides, h.itemId, h.accionId) }); });
+      view.hechos = view.hechos.map(function(h){ return Object.assign({}, h, { _overridden: isOverridden(hechoOverrides, h.itemId, h.accionId) }); });
       renderPendientesView(view);
     }
 
@@ -492,8 +590,7 @@
 
     function renderDiaScreen(fecha){
       if (!DATA) { renderSinDatos(); return; }
-      var overrides = storage.getJSON('hechoOverrides', {});
-      var items = applyOverrides(DATA.items, overrides);
+      var items = itemsConOverrides();
       var diaInfo = DATA.dias.find(function(d){ return d.fecha === fecha; });
       var hotel = hotelParaFecha(HOTELES, fecha);
       var itemsDia = itemsDeFecha(items, fecha);
@@ -599,6 +696,153 @@
       mapa.invalidateSize();
       if (puntos.length) mapa.fitBounds(L.latLngBounds(puntos).pad(0.25), { maxZoom: 16 });
       else mapa.setView([35.68, 139.76], 9);
+    }
+
+    // ================================================================
+    // Pantalla: Reservas (Fase 5) -- todo lo que se compra, en 3 grupos:
+    // ✅ Confirmado (hoteles/vuelos reales, o lo que el usuario marque a
+    // mano desde aquí), 🎫 Por reservar (con acción pendiente, reutiliza
+    // pendientesView tal cual) y 👀 Vigilar apertura (sin fecha). Cada
+    // elemento enlaza a su día en la Ruta cuando el ítem tiene fecha --
+    // nunca se inventa una si no la trae (p.ej. una idea suelta no la
+    // tiene, así que nunca llega aquí de todos modos: solo confirmado o con
+    // acciones pendientes participa).
+    // ================================================================
+    function confirmadoCardHTML(item, fechaRuta){
+      var rutaHTML = fechaRuta ? '<button class="link" data-ir-dia="' + esc(fechaRuta) + '">Ver en la Ruta → ' + esc(formatFechaCorta(fechaRuta)) + '</button>' : '';
+      var icono = item.tipo === 'vuelo' ? '✈️' : (item.tipo === 'alojamiento' ? '🏨' : (item.tipo === 'trayecto' ? '🚆' : '📍'));
+      var notaHTML = item.notaReserva ? '<p class="regla">' + esc(item.notaReserva) + '</p>' : '';
+      var manualHTML = item.estadoManual
+        ? '<span class="badge">🖊️ marcado a mano</span> <button class="link" data-deshacer-reservado="' + esc(item.id) + '" data-deshacer-accion="' + esc(item.accionReservadaId || '') + '">Deshacer</button>'
+        : '';
+      return '<div class="card"><div class="card-left"><h3>' + icono + ' ' + esc(item.nombre) + '</h3>' + notaHTML +
+        '<span class="badge">✅ confirmado</span> ' + manualHTML +
+        '<div class="actions">' + rutaHTML + '</div></div></div>';
+    }
+
+    function renderReservasScreen(){
+      if (!DATA) { renderSinDatos(); return; }
+      var items = itemsConOverrides();
+      var byId = {};
+      items.forEach(function(it){ byId[it.id] = it; });
+
+      var confirmados = items.filter(function(it){ return it.estado === 'confirmado'; })
+        .sort(function(a, b){ var fa = fechaDe(a) || '', fb = fechaDe(b) || ''; return fa < fb ? -1 : (fa > fb ? 1 : 0); });
+
+      var view = pendientesView(items, Date.now());
+      entryRegistry = [];
+      var porReservar = registerEntries(agruparPorApertura(view.conFecha).concat(view.reservarYa));
+      var vigilar = registerEntries(view.vigilar);
+
+      var html = '';
+      html += '<section><h2>✅ Confirmado (' + confirmados.length + ')</h2>' +
+        (confirmados.length ? confirmados.map(function(it){ return confirmadoCardHTML(it, fechaDe(it)); }).join('') : '<p class="empty">Nada confirmado todavía.</p>') +
+        '</section>';
+      html += '<section><h2>🎫 Por reservar (' + porReservar.length + ')</h2>' +
+        (porReservar.length ? porReservar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]), mostrarReservar: true }); }).join('') : '<p class="empty">Nada por reservar.</p>') +
+        '</section>';
+      if (vigilar.length) {
+        html += '<section><h2>👀 Vigilar apertura (' + vigilar.length + ')</h2>' +
+          vigilar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]) }); }).join('') +
+          '</section>';
+      }
+      main.innerHTML = html;
+      main.querySelectorAll('button[data-idx]').forEach(function(btn){ btn.addEventListener('click', function(){ marcarHecho(entryRegistry[Number(btn.getAttribute('data-idx'))]); }); });
+      main.querySelectorAll('button[data-deshacer-reservado]').forEach(function(btn){
+        btn.addEventListener('click', function(){ deshacerReservado(btn.getAttribute('data-deshacer-reservado'), btn.getAttribute('data-deshacer-accion')); });
+      });
+      wireCardActions(main);
+    }
+
+    // ================================================================
+    // Pantalla: Más (Fase 5) -- Ideas (catálogo fuera de la Ruta, filtrable)
+    // + Guía (Tips/Frases/Precios/Descartes, horneados de v2.1). "Pasar una
+    // idea a la Ruta" y el CHECKLIST de equipaje quedan fuera de esta fase
+    // (decisión 2026-09-16): no hay todavía ningún editor de Ruta en v3.
+    // ================================================================
+    var masFiltro = { procedencia: 'todas', categoria: 'todas', ciudad: 'todas' };
+    var PROCEDENCIA_LABELS = { ours: 'Nuestra', dani: 'Dani', maria: 'María', instagram: 'Instagram', ai: 'IA' };
+    // Mismos emoji/etiqueta que CATS en index.html raíz (v2.1) -- duplicado
+    // a propósito: es una tabla de presentación (emoji + texto), no una
+    // regla de negocio, así que no choca con PROJECT.md §D3.
+    var CATEGORIA_LABELS = {
+      templo: '⛩️ Templos y santuarios', comida: '🍜 Comida', compras: '🛍️ Compras', naturaleza: '🌿 Naturaleza',
+      zona: '🏮 Barrios y zonas', excursion: '🗾 Excursiones', mirador: '🌆 Miradores', museo: '🏛️ Museos y cultura',
+      alojamiento: '🏨 Alojamiento', transporte: '🚉 Transporte', otro: '📍 Otros'
+    };
+    function procedenciasDe(item){ return item.procedencias || [item.procedencia]; }
+
+    function ideasFiltradas(todasIdeas){
+      return todasIdeas.filter(function(it){
+        if (masFiltro.procedencia !== 'todas' && procedenciasDe(it).indexOf(masFiltro.procedencia) === -1) return false;
+        if (masFiltro.categoria !== 'todas' && it.categoria !== masFiltro.categoria) return false;
+        if (masFiltro.ciudad !== 'todas' && it.ciudad !== masFiltro.ciudad) return false;
+        return true;
+      });
+    }
+
+    function opcionesFiltro(ideas, campo){
+      var vals = new Set();
+      ideas.forEach(function(it){
+        if (campo === 'procedencia') procedenciasDe(it).forEach(function(p){ if (p) vals.add(p); });
+        else if (it[campo]) vals.add(it[campo]);
+      });
+      return Array.from(vals).sort();
+    }
+
+    function selectHTML(id, label, opciones, valorActual, etiquetaDe){
+      var opts = '<option value="todas">' + esc(label) + ': todas</option>' +
+        opciones.map(function(v){ return '<option value="' + esc(v) + '"' + (v === valorActual ? ' selected' : '') + '>' + esc(etiquetaDe(v)) + '</option>'; }).join('');
+      return '<select id="' + id + '">' + opts + '</select>';
+    }
+
+    function ideaRowHTML(it){
+      var cat = CATEGORIA_LABELS[it.categoria] || (it.categoria || 'Sin categoría');
+      var proc = procedenciasDe(it).map(function(p){ return PROCEDENCIA_LABELS[p] || p; }).join(' + ');
+      return '<div class="idea-row"><span class="idea-nombre">' + esc(it.nombre) + '</span>' +
+        '<span class="idea-meta">' + esc(cat) + (it.ciudad ? ' · ' + esc(it.ciudad) : '') + ' · ' + esc(proc) + '</span></div>';
+    }
+
+    function guiaHTML(){
+      if (!DATA.guia) return '';
+      var tips = DATA.guia.tips.map(function(t){
+        return '<div class="tip-card"><b>' + esc(t[0]) + ' ' + esc(t[1]) + '</b><p>' + esc(t[2]) + '</p></div>';
+      }).join('');
+      var phrases = '<table class="phrases-table"><tbody>' + DATA.guia.phrases.map(function(p){
+        return '<tr><td>' + esc(p[0]) + '</td><td>' + esc(p[1]) + '</td><td class="romaji">' + esc(p[2]) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+      var prices = DATA.guia.prices.map(function(pr){
+        return '<div class="guia-row"><span class="precio">' + esc(pr[2]) + '</span><div><b>' + esc(pr[1]) + '</b><small>' + esc(pr[3]) + '</small></div></div>';
+      }).join('');
+      var skipTag = { zona: 'Zona fuera', lejos: 'Otro viaje', criterio: 'Descarte de criterio', considerado: 'Considerado y descartado', pendiente: 'Decisión pendiente' };
+      var skipped = DATA.guia.skipped.map(function(s){
+        return '<div class="tip-card"><b>' + esc(s[1]) + ' <small>· ' + esc(skipTag[s[0]] || s[0]) + '</small></b><p>' + esc(s[2]) + '</p></div>';
+      }).join('');
+      return '<section><h2>💡 Tips</h2>' + tips + '</section>' +
+        '<section><h2>🗣️ Frases</h2>' + phrases + '</section>' +
+        '<section><h2>💴 Precios de referencia</h2>' + prices + '</section>' +
+        '<details><summary>🗺️ Lo que dejamos fuera (' + DATA.guia.skipped.length + ')</summary>' + skipped + '</details>';
+    }
+
+    function renderMasScreen(){
+      if (!DATA) { renderSinDatos(); return; }
+      var todasIdeas = DATA.items.filter(function(it){ return it.estado === 'idea'; });
+      var ideas = ideasFiltradas(todasIdeas);
+
+      var html = '<section><h2>Ideas (' + ideas.length + ' de ' + todasIdeas.length + ')</h2>';
+      html += '<div class="filtros">' +
+        selectHTML('filtroProcedencia', 'Origen', opcionesFiltro(todasIdeas, 'procedencia'), masFiltro.procedencia, function(v){ return PROCEDENCIA_LABELS[v] || v; }) +
+        selectHTML('filtroCategoria', 'Categoría', opcionesFiltro(todasIdeas, 'categoria'), masFiltro.categoria, function(v){ return CATEGORIA_LABELS[v] || v; }) +
+        selectHTML('filtroCiudad', 'Ciudad', opcionesFiltro(todasIdeas, 'ciudad'), masFiltro.ciudad, function(v){ return v; }) +
+        '</div>';
+      html += ideas.length ? '<div class="ideas-lista">' + ideas.map(ideaRowHTML).join('') + '</div>' : '<p class="empty">Ninguna idea con estos filtros.</p>';
+      html += '</section>';
+      html += guiaHTML();
+
+      main.innerHTML = html;
+      document.getElementById('filtroProcedencia').addEventListener('change', function(e){ masFiltro.procedencia = e.target.value; renderMasScreen(); });
+      document.getElementById('filtroCategoria').addEventListener('change', function(e){ masFiltro.categoria = e.target.value; renderMasScreen(); });
+      document.getElementById('filtroCiudad').addEventListener('change', function(e){ masFiltro.ciudad = e.target.value; renderMasScreen(); });
     }
 
     // ================================================================
