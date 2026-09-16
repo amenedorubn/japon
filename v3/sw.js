@@ -24,20 +24,29 @@ self.addEventListener('activate', e => {
 
 /* import/*.json es DATO VIVO (el volcado que escribe tools/v3-migrate-import.js
    cada vez que se re-ejecuta), no shell estático: va SIEMPRE por red, nunca
-   cache-first — mismo criterio que v2 con RTDB/Nominatim/OSRM. Sin esto, el
-   cache-first de abajo sirve un volcado antiguo mientras refresca en
-   segundo plano, y cada recarga durante desarrollo enseña datos de la
-   corrida anterior del importador (bug real, encontrado 2026-09-16). */
+   por caché — mismo criterio que v2 con RTDB/Nominatim/OSRM.
+
+   El resto del shell (html/js propios) va RED PRIMERO, caché de respaldo
+   solo si la red falla — al revés que el cache-first de v2 (adecuado ahí,
+   la app ya está publicada). Aquí, en desarrollo activo, cache-first hacía
+   que cada cambio tardase una recarga extra en verse: la primera mostraba
+   lo viejo, la segunda ya lo nuevo (bug real, encontrado 2026-09-16 al
+   probar los cambios de esta misma fase). Con red primero se ve al
+   instante y solo cae a caché sin conexión — que es justo lo que este SW
+   de desarrollo necesita demostrar, no más. */
 self.addEventListener('fetch', e => {
   const req = e.request;
   if(req.method !== 'GET') return;
   if(new URL(req.url).pathname.includes('/import/')) return; // deja pasar, sin respondWith: red directa
   e.respondWith(caches.open(CACHE).then(async cache => {
-    const hit = await cache.match(req);
-    const refresh = fetch(req).then(res => {
+    try {
+      const res = await fetch(req);
       if(res && res.status === 200) cache.put(req, res.clone());
       return res;
-    }).catch(() => hit);
-    return hit || refresh;
+    } catch (err) {
+      const hit = await cache.match(req);
+      if(hit) return hit;
+      throw err;
+    }
   }));
 });

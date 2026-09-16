@@ -136,6 +136,28 @@ check('pendientesView: el vuelo tiene 2 acciones, una pendiente (checkin) y otra
     viewOrden.conFecha[0].nivel === 2);
 }
 
+// Regresión (2026-09-16, punto 3): una acción SIN hora confirmada sigue
+// necesitando la conversión REAL a Madrid (desde 00:00 JST del día que
+// abre), no la fecha JST cruda sin convertir — mostrar "23 ene" tal cual en
+// Madrid es un día de más (la resta de horas cae al día anterior en
+// invierno, sin DST de por medio: JST es siempre +9, Madrid en enero es
+// CET +1, así que 00:00 JST del 23 es 16:00 del 22 en Madrid).
+{
+  const itemsSinHora = [{
+    id: 'usj', nombre: 'USJ + Nintendo World', tipo: 'lugar', procedencia: 'ai', estado: 'propuesta',
+    acciones: [accion('entrada', {
+      abreEn: { fecha: '2027-01-23', hora: null, zona: null },
+      reglaApertura: '~3 meses antes', horaConfirmada: false
+    })]
+  }];
+  const viewSinHora = model.pendientesView(itemsSinHora, Date.UTC(2026, 8, 16));
+  const usjEntry = viewSinHora.conFecha[0];
+  check('REGRESIÓN conversión sin hora: Madrid muestra 22 ene (no 23), desde las 16:00',
+    usjEntry.horas['Europe/Madrid'] === '2027-01-22 16:00');
+  check('REGRESIÓN conversión sin hora: JST sigue mostrando el día real, 23 ene',
+    usjEntry.horas['Asia/Tokyo'] === '2027-01-23 00:00');
+}
+
 // Shibuya Sky abre 00:00 JST 27-mar-2027; comprobamos con el helper de zonas
 // que la hora en Madrid mostrada coincide con la conversión real (CEST, +2).
 {

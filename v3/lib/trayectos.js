@@ -25,8 +25,14 @@ const TRANSPORT_RULES = [
     reglaApertura: 'Bus Nouhi: reservable desde 1 mes antes (oficial, "1ヶ月前より予約可能"), sin hora del día',
     fuente: 'https://www.nouhibus.co.jp/highwaybus/' },
   { diaMes: 26, researched: true, monthsBefore: null, hora: null, horaConfirmada: false, reglaApertura: null, fuente: null },
-  { diaMes: 13, researched: true, monthsBefore: 1, hora: null, horaConfirmada: false,
-    reglaApertura: 'JR East, regla estándar: 1 mes antes (sin hora exacta). Yamabiko también admite reserva anticipada desde 3 meses antes (servicio nuevo desde oct-2025); la hora de ESE servicio no está confirmada',
+  // Yamabiko SÍ tiene una ventana MÁS TEMPRANA que la regla estándar (a
+  // diferencia de Kagayaki, que la tiene excluida explícitamente, y de
+  // smartEX/Tobu/Nouhi, donde no se encontró ninguna alternativa más
+  // temprana): el servicio de reserva anticipada a 3 meses (activo desde
+  // oct-2025) es la fecha real que se muestra; la regla estándar de 1 mes
+  // queda como respaldo en el texto, no como la fecha que se calcula.
+  { diaMes: 13, researched: true, monthsBefore: 3, hora: '14:00', horaConfirmada: false, zona: 'Asia/Tokyo',
+    reglaApertura: 'JR East: servicio de reserva anticipada a 3 meses antes (activo desde oct-2025, apertura ~14:00 sin confirmar la zona explícita). Respaldo seguro si no está disponible: regla estándar, 1 mes antes, sin hora exacta',
     fuente: 'https://www.jreast.co.jp/en/multi/faq/' },
   { diaMes: 16, researched: false },
   { diaMes: 16, researched: true, monthsBefore: 1, hora: '10:00', horaConfirmada: true, zona: 'Asia/Tokyo',

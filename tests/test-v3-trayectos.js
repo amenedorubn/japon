@@ -59,6 +59,20 @@ check('computeAbreEn: sin monthsBefore devuelve null (nivel 4, sin fecha que inv
   const kawaguchiko = items.find(it => it.fechaHora.inicio === '2027-04-26');
   check('buildTrayectoItems: bus Kawaguchiko SÍ investigado pero SIN regla -> accion con abreEn null (nivel 4)',
     kawaguchiko && kawaguchiko.acciones.length === 1 && kawaguchiko.acciones[0].abreEn === null);
+
+  // Regresión (2026-09-16, punto 4): Yamabiko y Kagayaki comparten fecha de
+  // viaje (día 13) pero NO la misma ventana de reserva — Yamabiko sí tiene
+  // el servicio de reserva anticipada a 3 meses (Kagayaki lo tiene excluido
+  // explícitamente); Pendientes debe mostrar esa apertura MÁS TEMPRANA, no
+  // la regla estándar de 1 mes, aunque ambas existan para Yamabiko.
+  const yamabiko = items.find(it => it.nombre.includes('Utsunomiya'));
+  const kagayaki = items.find(it => it.nombre.includes('Kanazawa'));
+  check('buildTrayectoItems: Yamabiko usa la ventana de 3 meses (13-ene), no la de 1 mes (13-mar)',
+    yamabiko && yamabiko.acciones[0].abreEn.fecha === '2027-01-13');
+  check('buildTrayectoItems: Kagayaki (mismo día de viaje) SIGUE en la regla estándar de 1 mes (13-mar) — no tiene la de 3 meses',
+    kagayaki && kagayaki.acciones[0].abreEn.fecha === '2027-03-13');
+  check('buildTrayectoItems: el texto de Yamabiko menciona la regla estándar de 1 mes como respaldo, no la oculta',
+    yamabiko.acciones[0].reglaApertura.includes('1 mes'));
 }
 
 // --- Fila desajustada: TRANSPORT_RULES mal alineado se detecta, no se calla ---

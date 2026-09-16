@@ -140,14 +140,23 @@
       var conUbicacion = items.filter(function(it){ return it.ubicacion; });
       if (!mapa) {
         mapa = L.map('mapa', { zoomControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(mapa);
+        // PRUEBA (2026-09-16): las teselas de CARTO que usa v2.1 ahora piden
+        // API key (carto.com/basemaps/apikey) — parece un cambio de política
+        // de CARTO, no algo de este proyecto; hay que avisar de esto en
+        // v2.1 aparte. Aquí, mientras tanto, Esri World Street Map: sin
+        // API key, con nombres en alfabeto latino/rōmaji.
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.esri.com">Esri</a>'
+        }).addTo(mapa);
       }
       if (mapaLayer) mapa.removeLayer(mapaLayer);
       mapaLayer = L.layerGroup(conUbicacion.map(function(it){
         return L.marker([it.ubicacion.lat, it.ubicacion.lng], { icon: pinIconFor(it) }).bindPopup(esc(it.nombre));
       })).addTo(mapa);
+      mapa.invalidateSize(); // el contenedor puede haber cambiado de tamaño/visibilidad entre bases
       if (conUbicacion.length) {
-        mapa.fitBounds(L.latLngBounds(conUbicacion.map(function(it){ return [it.ubicacion.lat, it.ubicacion.lng]; })).pad(0.2));
+        mapa.fitBounds(L.latLngBounds(conUbicacion.map(function(it){ return [it.ubicacion.lat, it.ubicacion.lng]; })).pad(0.2), { maxZoom: 16 });
       } else {
         mapa.setView([35.68, 139.76], 10); // Tokio, sin pines que enmarcar
       }
