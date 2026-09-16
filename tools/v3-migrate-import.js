@@ -167,6 +167,20 @@ function addMinutosHHMM(horaHHMM, minutos){
   return `${pad2(Math.floor(total / 60) % 24)}:${pad2(total % 60)}`;
 }
 
+/* Hora de check-in REALMENTE documentada en las notas de la reserva
+   (import/live.json -> places[].notes), verificada a mano contra el texto
+   una a una (2026-09-16, encargo del usuario). Solo entra aquí una reserva
+   si el texto da una hora de APERTURA del check-in, no un límite de
+   llegada: "Check-in hasta las 00:00" (Nakasu Inn) es un tope, no una
+   apertura, así que se deja fuera a propósito -- no se inventa una hora
+   de inicio que el texto no da. Del resto de las 9 reservas confirmadas
+   (Louis House, Sunshine Kinugawa, INOVA Kanazawa, Kuwataniya, Vessel
+   Hiroshima, Nakasu Inn, Twilight Osaka, APA Asakusabashi) ninguna nota
+   menciona una hora de check-in: siguen sin hora en el bloque del día. */
+const HOTEL_CHECKIN_HORA = {
+  id_kyoto_guesthouse: '16:00' // notes: "Check-in solo de 16:00 a 19:00."
+};
+
 function transform(livePlaces, v2Baked){
   const { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel } = v2Baked;
   const byId = new Map(livePlaces.filter(p => p && p.id).map(p => [p.id, p]));
@@ -176,11 +190,20 @@ function transform(livePlaces, v2Baked){
 
   // 1) CONFIRMADO — hoteles reservados (más alto en la precedencia).
   for (const p of livePlaces.filter(isBookedHotel)) {
+    const horaCheckin = HOTEL_CHECKIN_HORA[p.id];
+    // OJO: `fin` sigue siendo el checkOut de la ESTANCIA (fecha pelada, sin
+    // hora) -- bases.js lo usa para el rango [checkIn, checkOut) de noches.
+    // Solo `inicio` gana hora, y fechaDe() de bases.js recorta con slice(0,10)
+    // así que seguir derivando las noches a partir de aquí no se rompe.
     items.push({
       id: p.id, nombre: p.name || p.id, tipo: 'alojamiento',
       procedencia: provenanceOf(p), estado: 'confirmado',
       noche: null, // una reserva de hotel cubre varias noches; el UI de Fase 4 lo deriva por rango
-      fechaHora: { inicio: p.checkIn || null, fin: p.checkOut || null, zona: 'Asia/Tokyo' },
+      fechaHora: {
+        inicio: p.checkIn ? (horaCheckin ? `${p.checkIn}T${horaCheckin}` : p.checkIn) : null,
+        fin: p.checkOut || null,
+        zona: 'Asia/Tokyo'
+      },
       ubicacion: (p.lat != null && p.lng != null) ? { lat: p.lat, lng: p.lng } : null,
       acciones: []
     });
@@ -339,14 +362,20 @@ function citiesInRange(desde, hasta, rutaDays, inclusive){
     .map(d => d.city).filter(c => c && !EXCURSION_CITIES.has(c)));
 }
 
+// fechaHora.inicio de un hotel puede llevar hora real (check-in documentado,
+// ver HOTEL_CHECKIN_HORA) pero estas comparaciones son de NOCHES (fechas de
+// calendario, no instantes) -- mismo criterio que fechaDe() en v3/lib/bases.js:
+// siempre recortar a 'YYYY-MM-DD' antes de comparar contra day.date.
+const soloFecha = f => f.slice(0, 10);
+
 function deriveCityOfHotels(hoteles, rutaDays){
   const cityOfHotel = new Map();
   for (const h of hoteles) {
-    let ciudades = citiesInRange(h.fechaHora.inicio, h.fechaHora.fin, rutaDays, false);
+    let ciudades = citiesInRange(soloFecha(h.fechaHora.inicio), h.fechaHora.fin, rutaDays, false);
     // Fallback: si TODOS los días de estancia son excursión (p.ej. APA
     // Asakusabashi: Kamakura + Monte Fuji), prueba incluyendo la mañana de
     // check-out — a veces es el único día sin excursión de por medio.
-    if (ciudades.size !== 1) ciudades = citiesInRange(h.fechaHora.inicio, h.fechaHora.fin, rutaDays, true);
+    if (ciudades.size !== 1) ciudades = citiesInRange(soloFecha(h.fechaHora.inicio), h.fechaHora.fin, rutaDays, true);
     cityOfHotel.set(h.id, ciudades.size === 1 ? [...ciudades][0] : null);
   }
   return cityOfHotel;
@@ -360,7 +389,7 @@ function checkIncoherenciasCiudad(canonicalItems, rutaDays){
     const day = rutaDays[i];
     if (!day.stops || !day.stops.length) continue; // días de vuelo, sin paradas: no aplica
     const siguiente = rutaDays[i + 1];
-    const hotel = hoteles.find(h => day.date >= h.fechaHora.inicio && day.date < h.fechaHora.fin);
+    const hotel = hoteles.find(h => day.date >= soloFecha(h.fechaHora.inicio) && day.date < h.fechaHora.fin);
     if (!hotel) {
       if (siguiente && siguiente.city === 'Vuelo') continue; // último día, duerme en el avión: esperado
       incoherencias.push(`${day.date} (${day.city}): sin ninguna base confirmada que cubra esta noche`);
