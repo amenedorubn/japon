@@ -389,21 +389,67 @@ Estado con icono+texto siempre (nunca solo color, ya es requisito explícito): �
 
 ## H. Fases de implementación (estimación en tiempo de trabajo, no calendario)
 
-0. **Fase 0 — Congelar + placeholder + este documento.** HECHO hoy (2026-09-16).
-1. **Modelo de datos + helpers de zona horaria + sus tests.** Sin UI. ~1 día.
-2. **Importador de migración v2→v3** (solo lectura de v2.1) + inventario E completo con fuentes
-   verificadas. ~1–2 días (depende de cuántas fuentes oficiales den problemas de idioma/contradicción).
-3. **UI Pendientes** (el mayor valor nuevo, y la más simple: solo lee, no edita apenas). ~2–3 días.
+> **Orden confirmado 2026-09-16** (UI antes que Auth, tal como ya estaba aquí desde el principio):
+> una respuesta mía anterior en la sesión dijo "Fase 3 = Auth" — fue un error mío al resumir "qué
+> sigue" sin mirar esta lista; el orden real siempre fue UI (3-4-5) y LUEGO Auth (6). Las Fases 3-5
+> se construyen y prueban enteras en `/v3/` leyendo `import/v3-migrated-preview.json` como JSON
+> estático (sin Firebase, sin login); las ediciones ("marcar como hecho") viven en `localStorage`
+> con prefijo `jp27v3:` como puente temporal hasta que la Fase 6 conecte Firebase de verdad.
+
+0. **Fase 0 — Congelar + placeholder + este documento.** HECHO (2026-09-16).
+1. **Modelo de datos + helpers de zona horaria + sus tests.** Sin UI. HECHO (2026-09-16).
+2. **Importador de migración v2→v3** (solo lectura de v2.1) + inventario E + dedup en 3 niveles
+   (agrupación automática + revisión manual versionada en `import/v3-manual-merges.json`). HECHO
+   (2026-09-16) — creció más de lo previsto por el dedup, pero cerrado con 0 candidatos pendientes.
+3. **UI Pendientes** (el mayor valor nuevo, y la más simple: solo lee, casi no edita). EN CURSO
+   (2026-09-16). ~2–3 días.
 4. **UI Ruta** (agrupada por noche/hotel) **+ Mapa**. ~3–4 días, la pieza más grande.
 5. **UI Reservas + Ideas.** ~2 días.
-6. **Auth**: reutilizar el patrón Google Sign-In + aprobación de admin de v2.1 (§16 de PROJECT.md),
-   nodo `access` propio de v3, reglas RTDB aditivas (diff a tu aprobación antes de desplegar). ~1 día.
+6. **Auth**: reutilizar el patrón Google Sign-In + aprobación de admin de v2.1 (§16 de PROJECT.md).
+   Decisión 2026-09-16: **sin nodo `access` propio de v3** — las reglas de `viaje-japon-v3`
+   comprueban directamente `proyectos/viaje-japon/access/users/{uid}` (mismo adminEmail, mismas
+   cuentas de Google, sin segunda aprobación). Diff de reglas ya escrito más abajo, **sin
+   desplegar** hasta que esta fase arranque de verdad. ~1 día.
 7. **Modo oscuro real + offline (SW de producción, no el de desarrollo actual) + pulido visual**
    con las Skills de diseño del proyecto. ~2–3 días.
 8. **Gate de paridad con datos reales + pruebas de los 3 móviles + corte final.** ~1–2 días.
 
 Total aproximado: 2–3 semanas de trabajo efectivo, sin contar el tiempo de tu revisión entre fases
 (cada fase termina en su propio commit y espera luz verde, igual que en v2).
+
+### Diff de reglas de la Fase 6 (escrito 2026-09-16, GUARDADO — no aplicado a `database.rules.json`
+### ni desplegado hasta que la Fase 6 arranque de verdad)
+
+100% aditivo: cero líneas tocadas en `viaje-japon` ni en `japon27-app-v2`; un nodo hermano nuevo
+que reutiliza LITERALMENTE la misma condición de aprobación de v2.1 (sin nodo `access` propio de
+v3, sin segunda aprobación — decisión explícita del usuario).
+
+```diff
+       "japon27-app-v2": {
+         ".read": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'",
+         ".write": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'"
++      },
++
++      "viaje-japon-v3": {
++        ".read": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'",
++        ".write": false,
++
++        "state": {
++          ".write": "auth != null && root.child('proyectos/viaje-japon/access/users/' + auth.uid + '/status').val() === 'approved'"
++        }
+       }
+     }
+   }
+ }
+```
+
+**Nota de seguridad (respuesta a "si hay un motivo para no hacerlo así, dímelo"):** referenciar
+`proyectos/viaje-japon/access/users/{uid}` desde las reglas de v3 es el mismo mecanismo que v2.1 ya
+usa consigo misma (`root.child(...)`, una lectura del MOTOR de reglas al autorizar, no una lectura
+de datos ni una escritura) — no toca el invariante "v3 nunca escribe en el nodo de v2.1". Única
+consecuencia real, aceptada a propósito: si el admin revoca a alguien en v2.1, pierde acceso a v3
+en el mismo instante, automáticamente. Dado que sois las mismas 3 personas para el mismo viaje, es
+el comportamiento deseado, no un efecto secundario indeseado.
 
 ---
 

@@ -10,11 +10,25 @@
    propio `id` estable (p.ej. 'reserva', 'checkin') para poder marcarla como
    hecha sin ambigüedad y para que el merge de la Fase 2 (v3/lib/merge.js)
    pueda emparejarlas entre una versión importada y la que ya vive en v3.
+
+   Isomorfo Node/navegador (Fase 3): bajo Node, `require` existe y este
+   fichero pide timezone.js como módulo normal (para los tests). En el
+   navegador NO hay `require`; timezone.js se carga antes como
+   `<script src="lib/timezone.js">` y sus funciones (declaradas con
+   `function`, no `const`) ya son globales — no hace falta pedirlas.
 ================================================================ */
 'use strict';
 
-const path = require('path');
-const { formatInZones, zonedTimeToUtc } = require(path.join(__dirname, 'timezone.js'));
+var formatInZones, zonedTimeToUtc;
+if (typeof require === 'function' && typeof module !== 'undefined') {
+  var __path = require('path');
+  var __tz = require(__path.join(__dirname, 'timezone.js'));
+  formatInZones = __tz.formatInZones;
+  zonedTimeToUtc = __tz.zonedTimeToUtc;
+} else {
+  formatInZones = this.formatInZones;
+  zonedTimeToUtc = this.zonedTimeToUtc;
+}
 
 const TIPOS = ['lugar', 'trayecto', 'alojamiento', 'vuelo'];
 const ESTADOS = ['confirmado', 'propuesta', 'idea']; // Decisión 2: sustituye al binario de v2

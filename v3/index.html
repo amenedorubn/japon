@@ -6,25 +6,210 @@
 <meta name="robots" content="noindex">
 <title>Japón 2027 · v3 (en construcción)</title>
 <style>
-  body{
-    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    font-family:system-ui,-apple-system,sans-serif; background:#0f1115; color:#e8e8ea;
-    text-align:center; padding:24px; box-sizing:border-box;
+  :root{
+    --bg:#f7f5f0; --card:#ffffff; --ink:#1c1a17; --muted:#6b675f;
+    --line:#e3ded3; --accent:#b23a2e; --warn:#a9670d; --ok:#3a7d44;
   }
-  h1{font-size:1.4rem; margin:0 0 8px;}
-  p{color:#9a9aa2; margin:0;}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#15130f; --card:#211e19; --ink:#efece5; --muted:#a49d8d;
+      --line:#3a352c; --accent:#e2685a; --warn:#e0a03c; --ok:#6fbf7a;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    padding:0 16px 40px; max-width:520px; margin-inline:auto;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 0; position:sticky; top:0; background:var(--bg); z-index:1;
+  }
+  h1{font-size:1.1rem; margin:0;}
+  .sub{color:var(--muted); font-size:.8rem; margin:2px 0 0;}
+  section{margin-top:20px;}
+  section > h2{font-size:.85rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; margin-bottom:8px;
+  }
+  .card h3{margin:0 0 4px; font-size:.98rem;}
+  .row{display:flex; justify-content:space-between; gap:8px; align-items:baseline;}
+  .badge{
+    display:inline-flex; align-items:center; gap:4px; font-size:.75rem;
+    padding:2px 8px; border-radius:999px; border:1px solid var(--line);
+  }
+  .badge.warn{color:var(--warn); border-color:var(--warn);}
+  .badge.watch{color:var(--muted); border-color:var(--line);}
+  .horas{font-size:.82rem; color:var(--muted); margin:4px 0;}
+  .regla{font-size:.82rem; color:var(--muted); margin:4px 0 8px;}
+  .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  button, a.btn{
+    font:inherit; font-size:.82rem; padding:6px 12px; border-radius:8px;
+    border:1px solid var(--line); background:transparent; color:var(--ink);
+    cursor:pointer; text-decoration:none; display:inline-block;
+  }
+  button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  details{margin-top:20px;}
+  summary{cursor:pointer; color:var(--muted); font-size:.85rem;}
+  .empty, .devnote{
+    text-align:center; color:var(--muted); padding:40px 12px; font-size:.9rem;
+  }
+  .devnote code{background:var(--card); padding:1px 5px; border-radius:4px;}
 </style>
 </head>
 <body>
-  <div>
-    <h1>Japón 2027 · v3</h1>
-    <p>En construcción. La versión en uso sigue en <a href="../" style="color:#7db3ff">la raíz</a>.</p>
-  </div>
+  <header>
+    <div>
+      <h1>Japón 2027 · Pendientes</h1>
+      <p class="sub">v3 · en construcción</p>
+    </div>
+  </header>
+  <main id="app">
+    <p class="sub">Cargando…</p>
+  </main>
+
+  <script src="./lib/timezone.js"></script>
+  <script src="./lib/model.js"></script>
+  <script src="./lib/storage.js"></script>
   <script>
     'use strict';
-    // Scope propio /v3/: NO debe interferir con el SW raíz de v2.1 ni al revés.
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./sw.js', {scope: './'});
+    var storage = makeStorage(window.localStorage);
+    var app = document.getElementById('app');
+
+    function pad2(n){ return String(n).padStart(2, '0'); }
+
+    function formatCountdown(minutos){
+      if (minutos == null) return '';
+      if (minutos <= 0) return 'Ya abrió';
+      var dias = Math.floor(minutos / 1440);
+      var horas = Math.floor((minutos % 1440) / 60);
+      if (dias >= 1) return 'abre en ' + dias + (dias === 1 ? ' día' : ' días');
+      if (horas >= 1) return 'abre en ' + horas + (horas === 1 ? ' hora' : ' horas');
+      return 'abre en ' + minutos + ' min';
+    }
+
+    // Nivel 2 (día exacto, hora/zona sin confirmar): solo se enseña el día,
+    // nunca la hora 00:00 de relleno que usa accionAbreEnUtc internamente
+    // para poder ordenar (V3-DESIGN.md §C.2).
+    function formatHoras(entry){
+      if (!entry.horas) return '';
+      var soloDia = entry.nivel === 2;
+      var md = entry.horas['Europe/Madrid'], jst = entry.horas['Asia/Tokyo'];
+      if (soloDia) { md = md.split(' ')[0]; jst = jst.split(' ')[0]; }
+      return jst + ' JST · ' + md + ' Madrid';
+    }
+
+    function overrideKey(itemId, accionId){ return itemId + '::' + accionId; }
+
+    function applyOverrides(items, overrides){
+      return items.map(function(it){
+        if (!it.acciones || !it.acciones.length) return it;
+        var acciones = it.acciones.map(function(ac){
+          var k = overrideKey(it.id, ac.id);
+          return overrides[k] ? Object.assign({}, ac, { hecho: true }) : ac;
+        });
+        return Object.assign({}, it, { acciones: acciones });
+      });
+    }
+
+    function marcarHecho(itemId, accionId){
+      var overrides = storage.getJSON('hechoOverrides', {});
+      overrides[overrideKey(itemId, accionId)] = true;
+      storage.setJSON('hechoOverrides', overrides);
+      render();
+    }
+
+    function cardHTML(entry, mostrarAccion){
+      var badge = '';
+      if (entry.nivel === 2) badge = '<span class="badge warn">⚠️ hora sin confirmar</span>';
+      if (entry.nivel === 3) badge = '<span class="badge watch">👀 vigilar apertura</span>';
+      if (entry.nivel === 4) badge = '<span class="badge watch">📌 reservar ya</span>';
+
+      var horasHTML = entry.horas ? '<p class="horas">' + formatHoras(entry) +
+        (entry.nivel <= 2 ? ' · ' + formatCountdown(entry.minutosHastaApertura) : '') + '</p>' : '';
+
+      var reglaHTML = entry.accion.reglaApertura ? '<p class="regla">' + esc(entry.accion.reglaApertura) + '</p>' : '';
+
+      var linkHTML = '';
+      var url = entry.accion.dondeReservar || entry.accion.fuente;
+      if (url) linkHTML = '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Ir a reservar ↗</a>';
+
+      var accionHTML = mostrarAccion
+        ? '<button class="primary" data-item="' + esc(entry.itemId) + '" data-accion="' + esc(entry.accionId) + '">Marcar como hecho</button>'
+        : '';
+
+      return '<div class="card">' +
+        '<div class="row"><h3>' + esc(entry.nombre) + '</h3>' + badge + '</div>' +
+        horasHTML + reglaHTML +
+        '<div class="actions">' + linkHTML + accionHTML + '</div>' +
+        '</div>';
+    }
+
+    function esc(s){
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function renderView(view){
+      var html = '';
+      if (!view.conFecha.length && !view.vigilar.length && !view.reservarYa.length) {
+        html += '<p class="empty">Nada pendiente. 🎉</p>';
+      }
+      if (view.conFecha.length) {
+        html += '<section><h2>Próximo a abrir</h2>' +
+          view.conFecha.map(function(e){ return cardHTML(e, true); }).join('') + '</section>';
+      }
+      if (view.vigilar.length) {
+        html += '<section><h2>Vigilar apertura</h2>' +
+          view.vigilar.map(function(e){ return cardHTML(e, true); }).join('') + '</section>';
+      }
+      if (view.reservarYa.length) {
+        html += '<section><h2>Reservar ya, sin fecha</h2>' +
+          view.reservarYa.map(function(e){ return cardHTML(e, true); }).join('') + '</section>';
+      }
+      if (view.hechos.length) {
+        html += '<details><summary>✅ Ya hecho (' + view.hechos.length + ')</summary>' +
+          '<ul>' + view.hechos.map(function(h){ return '<li>' + esc(h.nombre) + '</li>'; }).join('') + '</ul>' +
+          '</details>';
+      }
+      app.innerHTML = html;
+      app.querySelectorAll('button[data-item]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          marcarHecho(btn.getAttribute('data-item'), btn.getAttribute('data-accion'));
+        });
+      });
+    }
+
+    function renderSinDatos(){
+      app.innerHTML = '<div class="devnote">' +
+        '<p><strong>Modo desarrollo: sin datos</strong></p>' +
+        '<p>No se encontró <code>import/v3-migrated-preview.json</code>. Ese fichero tiene datos ' +
+        'reales del viaje y nunca se publica (está en <code>.gitignore</code>): solo existe en tu ' +
+        'servidor local tras ejecutar el importador.</p>' +
+        '<p>Genera un volcado con <code>node tools/v3-migrate-import.js live.json</code> y sirve el ' +
+        'repo con <code>.claude/serve.ps1</code> (o <code>.claude/serve-lan.ps1</code> para probar ' +
+        'desde el móvil).</p>' +
+        '</div>';
+    }
+
+    var itemsCache = null;
+    function render(){
+      if (!itemsCache) { renderSinDatos(); return; }
+      var overrides = storage.getJSON('hechoOverrides', {});
+      var items = applyOverrides(itemsCache, overrides);
+      renderView(pendientesView(items, Date.now()));
+    }
+
+    fetch('../import/v3-migrated-preview.json')
+      .then(function(res){ if (!res.ok) throw new Error('sin datos'); return res.json(); })
+      .then(function(items){ itemsCache = items; render(); })
+      .catch(function(){ itemsCache = null; render(); });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js', { scope: './' });
     }
   </script>
 </body>
