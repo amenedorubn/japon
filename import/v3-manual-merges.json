@@ -1,7 +1,7 @@
 {
   "version": 1,
   "fecha": "2026-09-16",
-  "nota": "Decisiones de revisión manual del nivel 3 de dedup (V3-DESIGN.md). El importador las reaplica siempre igual: es la única fuente de fusiones que no salen de TWIN_GROUPS ni de la regla automática nombre+distancia. 'aprobadas' se fusionan (el canonicalId es SIEMPRE la parada propuesta/confirmado, que absorbe procedencias/ids); 'rechazadas' quedan registradas para no volver a proponerlas en el nivel 3 de futuras corridas; 'pendientes' son casos donde la decisión del usuario no encajó con los datos reales y se dejaron sin aplicar (ver motivo).",
+  "nota": "Decisiones de revisión manual del nivel 3 de dedup (V3-DESIGN.md). El importador las reaplica siempre igual: es la única fuente de fusiones que no salen de TWIN_GROUPS ni de la regla automática nombre+distancia. 'aprobadas' se fusionan (normalmente el canonicalId es la parada propuesta/confirmado que absorbe ids sueltos; idea↔idea también se permite para duplicados internos del catálogo, ver 'motivo' en esas entradas); 'rechazadas' quedan registradas para no volver a proponerlas en el nivel 3 de futuras corridas — la revisión de la Fase 2 se cerró el 2026-09-16 con 29 candidatos sin fusionar, todos aquí.",
   "aprobadas": [
     { "canonicalId": "catalog_sensoji", "absorbe": ["maria_senso_ji_tokio"] },
     { "canonicalId": "catalog_meiji", "absorbe": ["maria_santuario_meiji_tokio"] },
@@ -41,7 +41,13 @@
     { "canonicalId": "kitan", "absorbe": ["id_bhdj3h4umr3ekauj"] },
     { "canonicalId": "chureito", "absorbe": ["maria_arakurayama_sengen_park_tokio"] },
     { "canonicalId": "kawaguchi", "absorbe": ["maria_lake_kawaguchi_tokio"] },
-    { "canonicalId": "imperial", "absorbe": ["maria_kokyo_tokio"] }
+    { "canonicalId": "imperial", "absorbe": ["maria_kokyo_tokio"] },
+    { "canonicalId": "kuromonmaru", "absorbe": ["id_xbfr42iimr3e8ocm"],
+      "motivo": "duplicado interno del catálogo (idea+idea): mismo puesto de melón en Kuromon Ichiba, 0 m, seedeado por ai y guardado también desde Instagram" },
+    { "canonicalId": "maguroya", "absorbe": ["id_c9imcg8xmr3e68yi"],
+      "motivo": "duplicado interno del catálogo (idea+idea): mismo puesto de atún en Kuromon Ichiba, 1 m, seedeado por ai y guardado también desde Instagram" },
+    { "canonicalId": "dotonbori", "absorbe": ["maria_dotonbori_osaka"],
+      "motivo": "excepción manual (2026-09-16): 165 m está por encima del umbral automático de 150 m, pero Dotonbori es una calle larga — el usuario confirma que es el mismo sitio" }
   ],
   "rechazadas": [
     { "a": "catalog_shibuya", "b": "dani_shibuya", "motivo": "barrio genérico, no el cruce en concreto" },
@@ -64,13 +70,36 @@
     { "a": "momiji", "b": "kakiya", "motivo": "tienda distinta a la recomendación genérica de probar momiji manjū" },
     { "a": "dani_nigatsudo", "b": "dani_hokkedo", "motivo": "edificio distinto dentro del mismo complejo de Tōdai-ji" },
     { "a": "todaiji", "b": "dani_nandaimon", "motivo": "puerta distinta al templo principal" },
-    { "a": "kagetsudo", "b": "miyabi", "motivo": "tiendas distintas cercanas; además nunca propuesta↔propuesta" }
-  ],
-  "pendientes": [
-    {
-      "canonicalId": "dotonbori",
-      "candidato": "maria_dotonbori_osaka",
-      "motivo": "Pedido como '31 solo Dotonbori [maria]', pero esa pareja NUNCA apareció como candidata: la distancia real es 165 m (por encima del umbral de 150 m) y el nombre no coincide tras normalizar ('Dōtonbori y Glico Man' vs 'Dotonbori'). No se aplicó. maria_dotonbori_osaka SÍ aparece como candidato de otros anclas (dani_hozenji, round1, kitan) pero no se pidió fusionarlo ahí. Si quieres, dime explícitamente 'fusiona maria_dotonbori_osaka en dotonbori' y lo aplico como excepción manual, o dime si prefieres alguna de las otras anclas."
-    }
+    { "a": "kagetsudo", "b": "miyabi", "motivo": "tiendas distintas cercanas; además nunca propuesta↔propuesta" },
+
+    { "a": "catalog_sensoji", "b": "kagetsudo", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_sensoji", "b": "miyabi", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_sensoji", "b": "maria_santuario_de_asakusa_tokio", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "golden_gai", "b": "dani_shinjuku", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "golden_gai", "b": "maria_santuario_hanazono_tokio", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_yasaka", "b": "id_7koy1eenmr3dtbjn", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_yasaka", "b": "maria_gion_kioto_y_nara", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_pontocho", "b": "maria_pontocho_park_kioto_y_nara", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_sannenzaka", "b": "catalog_higashiyama", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "catalog_sannenzaka", "b": "maria_starbucks_coffee_kyoto_nineizaka_yasaka_chay", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "fushimi", "b": "vermillion", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "itsukushima", "b": "dani_senjokaku", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "itsukushima", "b": "dani_cafe_lente", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "dotonbori", "b": "kitan", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "dani_hozenji", "b": "round1", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "dani_hozenji", "b": "kitan", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "dani_hozenji", "b": "maria_dotonbori_osaka", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kasuga", "b": "dani_wakamiya", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "naramachi", "b": "maria_naramachi_nigiwai_no_le_kioto_y_nara", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kuromon", "b": "id_c9imcg8xmr3e68yi", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kuromon", "b": "id_xbfr42iimr3e8ocm", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kuromon", "b": "matcha587", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kuromon", "b": "maguroya", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kuromon", "b": "kuromonmaru", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "round1", "b": "kitan", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "round1", "b": "maria_dotonbori_osaka", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kitan", "b": "maria_dotonbori_osaka", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "kagetsudo", "b": "maria_santuario_de_asakusa_tokio", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" },
+    { "a": "miyabi", "b": "maria_santuario_de_asakusa_tokio", "motivo": "revisión Fase 2 cerrada 2026-09-16: se deja sin fusionar, no re-proponer" }
   ]
 }

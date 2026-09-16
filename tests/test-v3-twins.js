@@ -154,6 +154,18 @@ check('normalizeNameForTwins: nombres realmente distintos siguen distintos',
   check('applyManualMerges: reporta id inexistente sin reventar', omitidas.some(o => o.id === 'no_existe'));
 }
 
+// --- applyManualMerges: idea↔idea SÍ se permite (duplicado interno del catálogo, ninguno es una parada) ---
+{
+  const items = [
+    it('kuromonmaru', { nombre: 'Kuromonmaru (melón)', procedencia: 'ai', estado: 'idea' }),
+    it('id_insta_kuromonmaru', { nombre: 'Kuromonmaru', procedencia: 'instagram', estado: 'idea' })
+  ];
+  const { items: out, omitidas } = applyManualMerges(items, [{ canonicalId: 'kuromonmaru', absorbe: ['id_insta_kuromonmaru'] }]);
+  check('applyManualMerges: idea↔idea SÍ se fusiona (no exige que el canónico sea propuesta/confirmado)',
+    out.length === 1 && out[0].id === 'kuromonmaru' && omitidas.length === 0);
+  check('applyManualMerges: idea↔idea también acumula procedencias', out[0].procedencias.includes('instagram'));
+}
+
 // --- filterRejected / isRejectedPair: idempotencia del nivel 3 ---
 {
   const rechazadas = [{ a: 'x', b: 'y', motivo: 'prueba' }];

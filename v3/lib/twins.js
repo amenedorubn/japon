@@ -140,10 +140,12 @@ function filterRejected(candidates, rechazadas){
    merges.json, §Decisión 2026-09-16): SIEMPRE el canonicalId es una parada
    propuesta/confirmado que absorbe ids sueltos, nunca al revés. Antes de
    fusionar, verifica que el id absorbido exista y que su estado sea 'idea'
-   (nunca propuesta↔propuesta ni confirmado↔confirmado, regla explícita del
-   usuario): si no, se salta y se reporta en `omitidas` en vez de aplicarse a
-   ciegas — igual que el resto del pipeline, esto nunca inventa una fusión
-   que los datos reales no sostienen. */
+   (nunca dos ítems "decididos" — propuesta o confirmado — entre sí; idea↔idea
+   sí está permitido, p.ej. dos duplicados internos del catálogo que nunca
+   llegaron a la Ruta): si la pareja viola eso, se salta y se reporta en
+   `omitidas` en vez de aplicarse a ciegas — igual que el resto del pipeline,
+   esto nunca inventa una fusión que los datos reales no sostienen. */
+const ESTADOS_DECIDIDOS = new Set(['propuesta', 'confirmado']);
 function applyManualMerges(items, aprobadas){
   const byId = new Map(items.map(it => [it.id, it]));
   const consumed = new Set();
@@ -153,16 +155,15 @@ function applyManualMerges(items, aprobadas){
   for (const regla of (aprobadas || [])) {
     const canonical = byId.get(regla.canonicalId);
     if (!canonical) { omitidas.push({ regla, motivo: `canonicalId '${regla.canonicalId}' no existe en los ítems actuales` }); continue; }
-    if (canonical.estado !== 'propuesta' && canonical.estado !== 'confirmado') {
-      omitidas.push({ regla, motivo: `canonicalId '${regla.canonicalId}' es '${canonical.estado}', no propuesta/confirmado` });
-      continue;
-    }
     const absorbedItems = [];
     const absorbedOk = [];
     for (const id of regla.absorbe) {
       const it = byId.get(id);
       if (!it) { omitidas.push({ regla, id, motivo: `id '${id}' no existe en los ítems actuales` }); continue; }
-      if (it.estado !== 'idea') { omitidas.push({ regla, id, motivo: `id '${id}' es '${it.estado}', nunca propuesta/confirmado↔propuesta/confirmado` }); continue; }
+      if (ESTADOS_DECIDIDOS.has(canonical.estado) && ESTADOS_DECIDIDOS.has(it.estado)) {
+        omitidas.push({ regla, id, motivo: `'${regla.canonicalId}' (${canonical.estado}) y '${id}' (${it.estado}) son dos ítems decididos: nunca se fusionan entre sí` });
+        continue;
+      }
       absorbedItems.push(it);
       absorbedOk.push(id);
     }
