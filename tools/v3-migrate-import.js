@@ -237,12 +237,25 @@ function transform(livePlaces, v2Baked){
 /* --------------------------------------------------------------
    Orquestación
 -------------------------------------------------------------- */
-const live = JSON.parse(fs.readFileSync(liveJsonPath, 'utf8'));
+const liveRaw = JSON.parse(fs.readFileSync(liveJsonPath, 'utf8'));
+// Dos formas válidas de volcado, según cómo se haya obtenido: el recorte del
+// curl histórico (raíz = el propio nodo viaje-japon, con `state` directo) o
+// una exportación completa desde la consola de Firebase (raíz = todo el
+// árbol, con `proyectos.viaje-japon` anidado dentro). Se acepta cualquiera
+// de las dos sin pedir un formato concreto.
+const live = (liveRaw.proyectos && liveRaw.proyectos['viaje-japon']) || liveRaw;
 const livePlaces = (live.state && live.state.places) || [];
 const v2Baked = loadV2Baked();
 
 const { items: imported, avisos } = transform(livePlaces, v2Baked);
-const duplicates = findPotentialDuplicates(imported);
+const rawDuplicates = findPotentialDuplicates(imported);
+// v3/lib/dedupe.js es genérico (no sabe qué es "procedencia"): se enriquece
+// aquí, en el importador, solo para que el informe sea legible de un vistazo.
+const byImportedId = new Map(imported.map(it => [it.id, it]));
+const duplicates = rawDuplicates.map(d => Object.assign({}, d, {
+  procedenciaA: (byImportedId.get(d.a) || {}).procedencia || null,
+  procedenciaB: (byImportedId.get(d.b) || {}).procedencia || null
+}));
 const existing = v3JsonPath ? JSON.parse(fs.readFileSync(v3JsonPath, 'utf8')) : [];
 const { items: merged, stats } = mergeV3State(existing, imported);
 
@@ -256,7 +269,6 @@ console.log('=== Importador v2 → v3 (Fase 2) — vista previa, SIN escribir en
 console.log(`Ítems importados: ${imported.length} (confirmado: ${porEstado('confirmado')}, propuesta: ${porEstado('propuesta')}, idea: ${porEstado('idea')})`);
 console.log(`Fusión con v3 ${v3JsonPath ? 'existente (' + v3JsonPath + ')' : '(nodo vacío, siembra)'}: ` +
   `${stats.nuevos} nuevos, ${stats.actualizados} actualizados, ${stats.soloEnV3Conservados} conservados solo-en-v3`);
-console.log(`Posibles duplicados detectados (NUNCA fusionados a ciegas): ${duplicates.length}`);
-if (duplicates.length) console.log(JSON.stringify(duplicates, null, 2));
+console.log(`Posibles duplicados detectados (NUNCA fusionados a ciegas): ${duplicates.length} — detalle completo en import/v3-duplicates-report.json`);
 if (avisos.length) { console.log('\nAvisos (alcance de esta fase, no errores):'); avisos.forEach(a => console.log('- ' + a)); }
 console.log(`\nEscrito: import/v3-migrated-preview.json (${merged.length} ítems totales) y import/v3-duplicates-report.json`);
