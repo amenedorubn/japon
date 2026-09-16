@@ -4,9 +4,22 @@ Traspaso de sesión (poca cuota restante, se abre chat nuevo). Léelo entero ant
 
 ## 1. Estado actual
 
-**Último commit:** `def3ecf` — "tests: 8c-gate desenvuelve el export nuevo de consola y refresca conteos" (pusheado a `origin/main`).
+**Último commit:** `f6b3234` — "v3: check-in real (franja + llegada estimada) reordena el dia en su sitio" (pusheado a `origin/main`).
 
 Historial reciente relevante (más nuevo primero):
+- `f6b3234` — **Fase 4 cerrada de verdad**: franja de check-in real (9 hoteles) + llegada
+  estimada curada (siempre "≈", nunca dato cierto) sustituyen a la hora de apertura de franja
+  como clave de ordenación — bug real corregido (19-abr salía a las 14:00, antes de Himeji).
+  16-abr Kioto: bloque "🧳 Hueco 14:20–16:00 · maletas" + acción Pendientes nivel 4
+  ("preguntar cuando puedas", NO nivel 3 — cuidado, `reglaApertura` fuerza nivel 3 en
+  `precisionLevel()`, usar `recomendacion` para texto libre en nivel 4). Aviso ⚠️ unificado
+  (franja sin confirmar, llegada antes de apertura, o margen al cierre <1h): solo 09/16/21-abr
+  lo llevan, 12-abr Nikkō no. 12-abr y 20-abr: huecos locales sin tramo en TRANSPORT (v2.1
+  congelado) cuentan como "desplazamiento sin definir" vía `GAPS_LOCALES_SIN_TRAMO` en
+  `v3/index.html` (curado a mano, no un RouteItem — evita el problema de que `ordenarDia` manda
+  TODOS los trayectos siempre arriba del día). Probado en el móvil real: OK (hueco de maletas,
+  check-in de 19-abr después de Himeji, pendiente de maletas). Suite completa + gate 8c en
+  verde, `git diff --stat -- index.html sw.js` vacío en todo el commit.
 - `def3ecf` — fix de `tests/test-8c-gate.js` (desenvuelve el export nuevo de consola de Firebase, conteos refrescados a 476).
 - `48c8319` — v3: el día empieza en el hotel de anoche y acaba en el de esta noche (bloques "Salida"/llegada, `ordenarDia` ya no manda el check-in sin hora al principio) + horas de check-in "estándar del hotel" investigadas para 7 reservas + fix CSS de Pendientes a 360px.
 - `d2f4b6c` — hora real de check-in de Kyoto Guesthouse (16:00–19:00, de la propia reserva).
@@ -14,7 +27,7 @@ Historial reciente relevante (más nuevo primero):
 - `45c8bb0` — **Bloque 2**: mapa solo vive dentro de la pantalla de un día, menú siempre por encima (z-index).
 - `3abd3b8` — **Bloque 1**: fix de v2.1 (único cambio autorizado en `index.html` raíz — CARTO exigía API key, cambio a Esri).
 
-**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa) · Bloques 1-2-3 de la ronda de bugfixing post-móvil.
+**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa/check-in real, incluida la ronda de bugfixing post-móvil) — **cerrada del todo en `f6b3234`**.
 
 **URLs:**
 - GitHub Pages (producción, v2.1): `https://amenedorubn.github.io/japon/`
@@ -49,57 +62,38 @@ Imprime la IP de Wi-Fi al arrancar; desde el móvil: `http://<esa-ip>:8734/v3/in
 - Localstorage de v3 SIEMPRE con prefijo `jp27v3:` (nunca tocar `localStorage` directo fuera de `v3/lib/storage.js` — hay un test estático, `test-v3-storage-guard.js`, que lo vigila).
 - No inventar horas, duraciones, tramos ni datos de reserva que no estén documentados: si falta el dato, se deja "sin hora"/"sin definir" explícitamente en vez de aproximar sin decirlo.
 
-## 3. Tarea en curso: horas de check-in reales de los 9 días con cambio de hotel
+## 3. Check-in real de los 9 días con cambio de hotel — CERRADO (commit `f6b3234`)
 
-El usuario dio las franjas de check-in REALES de la reserva (sustituyen a las "estándar del hotel" que se habían buscado por web en el commit `48c8319`):
+Las franjas reales (9 hoteles, 3 "sin confirmar 100%": Louis House, Kyoto Guesthouse, Twilight
+Osaka) y la reordenación por llegada estimada real (bug: el bloque salía a la hora de APERTURA
+de la franja, no de llegada) están implementadas, con tests en verde y probadas en el móvil real
+(hueco de maletas 16-abr, check-in 19-abr después de Himeji). Detalle completo en el mensaje de
+commit `f6b3234` y en §1 arriba. Los 3 casos abiertos que dejó la sesión anterior ya están
+resueltos: 16-abr usa el bloque "Hueco + maletas" (no la opción B), el aviso ⚠️ es una regla
+unificada (franja sin confirmar / llegada antes de apertura / margen al cierre <1h — Nikkō no lo
+lleva), y los huecos locales (Nikkō→Kinugawa, Fukuoka) cuentan como "desplazamiento sin definir".
 
-- Louis House Otsuka Nishi (Tokio 1): 15:00–00:00 (sin confirmar 100%)
-- Sunshine Kinugawa (Nikkō): 15:00–18:00
-- INOVA Kanazawa: 15:00–21:00
-- Kuwataniya (Takayama): 14:00–22:00
-- Kyoto Guesthouse: 16:00–19:00 (sin confirmar 100%)
-- Vessel Hotel Hiroshima: 14:00–23:00
-- Hakata Nakasu Inn (Fukuoka): 15:00–00:00
-- Twilight Osaka Inn: 15:00–00:00 (sin confirmar 100%)
-- APA Asakusabashi (Tokio 2): 15:00–00:00
+## 4. Tarea en curso: Fase 5 — Reservas y Más
 
-Van guardadas como franja de ESTA reserva (no "estándar del hotel"). Las 3 marcadas "sin confirmar 100%" llevan aviso ⚠️ "franja por confirmar".
+**Estado: en fase de PLAN, esperando el OK del usuario — no se ha tocado código todavía.**
 
-Además se detectó un **bug de lógica**: el bloque de check-in se colocaba a la hora de APERTURA de la franja, no a la hora real de llegada al hotel (ej.: 19-abr aparecía a las 14:00, antes del Castillo de Himeji, que está de camino desde Kioto; 25-abr a las 15:00 en pleno Kamakura). Reglas acordadas para el fix (**todavía sin implementar**):
+El usuario pidió un resumen en 5 líneas antes de escribir nada:
+1. Qué muestra Reservas (hoteles/vuelos/trenes/entradas, confirmado vs. pendiente, enlace a
+   confirmación — recordar: el repo es público, ningún enlace/dato privado en archivos
+   versionados, ver PROJECT.md y la nota de v2.1 sobre `confirmUrl`).
+2. Qué muestra Más (las 205 `idea`, filtros, y si "pasar una idea a la Ruta" entra ya o se deja
+   para después).
+3. Qué contenido de la Guía de v2.1 migra a Más.
+4. Qué es editable ya en local (`jp27v3:`) frente a lo que espera a la Fase 6 (Auth + Firebase).
+5. Estimación de tiempo.
 
-1. El bloque hotel va cuando realmente se llega: tras la última actividad FUERA de la ciudad del hotel y tras el trayecto de llegada.
-2. El hotel NO siempre va al final: si el día sigue con actividades en la misma ciudad (ej. 9-abr: aeropuerto → hotel → resto; o llegar, dejar maletas y salir a cenar), el bloque va en medio y el día termina volviendo al hotel.
-3. Si la llegada es antes de la apertura de la franja: bloque "Dejar maletas" + nota "check-in desde X".
-4. Aviso ⚠️ si la llegada estimada es DESPUÉS del cierre de la franja (Nikkō 18:00 y Kioto 19:00 son las más ajustadas, según el propio usuario).
-5. Mapa: sigue el orden real (salida → … → hotel → … → hotel si se vuelve).
+**Siguiente paso literal cuando retomes:** si el plan de 5 líneas ya se mandó en esta sesión y
+sigue sin respuesta, esperar el OK del usuario punto por punto antes de tocar `v3/index.html`.
+Si esta es una sesión nueva y el plan no está en el historial visible, hay que rehacerlo (no
+asumir que sigue vigente sin releer la respuesta del usuario).
 
-Se preparó (y se pegó al usuario, **pendiente de su OK, NO IMPLEMENTAR SIN CONFIRMAR**) esta tabla con el orden propuesto para los 9 días:
+## 5. Pendiente después (backlog de fases, sin empezar)
 
-| Fecha | Hotel | Orden propuesto del día | Llegada estimada al hotel | Franja (nuestra reserva) | ⚠️ |
-|---|---|---|---|---|---|
-| 09-abr | Louis House Otsuka Nishi | Narita → **🏨** → Sensō-ji → Nakamise → P. Sumida → Skytree → Hoppy St. | ~16:00 (Narita→Ōtsuka, ~90 min) | 15:00–00:00 ⚠️ franja por confirmar | — |
-| 12-abr | Sunshine Kinugawa | Tōshōgū → Futarasan → Rinnō-ji → Kanmangafuchi → **🏨** (fin del día) | ~15:45–16:00 | 15:00–18:00 | Justo, no tarde — margen ~2h |
-| 13-abr | INOVA Kanazawa | Mercado Ōmichō → Castillo Kanazawa → **🏨** → Kenroku-en → Higashi Chaya | ~15:25 | 15:00–21:00 | — |
-| 15-abr | Minshuku Kuwataniya | Shirakawa-go → Puente Ogimachi → trayecto→Takayama → **🏨** → Casco antiguo → P. Nakabashi | ~14:50–15:00 (llegada del tren) | 14:00–22:00 | — |
-| 16-abr | Kyoto Guesthouse | Miyagawa (Takayama) → trayecto→Kioto (llega 14:20) → *(hueco 14:20–16:00)* → **🏨** → Gion → Yasaka → Pontochō | ~16:00 | 16:00–19:00 ⚠️ franja por confirmar | Llega ANTES de apertura (14:20) — ver caso abierto abajo |
-| 19-abr | Vessel Hotel Hiroshima | Fushimi Inari → Uji → trayecto→Himeji → Castillo Himeji → trayecto→Hiroshima → **🏨** → Okonomimura | ~18:30 | 14:00–23:00 | — |
-| 20-abr | Hakata Nakasu Inn | Parque Paz → Miyajima/Itsukushima → Daishō-in → trayecto→Hakata → **🏨** → Yatai de Nakasu | ~19:00 | 15:00–00:00 | — |
-| 21-abr | Twilight Osaka Inn | Santuario Kushida → Ōhori/castillo → trayecto→Osaka → **🏨** → Dōtonbori → Hozen-ji | ~18:20 | 15:00–00:00 ⚠️ franja por confirmar | — |
-| 25-abr | APA Asakusabashi | Tokio Est. → Kamakura (4 paradas) → B. Chino Yokohama → Minato Mirai → **🏨** (fin del día) | ~21:00 | 15:00–00:00 | — |
-
-**Casos abiertos, sin decidir todavía (esperando respuesta del usuario):**
-
-1. **16-abr (Kioto):** llegan a las 14:20, el check-in no abre hasta las 16:00 — hueco de 1h40 sin actividad. ¿Se aplica la regla 3 ("Dejar maletas" + nota) o el bloque de check-in simplemente aparece a las 16:00 sin más (maletas en consigna de la estación, sin bloque aparte)?
-2. **12-abr (Nikkō) y 16-abr (Kioto)** son los dos días "ajustados" que señaló el usuario. Con las estimaciones de la tabla ninguno llega tarde, pero el margen es corto — ¿llevan ⚠️ igualmente como aviso preventivo aunque no incumplan la franja, o solo aviso si de verdad se pasa de hora?
-3. El salto **Nikko → Kinugawa Onsen** (12-abr) y **Fukuoka morning → Fukuoka centro** (20-abr, parada genérica "Fukuoka") no tienen un `trayecto` propio en los datos de v2 — son huecos locales sin tramo formal horneado. ¿Se dejan implícitos (como ahora) o se marcan de algún modo en la UI?
-
-Todas las horas estimadas de llegada son cálculos del asistente (no vienen de la reserva ni de `RUTA_DAYS`) — el usuario tiene que confirmar que no chocan con lo que sabe del itinerario real antes de implementar nada.
-
-**Siguiente paso literal cuando retomes:** esperar el OK del usuario sobre la tabla y los 3 casos abiertos, y SOLO ENTONCES tocar código (`v3/lib/bases.js` para el reordenamiento real por ciudad-del-hotel-vs-actividad, y `v3/index.html` para el bloque "Dejar maletas" si aplica). No se ha escrito ni una línea de este fix todavía.
-
-## 4. Pendiente después (backlog de fases, sin empezar)
-
-- **Fase 5** — Reservas y Más (hoy son placeholders "próximamente" en el menú de `v3/index.html`).
 - **Fase 6** — Auth (Google Sign-In + aprobación, como en v2.1) y aplicar el diff de `database.rules.json` ya documentado-pero-no-desplegado en `V3-DESIGN.md` (recordar: mostrar diff y pedir OK antes de tocar la consola de Firebase).
 - **Fase 7** — Pulido visual: modo oscuro real (hoy el mapa sale claro en dark mode, aceptado "por ahora" en el Bloque 1), soporte offline completo (cache strategy de `v3/sw.js` sigue en modo dev network-first, pensado para cuando v3 esté más maduro pasar a algo más parecido al cache-first de v2.1).
 - **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática).
