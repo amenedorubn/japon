@@ -4,9 +4,27 @@ Traspaso de sesión (poca cuota restante, se abre chat nuevo). Léelo entero ant
 
 ## 1. Estado actual
 
-**Último commit:** `f6b3234` — "v3: check-in real (franja + llegada estimada) reordena el dia en su sitio" (pusheado a `origin/main`).
+**Último commit:** `7e8dca3` — "v3: Fase 5 - Reservas (3 grupos + marcar como reservado) y Mas (Ideas + Guia)" (pusheado a `origin/main`).
 
 Historial reciente relevante (más nuevo primero):
+- `7e8dca3` — **Fase 5 cerrada** (Reservas + Más). Reservas: 3 grupos —
+  ✅ Confirmado (13: 9 hoteles + 4 vuelos), 🎫 Por reservar (reutiliza `pendientesView` tal
+  cual, sin lógica propia), 👀 Vigilar apertura — cada tarjeta con enlace "Ver en la Ruta →
+  fecha". Botón "Marcar como reservado" (solo en 🎫): promueve el ÍTEM a
+  `estado:'confirmado'` + `estadoManual:true` vía `v3/lib/estado-overrides.js` (mismo patrón
+  que `hecho-overrides.js`, jp27v3: local hasta Fase 6) + nota opcional (`notaReserva`, nunca
+  versionada) + marca también la acción como hecha (desaparece de Pendientes a la vez). Nuevo
+  helper `itemsConOverrides()` combina las dos capas (hecho + estado) y lo usan Pendientes,
+  Ruta (un día) y Reservas por igual, así que un ítem reservado a mano se ve igual en las tres
+  pantallas. Más: 205 ideas filtrables por procedencia/**categoría**/**ciudad** (dos campos
+  nuevos horneados en el importador — `categoria` = `state.places.category` tal cual;
+  `ciudad` = hotel confirmado más cercano por coordenadas, haversine sobre los 9 reales, nunca
+  una tabla de ciudades inventada) + Guía (Tips/Frases/Precios/Descartes) extraída de
+  `index.html` raíz con el mismo mecanismo que `RUTA_DAYS`/`TRANSPORT` (nunca retranscrita a
+  mano — `loadV2Baked()` ahora también devuelve `TIPS/PHRASES/PRICES/SKIPPED`). CHECKLIST y
+  "pasar idea a Ruta" quedaron fuera a propósito (decisión 2026-09-16). Probado en el móvil
+  real por el usuario: Reservas, marcar como reservado, deshacer y Más — todo OK. Suite
+  completa + gate 8c en verde, `git diff --stat -- index.html sw.js` vacío.
 - `f6b3234` — **Fase 4 cerrada de verdad**: franja de check-in real (9 hoteles) + llegada
   estimada curada (siempre "≈", nunca dato cierto) sustituyen a la hora de apertura de franja
   como clave de ordenación — bug real corregido (19-abr salía a las 14:00, antes de Himeji).
@@ -27,7 +45,7 @@ Historial reciente relevante (más nuevo primero):
 - `45c8bb0` — **Bloque 2**: mapa solo vive dentro de la pantalla de un día, menú siempre por encima (z-index).
 - `3abd3b8` — **Bloque 1**: fix de v2.1 (único cambio autorizado en `index.html` raíz — CARTO exigía API key, cambio a Esri).
 
-**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa/check-in real, incluida la ronda de bugfixing post-móvil) — **cerrada del todo en `f6b3234`**.
+**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa/check-in real) — cerrada en `f6b3234` · Fase 5 (Reservas + Más) — **cerrada en `7e8dca3`, probada en el móvil real**.
 
 **URLs:**
 - GitHub Pages (producción, v2.1): `https://amenedorubn.github.io/japon/`
@@ -73,28 +91,53 @@ resueltos: 16-abr usa el bloque "Hueco + maletas" (no la opción B), el aviso �
 unificada (franja sin confirmar / llegada antes de apertura / margen al cierre <1h — Nikkō no lo
 lleva), y los huecos locales (Nikkō→Kinugawa, Fukuoka) cuentan como "desplazamiento sin definir".
 
-## 4. Tarea en curso: Fase 5 — Reservas y Más
+## 4. Tarea en curso: Fase 5b — recuperar la ficha de detalle (antes de la Fase 6)
 
-**Estado: en fase de PLAN, esperando el OK del usuario — no se ha tocado código todavía.**
+**Hallazgo del usuario probando el móvil (2026-09-16):** v3 perdió la ficha de detalle de v2.1
+— antes, tocar cualquier sitio abría TODOS sus datos (descripción, horario, precio, tips,
+enlaces, y el link de Instagram en los que vienen de Insta). En v3 hoy eso no existe. Prioridad
+nº 1 de PROJECT.md es no perder ningún dato — esto es una regresión real, no una mejora
+opcional.
 
-El usuario pidió un resumen en 5 líneas antes de escribir nada:
-1. Qué muestra Reservas (hoteles/vuelos/trenes/entradas, confirmado vs. pendiente, enlace a
-   confirmación — recordar: el repo es público, ningún enlace/dato privado en archivos
-   versionados, ver PROJECT.md y la nota de v2.1 sobre `confirmUrl`).
-2. Qué muestra Más (las 205 `idea`, filtros, y si "pasar una idea a la Ruta" entra ya o se deja
-   para después).
-3. Qué contenido de la Guía de v2.1 migra a Más.
-4. Qué es editable ya en local (`jp27v3:`) frente a lo que espera a la Fase 6 (Auth + Firebase).
-5. Estimación de tiempo.
+**Estado: PASO 1 (auditoría) en curso — pasos 2 y 3 esperan el OK del usuario a la auditoría,
+NO IMPLEMENTAR SIN CONFIRMAR.**
 
-**Siguiente paso literal cuando retomes:** si el plan de 5 líneas ya se mandó en esta sesión y
-sigue sin respuesta, esperar el OK del usuario punto por punto antes de tocar `v3/index.html`.
-Si esta es una sesión nueva y el plan no está en el historial visible, hay que rehacerlo (no
-asumir que sigue vigente sin releer la respuesta del usuario).
+Tres pasos, en este orden:
+1. **Auditoría de paridad de campos** (solo diagnóstico): tabla de TODOS los campos que
+   existen en v2.1 (state.places + catálogos horneados maria/dani/insta/ai/ours, más
+   hoteles/vuelos/trayectos) frente a lo que hoy copia/muestra v3 — campo · ejemplo · cuántos
+   ítems lo tienen · ¿se copia? · ¿se muestra? Marcar en rojo lo que se pierde (enlaces
+   Instagram/web/Maps, notas, descripción, precio, horario, tips, valoración, procedencia
+   detallada…).
+2. **Ficha de detalle** (tras el OK a la auditoría): al tocar cualquier elemento en Ruta,
+   Reservas, Ideas o Pendientes se abre una ficha con TODOS los datos conservados —
+   descripción, notas, horario, precio, enlaces (Instagram/web/Google Maps) como botones,
+   TODAS las procedencias fusionadas (cada una con su enlace original), estado y reservas.
+   Campos vacíos no se muestran. Enlaces privados de confirmación nunca en archivos
+   versionados (mismo invariante que `confirmUrl` de v2.1).
+3. **Filtro en Reservas**: desplegable (mismo estilo que los días del menú) con Todo · ✈️
+   Vuelos · 🏨 Hoteles · 🚆 Trenes · 🚌 Buses · 🎟️ Experiencias · 🍜 Comidas (reservas de
+   restaurante), clasificado en el importador — si algún ítem no encaja limpio en una
+   categoría, se avisa al usuario en vez de forzarlo. Contador por categoría. Pendiente de
+   comprobar en los datos reales de v2.1 si existe una reserva de cena en Hiroshima
+   (sospecha del usuario, sin confirmar todavía) — si no aparece como reserva real, se dice
+   así, no se inventa.
+
+**Siguiente paso literal cuando retomes:** si la tabla de auditoría del paso 1 ya se mandó en
+esta sesión y sigue sin respuesta del usuario, esperar su OK antes de tocar código de los
+pasos 2 y 3. Si esta es una sesión nueva sin esa respuesta visible, hay que regenerar la
+auditoría (no asumir que sigue vigente).
 
 ## 5. Pendiente después (backlog de fases, sin empezar)
 
-- **Fase 6** — Auth (Google Sign-In + aprobación, como en v2.1) y aplicar el diff de `database.rules.json` ya documentado-pero-no-desplegado en `V3-DESIGN.md` (recordar: mostrar diff y pedir OK antes de tocar la consola de Firebase).
+- **Fase 6** — Auth (Google Sign-In + aprobación) + sincronización Firebase entre los 3
+  móviles, DESPUÉS de cerrar la Fase 5b. El usuario ya pidió el resumen en 5 líneas de rigor
+  antes de tocar código (qué pasa de local a Firebase, cómo se migran las marcas locales ya
+  hechas sin perderlas, qué pasa si dos móviles editan lo mismo a la vez, cómo se publica en
+  GitHub Pages sin meter datos privados en el repo, y si el diff de reglas guardado en
+  `V3-DESIGN.md` sigue igual o cambia) — pendiente de responder tras cerrar la Fase 5b.
+  Recordar: mostrar el diff de `database.rules.json` y pedir OK explícito antes de desplegar
+  nada en la consola de Firebase.
 - **Fase 7** — Pulido visual: modo oscuro real (hoy el mapa sale claro en dark mode, aceptado "por ahora" en el Bloque 1), soporte offline completo (cache strategy de `v3/sw.js` sigue en modo dev network-first, pensado para cuando v3 esté más maduro pasar a algo más parecido al cache-first de v2.1).
 - **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática).
 
