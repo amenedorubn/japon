@@ -97,6 +97,28 @@ function pendientesView(items, ahoraUtcMs){
   return { conFecha, vigilar, reservarYa, hechos };
 }
 
+/* Agrupa en UNA sola tarjeta las acciones de check-in que comparten billete
+   (mismo `abreEnUtc`, por el through check-in de Finnair — ver §E y
+   tools/v3-migrate-import.js): dos tramos de la misma reserva no deben
+   pintarse como dos avisos idénticos. Deliberadamente restringido a
+   `accionId === 'checkin'` — para cualquier otro tipo de acción, dos fechas
+   iguales por PURA coincidencia (p.ej. dos reservas de sitios distintos que
+   casualmente abren el mismo día) NUNCA deben fundirse en una tarjeta. El
+   resultado trae `tramos` (el grupo completo) solo cuando hay más de uno. */
+function agruparPorApertura(entries){
+  const grupos = new Map();
+  const orden = [];
+  for (const e of (entries || [])) {
+    const key = e.accionId === 'checkin' ? ('checkin::' + e.abreEnUtc) : (e.itemId + '::' + e.accionId);
+    if (!grupos.has(key)) { grupos.set(key, []); orden.push(key); }
+    grupos.get(key).push(e);
+  }
+  return orden.map(key => {
+    const lista = grupos.get(key);
+    return lista.length === 1 ? lista[0] : Object.assign({}, lista[0], { tramos: lista });
+  });
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { TIPOS, ESTADOS, PROCEDENCIAS, ZONAS_PENDIENTES, precisionLevel, accionAbreEnUtc, pendientesView };
+  module.exports = { TIPOS, ESTADOS, PROCEDENCIAS, ZONAS_PENDIENTES, precisionLevel, accionAbreEnUtc, pendientesView, agruparPorApertura };
 }

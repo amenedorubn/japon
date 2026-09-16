@@ -145,5 +145,36 @@ check('pendientesView: el vuelo tiene 2 acciones, una pendiente (checkin) y otra
     shibuya.abreEnUtc === utcEsperado);
 }
 
+// --- agruparPorApertura (Decisión 2026-09-16, punto 4): check-ins del MISMO
+// billete (mismo abreEnUtc) se funden en una tarjeta con `tramos`; otras
+// acciones NUNCA se funden aunque coincidan por pura casualidad de fecha.
+{
+  const mismaHora = 1234567890;
+  const entradas = [
+    { itemId: 'vuelo-1', accionId: 'checkin', nombre: 'Madrid → Helsinki', abreEnUtc: mismaHora },
+    { itemId: 'vuelo-2', accionId: 'checkin', nombre: 'Helsinki → Narita', abreEnUtc: mismaHora },
+    { itemId: 'vuelo-3', accionId: 'checkin', nombre: 'Narita → Helsinki', abreEnUtc: mismaHora + 999999 }, // billete distinto
+    { itemId: 'coincidencia_a', accionId: 'reserva', nombre: 'Sitio A', abreEnUtc: mismaHora }, // misma fecha, NO es checkin
+    { itemId: 'coincidencia_b', accionId: 'reserva', nombre: 'Sitio B', abreEnUtc: mismaHora }  // misma fecha, NO es checkin
+  ];
+  const agrupado = model.agruparPorApertura(entradas);
+
+  check('agruparPorApertura: da 4 entradas de salida (2 checkin+2 checkin fundidos en 1, +1 checkin suelto, +2 "reserva" sueltas)',
+    agrupado.length === 4);
+
+  const grupoCheckin = agrupado.find(e => e.accionId === 'checkin' && e.abreEnUtc === mismaHora);
+  check('agruparPorApertura: el grupo de check-in del mismo billete trae "tramos" con los 2',
+    grupoCheckin && grupoCheckin.tramos && grupoCheckin.tramos.length === 2);
+
+  const checkinSuelto = agrupado.find(e => e.itemId === 'vuelo-3');
+  check('agruparPorApertura: el check-in de OTRO billete (distinto abreEnUtc) queda suelto, sin "tramos"',
+    checkinSuelto && !checkinSuelto.tramos);
+
+  const sitioA = agrupado.find(e => e.itemId === 'coincidencia_a');
+  const sitioB = agrupado.find(e => e.itemId === 'coincidencia_b');
+  check('agruparPorApertura: dos acciones "reserva" con la MISMA fecha por casualidad NUNCA se funden',
+    sitioA && !sitioA.tramos && sitioB && !sitioB.tramos);
+}
+
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

@@ -21,7 +21,7 @@ const suites = ['test-7a-import.js', 'test-7b-dani.js', 'test-10a-catalog.js', '
   // el appJs extraído de index.html (reciben la misma ruta por argv[2] que
   // el resto de suites, pero no la usan).
   'test-v3-timezone.js', 'test-v3-model.js', 'test-v3-dedupe.js', 'test-v3-merge.js', 'test-v3-twins.js',
-  'test-v3-storage.js', 'test-v3-storage-guard.js', 'test-v3-reservation-rules.js'];
+  'test-v3-storage.js', 'test-v3-storage-guard.js', 'test-v3-reservation-rules.js', 'test-v3-hecho-overrides.js'];
 let failed = 0;
 for (const s of suites) {
   console.log('=== ' + s + ' ===');
