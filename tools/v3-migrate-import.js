@@ -37,7 +37,7 @@ const path = require('path');
 
 const { mergeV3State } = require(path.join(__dirname, '..', 'v3', 'lib', 'merge.js'));
 const { zonedTimeToUtc, utcToZonedParts } = require(path.join(__dirname, '..', 'v3', 'lib', 'timezone.js'));
-const { normalizeNameForTwins, groupCanonical, residualDuplicates } = require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
+const { normalizeNameForTwins, groupCanonical, residualDuplicates, applyManualMerges, filterRejected } = require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
 
 const liveJsonPath = process.argv[2];
 const v3JsonPath = process.argv[3];
@@ -270,15 +270,23 @@ function isExcludedFromCoordMatch(id){
 }
 
 // Nivel 1: agrupación automática (TWIN_GROUPS de v2 + nombre Y coordenadas).
-const { items: canonical, merges } = groupCanonical(imported, v2Baked.TWIN_GROUPS, { isExcludedFromCoordMatch });
+const { items: nivel1, merges } = groupCanonical(imported, v2Baked.TWIN_GROUPS, { isExcludedFromCoordMatch });
 
-// Nivel 3: lo que sigue suelto tras el nivel 1. Se anula `ubicacion` de los
-// ids excluidos SOLO para este cálculo (misma exclusión que el nivel 1,
-// aplicada también aquí para no proponer en revisión manual lo mismo que el
-// nivel 2 ya descarta como ruido de coordenadas).
+// Nivel 3 (revisión manual, ya decidida): import/v3-manual-merges.json es
+// versionado — la única fuente de fusiones que no salen de TWIN_GROUPS ni de
+// la regla automática. Si no existe todavía (primera vez), se trata como
+// "nada aprobado ni rechazado" y el importador solo informa.
+const manualMergesPath = path.join(__dirname, '..', 'import', 'v3-manual-merges.json');
+const manualMerges = fs.existsSync(manualMergesPath) ? JSON.parse(fs.readFileSync(manualMergesPath, 'utf8')) : { aprobadas: [], rechazadas: [] };
+const { items: canonical, aplicadas, omitidas } = applyManualMerges(nivel1, manualMerges.aprobadas);
+
+// Lo que sigue suelto tras nivel 1 + nivel 3 aprobado. Se anula `ubicacion`
+// de los ids excluidos SOLO para este cálculo (misma exclusión que el nivel
+// 1) y se filtran las parejas ya `rechazadas` (idempotencia: no se vuelven a
+// proponer en corridas futuras).
 const byCanonicalId = new Map(canonical.map(it => [it.id, it]));
 const forResidual = canonical.map(it => isExcludedFromCoordMatch(it.id) ? Object.assign({}, it, { ubicacion: null }) : it);
-const rawResidual = residualDuplicates(forResidual);
+const rawResidual = filterRejected(residualDuplicates(forResidual), manualMerges.rechazadas);
 const residual = rawResidual.map(d => {
   const a = byCanonicalId.get(d.a), b = byCanonicalId.get(d.b);
   return Object.assign({}, d, {
@@ -303,13 +311,23 @@ console.log('=== Importador v2 → v3 (Fase 2+dedup) — vista previa, SIN escri
 console.log(`Ítems importados (antes del nivel 1): ${imported.length} ` +
   `(confirmado: ${porEstado(imported, 'confirmado')}, propuesta: ${porEstado(imported, 'propuesta')}, idea: ${porEstado(imported, 'idea')})`);
 console.log(`Nivel 1 — fusiones automáticas: ${merges.length} grupos (${merges.reduce((n, m) => n + m.idsOriginales.length, 0)} ids originales colapsados)`);
-console.log(`Ítems tras el nivel 1: ${canonical.length} ` +
+console.log(`Nivel 3 — fusiones manuales aprobadas: ${aplicadas.length} (import/v3-manual-merges.json)` +
+  (omitidas.length ? ` — ${omitidas.length} OMITIDAS por contradicción (ver detalle abajo)` : ''));
+console.log(`Ítems tras nivel 1 + nivel 3 aprobado: ${canonical.length} ` +
   `(confirmado: ${porEstado(canonical, 'confirmado')}, propuesta: ${porEstado(canonical, 'propuesta')}, idea: ${porEstado(canonical, 'idea')})`);
 console.log(`Nivel 3 — candidatos sueltos con al menos un lado propuesta/confirmado: ${paraRevisionManual.length} (NUNCA fusionados; revisión manual)`);
 console.log(`Candidatos dudosos que quedan SOLO entre ideas (no se muestran, no bloquean nada): ${soloEntreIdeas}`);
 console.log(`Fusión con v3 ${v3JsonPath ? 'existente (' + v3JsonPath + ')' : '(nodo vacío, siembra)'}: ` +
   `${stats.nuevos} nuevos, ${stats.actualizados} actualizados, ${stats.soloEnV3Conservados} conservados solo-en-v3`);
 if (avisos.length) { console.log('\nAvisos (alcance de esta fase, no errores):'); avisos.forEach(a => console.log('- ' + a)); }
+if (omitidas.length) {
+  console.log('\n=== Nivel 3: fusiones aprobadas que NO se aplicaron (contradicción con los datos reales) ===');
+  omitidas.forEach(o => console.log(`- ${JSON.stringify(o.regla)}: ${o.motivo}`));
+}
+if (manualMerges.pendientes && manualMerges.pendientes.length) {
+  console.log('\n=== Nivel 3: pendientes de decisión (la petición no encajó con los datos) ===');
+  manualMerges.pendientes.forEach(p => console.log(`- ${p.canonicalId} <- ${p.candidato}: ${p.motivo}`));
+}
 console.log(`\nEscrito: import/v3-migrated-preview.json (${merged.length} ítems totales) y import/v3-duplicates-report.json (${residual.length} candidatos residuales completos)`);
 if (paraRevisionManual.length) {
   console.log('\n=== Nivel 3: revisión manual (nombre / procedencia / estado / distancia) ===');

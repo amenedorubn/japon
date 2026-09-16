@@ -124,9 +124,75 @@ function residualDuplicates(canonicalItems, opts){
   return findPotentialDuplicates(canonicalItems, opts);
 }
 
+/* Un par (a,b) está en `rechazadas` (sin importar el orden). */
+function isRejectedPair(rechazadas, a, b){
+  return (rechazadas || []).some(r => (r.a === a && r.b === b) || (r.a === b && r.b === a));
+}
+
+/* Quita de una lista de candidatos (formato de residualDuplicates/con d.a,d.b)
+   las parejas ya registradas como rechazadas, para no volver a proponerlas en
+   futuras corridas del importador. */
+function filterRejected(candidates, rechazadas){
+  return (candidates || []).filter(d => !isRejectedPair(rechazadas, d.a, d.b));
+}
+
+/* Aplica las decisiones de revisión manual del nivel 3 (import/v3-manual-
+   merges.json, §Decisión 2026-09-16): SIEMPRE el canonicalId es una parada
+   propuesta/confirmado que absorbe ids sueltos, nunca al revés. Antes de
+   fusionar, verifica que el id absorbido exista y que su estado sea 'idea'
+   (nunca propuesta↔propuesta ni confirmado↔confirmado, regla explícita del
+   usuario): si no, se salta y se reporta en `omitidas` en vez de aplicarse a
+   ciegas — igual que el resto del pipeline, esto nunca inventa una fusión
+   que los datos reales no sostienen. */
+function applyManualMerges(items, aprobadas){
+  const byId = new Map(items.map(it => [it.id, it]));
+  const consumed = new Set();
+  const omitidas = [];
+  const aplicadas = [];
+
+  for (const regla of (aprobadas || [])) {
+    const canonical = byId.get(regla.canonicalId);
+    if (!canonical) { omitidas.push({ regla, motivo: `canonicalId '${regla.canonicalId}' no existe en los ítems actuales` }); continue; }
+    if (canonical.estado !== 'propuesta' && canonical.estado !== 'confirmado') {
+      omitidas.push({ regla, motivo: `canonicalId '${regla.canonicalId}' es '${canonical.estado}', no propuesta/confirmado` });
+      continue;
+    }
+    const absorbedItems = [];
+    const absorbedOk = [];
+    for (const id of regla.absorbe) {
+      const it = byId.get(id);
+      if (!it) { omitidas.push({ regla, id, motivo: `id '${id}' no existe en los ítems actuales` }); continue; }
+      if (it.estado !== 'idea') { omitidas.push({ regla, id, motivo: `id '${id}' es '${it.estado}', nunca propuesta/confirmado↔propuesta/confirmado` }); continue; }
+      absorbedItems.push(it);
+      absorbedOk.push(id);
+    }
+    if (!absorbedOk.length) continue;
+
+    const procedencias = new Set(canonical.procedencias || [canonical.procedencia]);
+    const idsOriginales = new Set(canonical.idsOriginales || [canonical.id]);
+    for (const it of absorbedItems) {
+      (it.procedencias || [it.procedencia]).forEach(p => procedencias.add(p));
+      (it.idsOriginales || [it.id]).forEach(i => idsOriginales.add(i));
+      consumed.add(it.id);
+    }
+    byId.set(canonical.id, Object.assign({}, canonical, {
+      procedencias: [...procedencias].sort(),
+      idsOriginales: [...idsOriginales].sort()
+    }));
+    aplicadas.push({ canonicalId: canonical.id, absorbidos: absorbedOk });
+  }
+
+  const result = items
+    .filter(it => !consumed.has(it.id))
+    .map(it => byId.get(it.id));
+
+  return { items: result, aplicadas, omitidas };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     normalizeNameForTwins, groupCanonical, residualDuplicates,
+    isRejectedPair, filterRejected, applyManualMerges,
     ESTADO_PRIORITY, DEFAULT_PROCEDENCIA_PRIORITY
   };
 }

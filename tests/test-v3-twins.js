@@ -2,7 +2,7 @@
 // Decisión 2026-09-16). No depende de index.html: prueba directamente
 // v3/lib/twins.js.
 const path = require('path');
-const { normalizeNameForTwins, groupCanonical, residualDuplicates } =
+const { normalizeNameForTwins, groupCanonical, residualDuplicates, isRejectedPair, filterRejected, applyManualMerges } =
   require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
 
 let fail = 0;
@@ -114,6 +114,54 @@ check('normalizeNameForTwins: nombres realmente distintos siguen distintos',
   const residuales = residualDuplicates(canonicalItems);
   check('residualDuplicates: encuentra el par que compartía nombre pero quedó suelto',
     residuales.some(d => (d.a === 'solo1' && d.b === 'solo2') || (d.a === 'solo2' && d.b === 'solo1')));
+}
+
+// --- applyManualMerges: nivel 3 aprobado, import/v3-manual-merges.json ---
+{
+  const items = [
+    it('catalog_x', { nombre: 'Catalog X', estado: 'propuesta', procedencia: 'ours' }),
+    it('maria_x', { nombre: 'X', estado: 'idea', procedencia: 'maria' }),
+    it('dani_y', { nombre: 'Y suelto', estado: 'idea', procedencia: 'dani' }) // no tocado
+  ];
+  const aprobadas = [{ canonicalId: 'catalog_x', absorbe: ['maria_x'] }];
+  const { items: out } = applyManualMerges(items, aprobadas);
+  check('applyManualMerges: el id absorbido desaparece de la lista', !out.some(x => x.id === 'maria_x'));
+  check('applyManualMerges: el canónico sigue con su id (la parada manda)', out.some(x => x.id === 'catalog_x'));
+  check('applyManualMerges: un ítem no mencionado no se toca', out.some(x => x.id === 'dani_y'));
+}
+{
+  const items = [
+    it('catalog_x', { nombre: 'Catalog X', estado: 'propuesta', procedencia: 'ours' }),
+    it('maria_x', { nombre: 'X', estado: 'idea', procedencia: 'maria' })
+  ];
+  const { items: out } = applyManualMerges(items, [{ canonicalId: 'catalog_x', absorbe: ['maria_x'] }]);
+  const canon = out.find(x => x.id === 'catalog_x');
+  check('applyManualMerges: procedencias trae ours Y maria',
+    canon.procedencias.includes('ours') && canon.procedencias.includes('maria'));
+  check('applyManualMerges: idsOriginales trae los dos ids', canon.idsOriginales.includes('catalog_x') && canon.idsOriginales.includes('maria_x'));
+  check('applyManualMerges: total queda en 1 (se consumió maria_x)', out.length === 1);
+}
+
+// --- applyManualMerges: nunca aplica propuesta↔propuesta ni id inexistente, lo reporta ---
+{
+  const items = [
+    it('a_prop', { estado: 'propuesta' }),
+    it('b_prop', { estado: 'propuesta' })
+  ];
+  const { items: out, omitidas } = applyManualMerges(items, [{ canonicalId: 'a_prop', absorbe: ['b_prop', 'no_existe'] }]);
+  check('applyManualMerges: NO fusiona propuesta↔propuesta, aunque se lo pidan', out.length === 2);
+  check('applyManualMerges: reporta por qué se omitió (estado)', omitidas.some(o => o.id === 'b_prop'));
+  check('applyManualMerges: reporta id inexistente sin reventar', omitidas.some(o => o.id === 'no_existe'));
+}
+
+// --- filterRejected / isRejectedPair: idempotencia del nivel 3 ---
+{
+  const rechazadas = [{ a: 'x', b: 'y', motivo: 'prueba' }];
+  check('isRejectedPair: detecta el par en cualquier orden', isRejectedPair(rechazadas, 'y', 'x'));
+  check('isRejectedPair: un par no rechazado da false', !isRejectedPair(rechazadas, 'x', 'z'));
+  const candidatos = [{ a: 'x', b: 'y' }, { a: 'x', b: 'z' }];
+  const filtrados = filterRejected(candidatos, rechazadas);
+  check('filterRejected: quita el par rechazado y deja el resto', filtrados.length === 1 && filtrados[0].b === 'z');
 }
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
