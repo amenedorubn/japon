@@ -1,7 +1,7 @@
 // v3 · bases derivadas de hoteles CONFIRMADOS (Fase 4, Decisión 2026-09-16
 // punto 1). No depende de index.html: prueba directamente v3/lib/bases.js.
 const path = require('path');
-const { buildBases, fechaDe } = require(path.join(__dirname, '..', 'v3', 'lib', 'bases.js'));
+const { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha } = require(path.join(__dirname, '..', 'v3', 'lib', 'bases.js'));
 
 let fail = 0;
 const check = (name, ok) => { console.log((ok ? 'PASS' : 'FAIL') + ' ' + name); if (!ok) fail++; };
@@ -73,6 +73,24 @@ const hoteles = [
   const items = [parada('idea_suelta', 'Sin fecha', 'lugar', null)];
   const { sinBase } = buildBases(hoteles, items);
   check('buildBases: un ítem sin fechaHora no revienta y queda fuera (sinBase)', sinBase.length === 1);
+}
+
+// --- hotelParaFecha / itemsDeFecha (Fase 4, Bloque 3): un día SUELTO,
+// fuera de buildBases, necesita el mismo orden y la misma búsqueda de base.
+{
+  check('hotelParaFecha: encuentra el hotel activo esa fecha', hotelParaFecha(hoteles, '2027-04-17').id === 'h_kioto');
+  check('hotelParaFecha: null si ningún hotel cubre esa fecha (día de vuelo, por ejemplo)', hotelParaFecha(hoteles, '2027-04-30') === null);
+
+  const items = [
+    parada('trayecto-x', 'Takayama → Nagoya → Kioto', 'trayecto', '2027-04-16'),
+    parada('parada_tarde', 'Algo por la tarde', 'lugar', '2027-04-16T15:00'),
+    parada('parada_manana', 'Algo por la mañana', 'lugar', '2027-04-16T09:00'),
+    parada('otro_dia', 'No es de este día', 'lugar', '2027-04-17T09:00')
+  ];
+  const dia16 = itemsDeFecha(items, '2027-04-16');
+  check('itemsDeFecha: solo trae los ítems de esa fecha exacta (3, no el del 17)', dia16.length === 3);
+  check('itemsDeFecha: mismo orden que ordenarDia (trayecto primero, luego por hora)',
+    dia16[0].id === 'trayecto-x' && dia16[1].id === 'parada_manana' && dia16[2].id === 'parada_tarde');
 }
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');

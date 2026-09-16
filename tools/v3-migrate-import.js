@@ -157,6 +157,16 @@ function buildCheckinAccionesByLeg(FLIGHTS){
   return out;
 }
 
+/* 'HH:MM' + minutos -> 'HH:MM' (mismo día de calendario; ninguna parada de
+   RUTA_DAYS cruza medianoche). Aritmética de reloj, sin zona horaria: es
+   la MISMA fecha, solo se suman minutos a la hora de pared. */
+function addMinutosHHMM(horaHHMM, minutos){
+  const [h, m] = horaHHMM.split(':').map(Number);
+  const total = h * 60 + m + minutos;
+  const pad2 = n => String(n).padStart(2, '0');
+  return `${pad2(Math.floor(total / 60) % 24)}:${pad2(total % 60)}`;
+}
+
 function transform(livePlaces, v2Baked){
   const { RUTA_DAYS, FLIGHTS, canonicalPid, provenanceOf, isBookedHotel } = v2Baked;
   const byId = new Map(livePlaces.filter(p => p && p.id).map(p => [p.id, p]));
@@ -206,13 +216,19 @@ function transform(livePlaces, v2Baked){
       }
       const place = byId.get(pid);
       if (!place) { avisos.push(`pid de RUTA_DAYS sin ficha en el catálogo vivo: ${pid} (día ${day.date})`); continue; }
+      // Fase 4 (Bloque 3): la duración real de RUTA_DAYS (`S(pid,time,dur,
+      // note)`) se descartaba; la Ruta por días la necesita para la agenda.
+      // `fin` solo se calcula cuando hay `time` Y `dur` reales — nunca se
+      // inventa un final para una parada que no trajera duración.
+      const fin = (stop.time && stop.dur != null) ? `${day.date}T${addMinutosHHMM(stop.time, stop.dur)}` : null;
       items.push({
         id: pid, nombre: place.name || pid, tipo: 'lugar',
         procedencia: provenanceOf(place), estado: 'propuesta',
         noche: 'noche-' + day.date,
-        fechaHora: { inicio: `${day.date}T${stop.time}`, fin: null, zona: 'Asia/Tokyo' },
+        fechaHora: { inicio: stop.time ? `${day.date}T${stop.time}` : day.date, fin, zona: 'Asia/Tokyo' },
         ubicacion: (place.lat != null && place.lng != null) ? { lat: place.lat, lng: place.lng } : null,
-        acciones: []
+        acciones: [],
+        nota: stop.note || null
       });
       consumed.add(pid);
     }
@@ -370,6 +386,13 @@ const incoherenciasCiudad = checkIncoherenciasCiudad(canonical, v2Baked.RUTA_DAY
   for (const h of hotelesCanonical) h.ciudadBase = cityOfHotelFinal.get(h.id) || null;
 }
 
+/* Resumen de los 21 días de RUTA_DAYS (Fase 4, Bloque 3): el menú lateral
+   de la Ruta necesita la lista COMPLETA de días —incluidos los de vuelo o
+   sin base confirmada, que nunca aparecen como clave en `bases.dias` de
+   v3/lib/bases.js porque no tienen ningún ítem asignado ahí— para poder
+   construirse sin volver a tocar index.html raíz desde el navegador. */
+const diasResumen = v2Baked.RUTA_DAYS.map(d => ({ fecha: d.date, ciudad: d.city, stay: d.stay || null }));
+
 // Lo que sigue suelto tras nivel 1 + nivel 3 aprobado. Se anula `ubicacion`
 // de los ids excluidos SOLO para este cálculo (misma exclusión que el nivel
 // 1) y se filtran las parejas ya `rechazadas` (idempotencia: no se vuelven a
@@ -393,7 +416,10 @@ const { items: merged, stats } = mergeV3State(existing, canonical);
 
 const outDir = path.join(__dirname, '..', 'import');
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, 'v3-migrated-preview.json'), JSON.stringify(merged, null, 2));
+// Fase 4, Bloque 3: {items, dias} en vez de un array plano — la Ruta por
+// días necesita el resumen de los 21 días de RUTA_DAYS (ver diasResumen
+// arriba) tanto como los propios RouteItem.
+fs.writeFileSync(path.join(outDir, 'v3-migrated-preview.json'), JSON.stringify({ items: merged, dias: diasResumen }, null, 2));
 fs.writeFileSync(path.join(outDir, 'v3-duplicates-report.json'), JSON.stringify(residual, null, 2));
 
 const porEstado = (list, e) => list.filter(it => it.estado === e).length;

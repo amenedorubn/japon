@@ -41,20 +41,38 @@ function buildBases(hotels, items){
     base.dias[fecha].push(it);
   }
 
-  // Cada día: el/los trayecto(s) SIEMPRE arriba, luego el resto por hora
-  // (fechaHora.inicio trae fecha+hora, p.ej. '2027-04-12T09:00'; los
-  // trayectos no llevan hora y ya van primero por el partition de abajo).
   for (const base of bases) {
-    for (const fecha of Object.keys(base.dias)) {
-      const paradas = base.dias[fecha];
-      const trayectos = paradas.filter(p => p.tipo === 'trayecto');
-      const resto = paradas.filter(p => p.tipo !== 'trayecto')
-        .sort((a, b) => (a.fechaHora.inicio || '') < (b.fechaHora.inicio || '') ? -1 : 1);
-      base.dias[fecha] = trayectos.concat(resto);
-    }
+    for (const fecha of Object.keys(base.dias)) base.dias[fecha] = ordenarDia(base.dias[fecha]);
   }
 
   return { bases, sinBase };
+}
+
+/* El/los trayecto(s) SIEMPRE arriba, luego el resto por hora
+   (fechaHora.inicio trae fecha+hora, p.ej. '2027-04-12T09:00'; los
+   trayectos no llevan hora y ya van primero por el partition de abajo).
+   Exportado aparte de `buildBases` porque un día sin base (vuelo, o una
+   incoherencia real) también necesita este mismo orden en su propia
+   pantalla — Fase 4, Bloque 3. */
+const ES_TRANSPORTE = tipo => tipo === 'trayecto' || tipo === 'vuelo';
+function ordenarDia(paradas){
+  const transporte = paradas.filter(p => ES_TRANSPORTE(p.tipo));
+  const resto = paradas.filter(p => !ES_TRANSPORTE(p.tipo))
+    .sort((a, b) => (a.fechaHora.inicio || '') < (b.fechaHora.inicio || '') ? -1 : 1);
+  return transporte.concat(resto);
+}
+
+/* El hotel confirmado (si hay uno sin ambigüedad) cuyo rango [checkIn,
+   checkOut) cubre `fecha` — para el menú y la cabecera de un día concreto,
+   sin tener que reconstruir todas las bases para consultar un solo día. */
+function hotelParaFecha(hoteles, fecha){
+  return hoteles.find(h => fecha >= fechaDe(h) && fecha < h.fechaHora.fin) || null;
+}
+
+/* Todos los ítems (paradas + trayectos) cuya fecha de calendario es
+   exactamente `fecha`, ya ordenados con ordenarDia. */
+function itemsDeFecha(items, fecha){
+  return ordenarDia(items.filter(it => fechaDe(it) === fecha));
 }
 
 function addDiaISO(fechaISO){
@@ -66,5 +84,5 @@ function addDiaISO(fechaISO){
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { buildBases, fechaDe };
+  module.exports = { buildBases, fechaDe, ordenarDia, hotelParaFecha, itemsDeFecha };
 }

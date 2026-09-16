@@ -8,7 +8,7 @@
 ================================================================ */
 'use strict';
 const CACHE = 'jp27v3-dev';
-const SHELL = ['./', './ruta.html', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js', './lib/bases.js'];
+const SHELL = ['./', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js', './lib/bases.js', './lib/agenda.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
