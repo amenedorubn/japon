@@ -454,6 +454,47 @@ const { items: nivel3, aplicadas, omitidas } = applyManualMerges(nivel1, manualM
 // los vuelos tenían acciones, por eso Pendientes solo enseñaba check-ins).
 const { items: canonical, noEncontrados: reglasNoEncontradas } = attachReservationRules(nivel3, RESERVATION_RULES);
 
+/* Auditoría de reservas de comida (2026-09-17): de los 22 RouteItem de
+   categoría 'comida' en la Ruta real, solo dos tienen fuente oficial que
+   recomiende reservar (K36 The Bar & Rooftop, Kitan Hibiki -- ver la tabla
+   que se le pasó al usuario en el chat, ninguna con regla de antelación
+   publicada, así que quedan como acción de Pendientes nivel 4 "cuando
+   puedas", enganchadas directamente a sus RouteItem ya existentes más abajo
+   por id). La cena de cumpleaños del 19-abr en Hiroshima NUNCA tuvo un
+   restaurante elegido en los datos reales (solo aparecía condicional en el
+   CHECKLIST/BOOKINGS de v2.1, "si es teppanyaki de wagyū", sin pid) y
+   Okonomimura (el plan que SÍ está en RUTA_DAYS ese día) se queda tal cual,
+   sin tocar -- así que esto no es un RouteItem de un sitio real, es un
+   recordatorio de decisión sin inventar dónde: ítem sintético, curado a
+   mano, con acciones necesaria y NADA más (nunca se le pone ubicación ni se
+   hace pasar por una parada real). */
+canonical.push({
+  id: 'decision-cena-cumple-19abr', nombre: 'Cena de cumpleaños (19-abr)',
+  tipo: 'lugar', procedencia: 'ours', estado: 'propuesta',
+  noche: 'noche-2027-04-19', fechaHora: { inicio: '2027-04-19', fin: null, zona: 'Asia/Tokyo' },
+  ubicacion: null, categoria: 'comida', ciudad: 'Hiroshima',
+  acciones: [{
+    id: 'decidir', necesaria: true, hecho: false, dondeReservar: null, abreEn: null, reglaApertura: null,
+    recomendacion: 'Sin restaurante elegido todavía (presupuesto bajo). El plan ya en la Ruta ese día es Okonomimura, que no necesita reserva -- esto es solo para decidir si os cambiáis a otra cosa.',
+    horaConfirmada: false, fuente: null, verificadoEl: '2026-09-17'
+  }]
+});
+// K36 (Kioto, 17-abr) y Kitan Hibiki (Osaka, 24-abr): recomendación de
+// reserva verificada en sus webs oficiales, sin regla de antelación
+// publicada por ninguna de las dos -- se engancha como acción nivel 4
+// directamente al RouteItem ya existente (por id), NO como un nuevo ítem.
+[
+  { id: 'maria_k36_the_bar_rooftop_kioto_y_nara', recomendacion: 'Reserva telefónica recomendada (075-541-3636, franja 15:00-20:00). Web oficial no publica una ventana de antelación.', fuente: 'https://www.princehotels.co.jp/seiryu-kiyomizu/restaurant/k36/' },
+  { id: 'kitan', recomendacion: 'Las hamburguesas de wagyū son de tirada limitada y se agotan antes de la cena: reservar por email (info@kitangroup.jp) o Tabelog. Web oficial no publica una ventana de antelación.', fuente: 'https://kitangroup.jp/' }
+].forEach(({ id, recomendacion, fuente }) => {
+  const it = canonical.find(x => x.id === id);
+  if (!it) return; // si el dedup cambiara el id canónico, avisar en vez de fallar en silencio
+  it.acciones = (it.acciones || []).concat([{
+    id: 'reserva', necesaria: true, hecho: false, dondeReservar: null, abreEn: null, reglaApertura: null,
+    recomendacion, horaConfirmada: false, fuente, verificadoEl: '2026-09-17'
+  }]);
+});
+
 /* Fase 5b, punto 3: clasificación para el filtro de Reservas. Determinista a
    partir de datos que el ítem YA tiene -- nada a mano por id, nada
    inventado. `trenes`/`buses` reutiliza el MISMO criterio que ya usaba
