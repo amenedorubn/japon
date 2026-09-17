@@ -173,38 +173,64 @@
   .ficha .enlaces{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;}
   .ficha .fuente-bloque{border-top:1px dashed var(--line); margin-top:14px; padding-top:10px;}
   .ficha .fuente-bloque h4{margin:0 0 4px; font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;}
+
+  /* --- Fase 6: puerta de acceso --- */
+  #authGate{min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px 16px;}
+  .auth-card{max-width:340px; width:100%; text-align:center;}
+  .auth-logo{font-size:2.4rem; margin-bottom:6px;}
+  .auth-card h1{font-size:1.25rem; margin:0 0 22px;}
+  .auth-google{display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px 16px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); font:inherit; font-size:.92rem; cursor:pointer;}
+  .auth-google svg{width:20px; height:20px; flex-shrink:0;}
+  .auth-error{color:var(--accent); font-size:.82rem; margin-top:12px;}
+  .auth-status-msg{font-size:.9rem; color:var(--muted); line-height:1.5;}
+  .auth-actions{display:flex; gap:8px; justify-content:center; margin-top:16px; flex-wrap:wrap;}
+  .btn.ghost{background:transparent;}
 </style>
 </head>
 <body>
-  <header>
-    <button id="btnMenu" aria-label="Abrir menú">🇯🇵</button>
-    <div>
-      <h1 id="tituloPantalla">Japón 2027 · Pendientes</h1>
-      <p class="sub">v3 · en construcción</p>
+  <!-- Fase 6: puerta de acceso (Google Sign-In, mismo proyecto/nodo de
+       aprobación que v2.1 -- v3 nunca escribe ahí, solo lee). El resto de
+       la app (#appRoot) está oculto hasta que resolverAcceso() confirme
+       'approved'. -->
+  <div id="authGate">
+    <div class="auth-card">
+      <div class="auth-logo">🇯🇵</div>
+      <h1>Japón 2027</h1>
+      <div id="authBody"><p class="auth-status-msg">Cargando…</p></div>
     </div>
-  </header>
+  </div>
 
-  <div id="overlay"></div>
-  <nav id="menu">
-    <div class="cabecera">🇯🇵 Japón 2027</div>
-    <div class="seccion"><button id="btnPendientes">Pendientes</button></div>
-    <div class="seccion">
-      <button id="btnRuta">Ruta <span id="flechaRuta">▾</span></button>
-      <div id="listaDias"></div>
+  <div id="appRoot" style="display:none">
+    <header>
+      <button id="btnMenu" aria-label="Abrir menú">🇯🇵</button>
+      <div>
+        <h1 id="tituloPantalla">Japón 2027 · Pendientes</h1>
+        <p class="sub">v3 · en construcción</p>
+      </div>
+    </header>
+
+    <div id="overlay"></div>
+    <nav id="menu">
+      <div class="cabecera">🇯🇵 Japón 2027</div>
+      <div class="seccion"><button id="btnPendientes">Pendientes</button></div>
+      <div class="seccion">
+        <button id="btnRuta">Ruta <span id="flechaRuta">▾</span></button>
+        <div id="listaDias"></div>
+      </div>
+      <div class="seccion"><button id="btnReservas">Reservas</button></div>
+      <div class="seccion"><button id="btnMas">Más</button></div>
+    </nav>
+
+    <main id="main"><p class="sub" style="padding:16px;">Cargando…</p></main>
+    <div id="toastHost"></div>
+
+    <!-- Fase 5b, punto 2: ficha de detalle, hoja inferior compartida por Ruta,
+         Reservas, Ideas y Pendientes (un solo sitio que pintar/probar). -->
+    <div id="fichaOverlay"></div>
+    <div id="fichaSheet" class="ficha">
+      <button id="btnCerrarFicha" aria-label="Cerrar ficha">✕</button>
+      <div id="fichaContenido"></div>
     </div>
-    <div class="seccion"><button id="btnReservas">Reservas</button></div>
-    <div class="seccion"><button id="btnMas">Más</button></div>
-  </nav>
-
-  <main id="main"><p class="sub" style="padding:16px;">Cargando…</p></main>
-  <div id="toastHost"></div>
-
-  <!-- Fase 5b, punto 2: ficha de detalle, hoja inferior compartida por Ruta,
-       Reservas, Ideas y Pendientes (un solo sitio que pintar/probar). -->
-  <div id="fichaOverlay"></div>
-  <div id="fichaSheet" class="ficha">
-    <button id="btnCerrarFicha" aria-label="Cerrar ficha">✕</button>
-    <div id="fichaContenido"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -215,6 +241,7 @@
   <script src="./lib/estado-overrides.js"></script>
   <script src="./lib/bases.js"></script>
   <script src="./lib/agenda.js"></script>
+  <script src="./lib/sync.js"></script>
   <script>
     'use strict';
     var storage = makeStorage(window.localStorage);
@@ -320,14 +347,14 @@
       main.innerHTML = '<div class="placeholder"><p><strong>' + esc(titulo) + '</strong></p><p>' + esc(texto) + '</p></div>';
     }
 
-    // Único punto que combina las dos capas de overrides locales (hecho +
-    // estado, Fase 5) sobre los ítems importados -- usado por Pendientes,
-    // Ruta (un día) y Reservas, para que un ítem marcado a mano se vea igual
-    // en las tres pantallas.
+    // Único punto que combina las dos capas de overrides (hecho + estado)
+    // sobre los ítems importados -- usado por Pendientes, Ruta (un día) y
+    // Reservas, para que un ítem marcado a mano se vea igual en las tres
+    // pantallas. Fase 6: `overridesEnMemoria` es el reflejo en vivo de
+    // Firebase (o de la caché local mientras conecta) -- ya NO se lee
+    // localStorage aquí directamente (eso era Fase 5, antes de tener sync).
     function itemsConOverrides(){
-      var hecho = storage.getJSON('hechoOverrides', {});
-      var estado = storage.getJSON('estadoOverrides', {});
-      return applyEstadoOverrides(applyOverrides(DATA.items, hecho), estado);
+      return applyEstadoOverrides(applyOverrides(DATA.items, overridesEnMemoria.hecho), overridesEnMemoria.estado);
     }
 
     // ================================================================
@@ -356,15 +383,19 @@
 
     function pairsOf(entry){ return entry.tramos ? entry.tramos.map(function(t){ return [t.itemId, t.accionId]; }) : [[entry.itemId, entry.accionId]]; }
 
+    // Fase 6: cada marca/deshecho actualiza la memoria en vivo, la caché
+    // local (por si se cierra la app antes de que Firebase confirme) y
+    // encola la escritura remota -- Deshacer manda un `remove` real
+    // (valor null), nunca un `false` que un futuro merge pudiera revivir.
     function marcarHechoPar(itemId, accionId){
-      var overrides = storage.getJSON('hechoOverrides', {});
-      overrides = markDone(overrides, itemId, accionId);
-      storage.setJSON('hechoOverrides', overrides);
+      overridesEnMemoria.hecho = markDone(overridesEnMemoria.hecho, itemId, accionId);
+      storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
+      escribirRemoto(rutaHecho(itemId, accionId), true);
     }
     function deshacerPar(itemId, accionId){
-      var overrides = storage.getJSON('hechoOverrides', {});
-      overrides = undoDone(overrides, itemId, accionId);
-      storage.setJSON('hechoOverrides', overrides);
+      overridesEnMemoria.hecho = undoDone(overridesEnMemoria.hecho, itemId, accionId);
+      storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
+      escribirRemoto(rutaHecho(itemId, accionId), null);
     }
 
     function marcarHecho(entry){
@@ -380,17 +411,18 @@
     // deben ir siempre juntos para que Pendientes no lo siga reclamando.
     function marcarReservado(itemId, accionId, nota){
       marcarHechoPar(itemId, accionId);
-      var overrides = storage.getJSON('estadoOverrides', {});
-      overrides = markConfirmado(overrides, itemId, accionId, nota || null);
-      storage.setJSON('estadoOverrides', overrides);
+      var valor = { estado: 'confirmado', estadoManual: true, accionId: accionId, notaReserva: nota || null };
+      overridesEnMemoria.estado = markConfirmado(overridesEnMemoria.estado, itemId, accionId, nota || null);
+      storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
+      escribirRemoto(rutaEstado(itemId), valor);
       mostrarPantalla(pantallaActualId);
       showToast('Marcado como reservado', function(){ deshacerReservado(itemId, accionId); });
     }
     function deshacerReservado(itemId, accionId){
       deshacerPar(itemId, accionId);
-      var overrides = storage.getJSON('estadoOverrides', {});
-      overrides = undoConfirmado(overrides, itemId);
-      storage.setJSON('estadoOverrides', overrides);
+      overridesEnMemoria.estado = undoConfirmado(overridesEnMemoria.estado, itemId);
+      storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
+      escribirRemoto(rutaEstado(itemId), null);
       mostrarPantalla(pantallaActualId);
     }
 
@@ -647,10 +679,9 @@
 
     function renderPendientesScreen(){
       if (!DATA) { renderSinDatos(); return; }
-      var hechoOverrides = storage.getJSON('hechoOverrides', {});
       var items = itemsConOverrides();
       var view = pendientesView(items, Date.now());
-      view.hechos = view.hechos.map(function(h){ return Object.assign({}, h, { _overridden: isOverridden(hechoOverrides, h.itemId, h.accionId) }); });
+      view.hechos = view.hechos.map(function(h){ return Object.assign({}, h, { _overridden: isOverridden(overridesEnMemoria.hecho, h.itemId, h.accionId) }); });
       renderPendientesView(view);
     }
 
@@ -1070,28 +1101,205 @@
     }
 
     // ================================================================
-    // Carga de datos y arranque
+    // Fase 6: autenticación (Google, mismo proyecto Firebase que v2.1,
+    // nunca escribe en su nodo) + sync en vivo de proyectos/viaje-japon-v3.
+    // Diseño completo (3 correcciones del usuario, 2026-09-17) en
+    // HANDOFF-V3.md; aquí solo la orquestación -- la lógica de fusión y de
+    // cola vive en v3/lib/sync.js (pura, testeada sin Firebase real).
     // ================================================================
     var DATA = null, HOTELES = [];
     function renderSinDatos(){
-      main.innerHTML = '<div class="devnote"><p><strong>Modo desarrollo: sin datos</strong></p>' +
-        '<p>No se encontró <code>import/v3-migrated-preview.json</code>. Genera un volcado con ' +
-        '<code>node tools/v3-migrate-import.js live.json</code> y sirve el repo con <code>.claude/serve.ps1</code>.</p></div>';
+      main.innerHTML = '<div class="devnote"><p><strong>Sin datos sembrados</strong></p>' +
+        '<p>El nodo <code>proyectos/viaje-japon-v3/state/items</code> está vacío todavía. ' +
+        'Necesita la siembra inicial (ver HANDOFF-V3.md).</p></div>';
+      document.getElementById('authGate').style.display = 'none';
+      document.getElementById('appRoot').style.display = '';
     }
 
-    fetch('../import/v3-migrated-preview.json')
-      .then(function(res){ if (!res.ok) throw new Error('sin datos'); return res.json(); })
-      .then(function(data){
-        DATA = data;
-        HOTELES = data.items.filter(function(it){ return it.tipo === 'alojamiento' && it.estado === 'confirmado'; });
+    // Misma config pública que v2.1 (index.html raíz) -- no es un secreto,
+    // ya vive publicada ahí; v3 la reutiliza tal cual, mismo proyecto,
+    // nodo HERMANO (proyectos/viaje-japon-v3), nunca toca viaje-japon.
+    var FIREBASE_CONFIG = {
+      apiKey: 'AIzaSyA9v7VTciCVzHxcT13oP3Jm4El8lDn7o90',
+      authDomain: 'viaje-japon-8748a.firebaseapp.com',
+      databaseURL: 'https://viaje-japon-8748a-default-rtdb.europe-west1.firebasedatabase.app/',
+      projectId: 'viaje-japon-8748a',
+      storageBucket: 'viaje-japon-8748a.firebasestorage.app',
+      messagingSenderId: '680255020648', appId: '1:680255020648:web:065af7c30fbb2e78c9a5dd'
+    };
+    var V3_PATH = 'proyectos/viaje-japon-v3';
+    // Decisión 2026-09-16 (V3-DESIGN.md §H): sin nodo access propio de v3 --
+    // reutiliza el MISMO nodo de aprobación de v2.1, solo lectura.
+    var V2_ACCESS_PATH = 'proyectos/viaje-japon/access';
+
+    var fbApp = null, fbAuth = null, fbDb = null, fbAuthM = null, fbDbM = null;
+    var currentUser = null;
+    var overridesEnMemoria = { hecho: {}, estado: {} };
+    var colaEscrituras = storage.getJSON('colaEscrituras', []);
+
+    function authGoogleSvg(){
+      return '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.6H24v9.1h12.6c-.5 3-2.2 5.5-4.7 7.2l7.3 5.6c4.3-4 6.8-9.8 6.8-17.3z"/><path fill="#FBBC05" d="M10.5 19.3a14.5 14.5 0 0 0 0 9.4l-7.9 6.1a24 24 0 0 1 0-21.6l7.9 6.1z"/><path fill="#34A853" d="M24 48c6.4 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.9 2.3-8.6 2.3-6.3 0-11.6-3.5-13.5-9.7l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+    }
+    function authGateHTML(view, user, errorMsg){
+      if (view === 'connecting') return '<p class="auth-status-msg">Conectando…</p>';
+      if (view === 'signin') return '<button class="auth-google" id="authGoogleBtn" type="button">' + authGoogleSvg() +
+        '<span>Iniciar sesión con Google</span></button>' +
+        (errorMsg ? '<p class="auth-error">' + esc(errorMsg) + '</p>' : '');
+      if (view === 'sin-acceso') return '<p class="auth-status-msg">Hola' + (user && user.displayName ? ', ' + esc(user.displayName) : '') +
+        '. Este Google todavía no tiene acceso aprobado al viaje. Pídelo desde la app principal:</p>' +
+        '<p><a class="btn" href="https://amenedorubn.github.io/japon/" target="_blank" rel="noopener">Ir a la app principal ↗</a></p>' +
+        '<div class="auth-actions"><button class="btn" id="authRetry" type="button">🔄 Comprobar de nuevo</button>' +
+        '<button class="btn ghost" id="authSignOut" type="button">Salir</button></div>';
+      if (view === 'error') return '<p class="auth-status-msg">No se pudo conectar. Comprueba tu conexión y recarga.</p>';
+      return '';
+    }
+    function renderAuthGate(view, user, errorMsg){
+      document.getElementById('authGate').style.display = 'flex';
+      document.getElementById('appRoot').style.display = 'none';
+      document.getElementById('authBody').innerHTML = authGateHTML(view, user, errorMsg);
+      var btn = document.getElementById('authGoogleBtn');
+      if (btn) btn.addEventListener('click', doGoogleSignIn);
+      var retry = document.getElementById('authRetry');
+      if (retry) retry.addEventListener('click', function(){ resolverAcceso(currentUser); });
+      var salir = document.getElementById('authSignOut');
+      if (salir) salir.addEventListener('click', function(){ fbAuthM.signOut(fbAuth); });
+    }
+    async function doGoogleSignIn(){
+      var btn = document.getElementById('authGoogleBtn');
+      if (btn) btn.disabled = true;
+      try { await fbAuthM.signInWithPopup(fbAuth, new fbAuthM.GoogleAuthProvider()); }
+      catch (e) { renderAuthGate('signin', null, 'No se pudo iniciar sesión. Inténtalo de nuevo.'); }
+      finally { if (btn) btn.disabled = false; }
+    }
+
+    // Comprueba el estado aprobado/pending/rejected del MISMO nodo de acceso
+    // que usa v2.1 -- v3 nunca escribe ahí, solo lee.
+    async function resolverAcceso(user){
+      currentUser = user;
+      if (!user) { renderAuthGate('signin', null); return; }
+      renderAuthGate('connecting', user);
+      try {
+        var snap = await fbDbM.get(fbDbM.ref(fbDb, V2_ACCESS_PATH + '/users/' + user.uid + '/status'));
+        if (snap.val() === 'approved') { await arrancarAppV3(); }
+        else { renderAuthGate('sin-acceso', user); }
+      } catch (e) {
+        renderAuthGate('error', user);
+      }
+    }
+
+    async function initAuthV3(){
+      // Defensivo (mismo patrón que initAuth() en v2.1): sin red, esto no
+      // debe tumbar el resto del arranque, solo dejar el aviso de "no se
+      // pudo conectar".
+      try {
+        var appM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+        var authM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+        var dbM = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+        fbApp = appM.initializeApp(FIREBASE_CONFIG);
+        fbAuth = authM.getAuth(fbApp);
+        fbDb = dbM.getDatabase(fbApp);
+        fbAuthM = authM;
+        fbDbM = { ref: dbM.ref, get: dbM.get, set: dbM.set, remove: dbM.remove, onValue: dbM.onValue };
+        try { await authM.setPersistence(fbAuth, authM.browserLocalPersistence); } catch (e) {}
+        authM.onAuthStateChanged(fbAuth, resolverAcceso);
+      } catch (e) {
+        renderAuthGate('error', null);
+      }
+    }
+
+    // Cola de escrituras offline (corrección 3, 2026-09-17): cada mutación
+    // se encola y se persiste en localStorage ANTES de intentar la red, así
+    // que cerrar la app en modo avión nunca la pierde -- se reintenta sola
+    // en el próximo evento de reconexión (.info/connected, más abajo).
+    function intentarVaciarCola(){
+      if (!fbDb) return;
+      colaEscrituras.slice().forEach(function(entrada){
+        var ref = fbDbM.ref(fbDb, V3_PATH + '/state/' + entrada.ruta);
+        var op = entrada.valor === null ? fbDbM.remove(ref) : fbDbM.set(ref, entrada.valor);
+        op.then(function(){
+          colaEscrituras = quitarDeCola(colaEscrituras, entrada.ruta);
+          storage.setJSON('colaEscrituras', colaEscrituras);
+        }).catch(function(){ /* sigue en la cola; se reintenta al reconectar */ });
+      });
+    }
+    function escribirRemoto(ruta, valor){
+      colaEscrituras = encolarEscritura(colaEscrituras, ruta, valor);
+      storage.setJSON('colaEscrituras', colaEscrituras);
+      intentarVaciarCola();
+    }
+
+    async function arrancarAppV3(){
+      try {
+        var itemsSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/items'));
+        var items = itemsSnap.val();
+        if (!items) { renderSinDatos(); return; }
+        var diasSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/dias'));
+        var guiaSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/guia'));
+        DATA = { items: items, dias: diasSnap.val() || [], guia: guiaSnap.val() || null };
+        HOTELES = DATA.items.filter(function(it){ return it.tipo === 'alojamiento' && it.estado === 'confirmado'; });
+
+        var hechoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'));
+        var estadoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/estadoOverrides'));
+        var hechoRemoto = hechoRemotoSnap.val() || {};
+        var estadoRemoto = estadoRemotoSnap.val() || {};
+
+        // Corrección 1, 2026-09-17: fusión "hecho gana" SOLO la primera vez
+        // que ESTE móvil se conecta tras la Fase 6 (flag jp27v3:migrado).
+        // Después, Firebase manda solo -- Deshacer borra la clave remota de
+        // verdad, nunca resucita desde una caché local vieja.
+        var seAcabaDeMigrar = storage.get('migrado') !== '1';
+        if (seAcabaDeMigrar) {
+          var hechoLocalViejo = storage.getJSON('hechoOverrides', {});
+          var estadoLocalViejo = storage.getJSON('estadoOverrides', {});
+          var hechoFundido = fusionInicialHecho(hechoLocalViejo, hechoRemoto);
+          var estadoFundido = fusionInicialEstado(estadoLocalViejo, estadoRemoto);
+          Object.keys(hechoFundido).forEach(function(clave){ if (hechoFundido[clave] === true) escribirRemoto('hechoOverrides/' + clave, true); });
+          Object.keys(estadoFundido).forEach(function(clave){ escribirRemoto('estadoOverrides/' + clave, estadoFundido[clave]); });
+          storage.set('migrado', '1');
+          overridesEnMemoria.hecho = hechoFundido;
+          overridesEnMemoria.estado = estadoFundido;
+        } else {
+          overridesEnMemoria.hecho = hechoRemoto;
+          overridesEnMemoria.estado = estadoRemoto;
+        }
+        storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
+        storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
+
+        // A partir de aquí, en vivo: si otro móvil marca/deshace algo, este
+        // se entera sin recargar. Ojo (bug real, encontrado al probarlo con
+        // un mock): justo tras migrar, las escrituras de la fusión pueden
+        // seguir en vuelo -- si el primer snapshot de este listener llega
+        // ANTES de que el servidor las confirme, pisaría con datos viejos
+        // la fusión que se acaba de calcular en memoria. Se ignora solo ESE
+        // primer snapshot cuando venimos de migrar; a partir del segundo,
+        // en vivo normal.
+        var ignorarPrimerSnapshotHecho = seAcabaDeMigrar, ignorarPrimerSnapshotEstado = seAcabaDeMigrar;
+        fbDbM.onValue(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'), function(snap){
+          if (ignorarPrimerSnapshotHecho) { ignorarPrimerSnapshotHecho = false; return; }
+          overridesEnMemoria.hecho = snap.val() || {};
+          storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
+          if (pantallaActualId) mostrarPantalla(pantallaActualId);
+        });
+        fbDbM.onValue(fbDbM.ref(fbDb, V3_PATH + '/state/estadoOverrides'), function(snap){
+          if (ignorarPrimerSnapshotEstado) { ignorarPrimerSnapshotEstado = false; return; }
+          overridesEnMemoria.estado = snap.val() || {};
+          storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
+          if (pantallaActualId) mostrarPantalla(pantallaActualId);
+        });
+        // Reconexión real (RTDB, estándar): vacía la cola offline sola.
+        fbDbM.onValue(fbDbM.ref(fbDb, '.info/connected'), function(snap){ if (snap.val()) intentarVaciarCola(); });
+
+        document.getElementById('authGate').style.display = 'none';
+        document.getElementById('appRoot').style.display = '';
         renderMenuDias();
         mostrarPantalla('pendientes');
-      })
-      .catch(function(){ DATA = null; renderSinDatos(); });
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js', { scope: './' });
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js', { scope: './' });
+      } catch (e) {
+        renderAuthGate('error', currentUser);
+      }
     }
+
+    initAuthV3();
   </script>
 </body>
 </html>
