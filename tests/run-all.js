@@ -34,8 +34,11 @@ if (live) {
   console.log('=== test-8c-gate.js (payload en vivo) ===');
   try { execFileSync('node', [path.join(__dirname, 'test-8c-gate.js'), appJs, live], { stdio: 'inherit' }); }
   catch (e) { failed++; }
+  console.log('=== test-v3-field-parity.js (payload en vivo) ===');
+  try { execFileSync('node', [path.join(__dirname, 'test-v3-field-parity.js'), appJs, live], { stdio: 'inherit' }); }
+  catch (e) { failed++; }
 } else {
-  console.log('(test-8c-gate.js omitido: pásale un volcado de Firebase para ejecutarlo)');
+  console.log('(test-8c-gate.js y test-v3-field-parity.js omitidos: pásale un volcado de Firebase para ejecutarlos)');
 }
 console.log(failed ? '\n' + failed + ' suite(s) con fallos' : '\nTODAS LAS SUITES PASAN');
 process.exit(failed ? 1 : 0);

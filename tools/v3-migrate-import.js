@@ -274,7 +274,18 @@ function transform(livePlaces, v2Baked){
       llegadaEstimadaTexto: checkin ? checkin.llegadaTexto : null,
       avisoLlegada: checkin ? debeAvisarLlegada(checkin) : false,
       huecoAntesCheckin: (checkin && checkin.huecoAntesCheckin) || null,
-      nota: null
+      // Fase 5b (auditoría de paridad, 2026-09-16): campos reales de la
+      // reserva que v3 venía descartando -- MISMOS nombres que en
+      // state.places (p.notes, p.price...), nunca renombrados, para que el
+      // test de paridad (tests/test-v3-field-parity.js) los compare 1:1 sin
+      // ambigüedad. `price`/`bookingRef`/`address`/`hotelPhone` son datos
+      // privados de ESTA reserva: viven aquí (import/v3-migrated-preview.json,
+      // gitignored) y en Firebase en la Fase 6, NUNCA en un fichero
+      // versionado -- verificado con git grep antes de cada commit.
+      notes: p.notes || null, web: p.web || null, price: p.price || null,
+      hotelArea: p.hotelArea || null, address: p.address || null,
+      hotelPhone: p.hotelPhone || null, bookingRef: p.bookingRef || null,
+      region: p.region || null
     });
     consumed.add(p.id);
   }
@@ -289,7 +300,11 @@ function transform(livePlaces, v2Baked){
       noche: null,
       fechaHora: { inicio: `${f.date}T${f.dep}`, fin: null, zona: zone },
       ubicacion: null,
-      acciones: [checkinByLeg.get(f.id)]
+      acciones: [checkinByLeg.get(f.id)],
+      // Fase 5b: resto de FLIGHTS (index.html raíz) que v3 no copiaba --
+      // mismos nombres que el array fuente.
+      flight: f.flight || null, arr: f.arr || null, airline: f.airline || null,
+      terminal: f.terminal || null, note: f.note || null
     });
   }
 
@@ -312,7 +327,14 @@ function transform(livePlaces, v2Baked){
       // note)`) se descartaba; la Ruta por días la necesita para la agenda.
       // `fin` solo se calcula cuando hay `time` Y `dur` reales — nunca se
       // inventa un final para una parada que no trajera duración.
-      const fin = (stop.time && stop.dur != null) ? `${day.date}T${addMinutosHHMM(stop.time, stop.dur)}` : null;
+      // Fase 5b, punto 4: si RUTA_DAYS no trae `dur` para esta parada pero el
+      // catálogo SÍ tiene una duración típica de visita (`place.dur`), se usa
+      // como respaldo -- marcada con `duracionOrientativa:true` para que la
+      // UI/el conteo la distingan de una duración real de la Ruta (nunca se
+      // presenta como dato cierto).
+      const finReal = (stop.time && stop.dur != null) ? `${day.date}T${addMinutosHHMM(stop.time, stop.dur)}` : null;
+      const duracionOrientativa = !finReal && !!stop.time && place.dur != null;
+      const fin = finReal || (duracionOrientativa ? `${day.date}T${addMinutosHHMM(stop.time, place.dur)}` : null);
       items.push({
         id: pid, nombre: place.name || pid, tipo: 'lugar',
         procedencia: provenanceOf(place), estado: 'propuesta',
@@ -320,7 +342,15 @@ function transform(livePlaces, v2Baked){
         fechaHora: { inicio: stop.time ? `${day.date}T${stop.time}` : day.date, fin, zona: 'Asia/Tokyo' },
         ubicacion: (place.lat != null && place.lng != null) ? { lat: place.lat, lng: place.lng } : null,
         acciones: [],
-        nota: stop.note || null
+        nota: stop.note || null,
+        duracionOrientativa: duracionOrientativa,
+        // Fase 5b (auditoría de paridad): resto de campos ricos del catálogo
+        // que v3 no copiaba -- mismos nombres que en state.places.
+        categoria: place.category || null,
+        notes: place.notes || null, web: place.web || null, video: place.video || null,
+        tip: place.tip || null, hours: place.hours || null, price: place.price || null,
+        yen: place.yen != null ? place.yen : null, dur: place.dur != null ? place.dur : null,
+        region: place.region || null
       });
       consumed.add(pid);
     }
@@ -344,7 +374,21 @@ function transform(livePlaces, v2Baked){
       // en algún punto de la app antes de llegar a Firebase). `ciudad` se
       // añade más abajo, tras derivar la ciudad de los 9 hoteles.
       categoria: p.category || null,
-      ciudad: null
+      ciudad: null,
+      // Fase 5b (auditoría de paridad, 2026-09-16): resto de campos ricos que
+      // el catálogo ya trae en state.places (foldCurated de v2.1 los deja ahí
+      // antes de exportar) y v3 venía descartando -- mismos nombres, nunca
+      // renombrados, para que tests/test-v3-field-parity.js los compare 1:1.
+      // hotelArea/address/hotelPhone/bookingRef también aquí (no solo en el
+      // bloque de hoteles CONFIRMADOS de arriba): los hoteles del viaje de
+      // Dani (categoría alojamiento, pero estado 'idea' -- nunca confirmados
+      // en NUESTRA app, ver tools/dani-data.json) también los traen.
+      notes: p.notes || null, web: p.web || null, video: p.video || null,
+      tip: p.tip || null, hours: p.hours || null, price: p.price || null,
+      yen: p.yen != null ? p.yen : null, dur: p.dur != null ? p.dur : null,
+      region: p.region || null,
+      hotelArea: p.hotelArea || null, address: p.address || null,
+      hotelPhone: p.hotelPhone || null, bookingRef: p.bookingRef || null
     });
     consumed.add(p.id);
   }
@@ -409,6 +453,29 @@ const { items: nivel3, aplicadas, omitidas } = applyManualMerges(nivel1, manualM
 // una fecha de apertura real y verificada (bug encontrado 2026-09-16: solo
 // los vuelos tenían acciones, por eso Pendientes solo enseñaba check-ins).
 const { items: canonical, noEncontrados: reglasNoEncontradas } = attachReservationRules(nivel3, RESERVATION_RULES);
+
+/* Fase 5b, punto 3: clasificación para el filtro de Reservas. Determinista a
+   partir de datos que el ítem YA tiene -- nada a mano por id, nada
+   inventado. `trenes`/`buses` reutiliza el MISMO criterio que ya usaba
+   modoIcono() en v3/index.html (nota contiene "bus", si no tren) en vez de
+   duplicar una lista aparte. `comidas` vs `experiencias`: por `categoria`
+   del catálogo (`comida` -> comidas, cualquier otra -> experiencias) --
+   solo se etiqueta un 'lugar' si de verdad tiene alguna acción necesaria
+   (si no, nunca aparecerá en Reservas y la etiqueta no tendría a qué
+   aplicarse). Ningún ítem quedó sin encajar en una categoría al probarlo
+   contra los datos reales (ver HANDOFF-V3.md) -- si algún día apareciera
+   uno que no encajase, esta función seguiría devolviendo 'experiencias' por
+   defecto para un 'lugar' con acción, nunca null en silencio. */
+function grupoReservaDe(it){
+  if (it.tipo === 'vuelo') return 'vuelos';
+  if (it.tipo === 'alojamiento') return 'hoteles';
+  if (it.tipo === 'trayecto') return /bus/i.test(it.nota || '') ? 'buses' : 'trenes';
+  if (it.tipo === 'lugar' && (it.acciones || []).some(a => a.necesaria)) {
+    return it.categoria === 'comida' ? 'comidas' : 'experiencias';
+  }
+  return null;
+}
+canonical.forEach(it => { it.grupoReserva = grupoReservaDe(it); });
 
 /* Fase 4, Decisión 2026-09-16 punto 1: las bases (noche/hotel) de la Ruta
    se derivan de los 9 hoteles CONFIRMADOS, nunca del campo `noche` de una

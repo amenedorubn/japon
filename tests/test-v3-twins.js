@@ -2,7 +2,7 @@
 // Decisión 2026-09-16). No depende de index.html: prueba directamente
 // v3/lib/twins.js.
 const path = require('path');
-const { normalizeNameForTwins, groupCanonical, residualDuplicates, isRejectedPair, filterRejected, applyManualMerges } =
+const { normalizeNameForTwins, groupCanonical, residualDuplicates, isRejectedPair, filterRejected, applyManualMerges, fuenteFromItem } =
   require(path.join(__dirname, '..', 'v3', 'lib', 'twins.js'));
 
 let fail = 0;
@@ -92,6 +92,39 @@ check('normalizeNameForTwins: nombres realmente distintos siguen distintos',
     out.length === 1 && out[0].estado === 'propuesta');
   check('estado ganador: hereda TAMBIÉN los demás campos del miembro ganador (noche)',
     out[0].noche === 'noche-2027-04-10');
+}
+
+// --- Fase 5b: fuentes[] conserva TODOS los campos de CADA miembro fusionado,
+//     no solo los del ganador (prioridad nº1 de PROJECT.md: no perder datos) ---
+{
+  const items = [
+    it('catalog_sensoji', { nombre: 'Templo Sensō-ji', procedencia: 'ours', estado: 'propuesta',
+      ubicacion: { lat: 35.7148, lng: 139.7967 }, notes: 'El templo más antiguo de Tokio', price: 'Gratis' }),
+    it('id_insta_sensoji', { nombre: 'Templo Sensō-ji', procedencia: 'instagram', estado: 'idea',
+      ubicacion: { lat: 35.7148, lng: 139.7967 }, video: 'https://www.instagram.com/reel/abc123/' })
+  ];
+  const { items: out } = groupCanonical(items, []);
+  check('fuentes[]: el grupo tiene 1 ítem canónico (fusión por nombre+distancia)', out.length === 1);
+  const canon = out[0];
+  check('fuentes[]: trae una entrada por cada miembro fusionado', canon.fuentes && canon.fuentes.length === 2);
+  const fCatalog = canon.fuentes.find(f => f.id === 'catalog_sensoji');
+  const fInsta = canon.fuentes.find(f => f.id === 'id_insta_sensoji');
+  check('fuentes[]: la fuente "ours" conserva su notes/price aunque no gane', fCatalog.notes === 'El templo más antiguo de Tokio' && fCatalog.price === 'Gratis');
+  check('fuentes[]: la fuente "instagram" conserva su video aunque pierda el estado', fInsta.video === 'https://www.instagram.com/reel/abc123/');
+  check('fuenteFromItem: nunca incluye un campo vacío/null (no ensucia la ficha)', fCatalog.video === undefined);
+}
+
+// --- Fase 5b: applyManualMerges (nivel 3) también acumula fuentes[] ---
+{
+  const items = [
+    it('catalog_x', { nombre: 'Catalog X', estado: 'propuesta', procedencia: 'ours', hours: '9:00-17:00' }),
+    it('maria_x', { nombre: 'X', estado: 'idea', procedencia: 'maria', tip: 'Ir por la mañana' })
+  ];
+  const { items: out } = applyManualMerges(items, [{ canonicalId: 'catalog_x', absorbe: ['maria_x'] }]);
+  const canon = out.find(x => x.id === 'catalog_x');
+  check('applyManualMerges: fuentes[] trae las dos procedencias', canon.fuentes.length === 2);
+  check('applyManualMerges: la fuente absorbida conserva su tip', canon.fuentes.find(f => f.id === 'maria_x').tip === 'Ir por la mañana');
+  check('applyManualMerges: la fuente ganadora conserva su hours', canon.fuentes.find(f => f.id === 'catalog_x').hours === '9:00-17:00');
 }
 
 // --- id canónico sin ancla: prioridad de procedencia, con desempate alfabético ---

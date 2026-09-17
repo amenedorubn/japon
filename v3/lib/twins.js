@@ -39,6 +39,25 @@ function normalizeNameForTwins(s){
 const ESTADO_PRIORITY = { confirmado: 3, propuesta: 2, idea: 1 };
 const DEFAULT_PROCEDENCIA_PRIORITY = ['ours', 'ai', 'dani', 'maria', 'instagram'];
 
+/* Fase 5b (auditoría de paridad, 2026-09-16): al fusionar 2+ ítems en uno
+   canónico, el ganador (más `estado`) se quedaba con SUS campos y el resto
+   solo sobrevivía como un id suelto en `idsOriginales` -- se perdían su nota,
+   su enlace de Instagram, su precio... Ahora cada miembro deja un registro
+   en `fuentes[]` con TODOS los campos ricos que aporte (no solo los
+   distintos del ganador: eso es una decisión de presentación de la ficha,
+   v3/index.html, nunca de los datos -- prioridad nº1 de PROJECT.md es no
+   perder nada). Misma lista de campos que copia tools/v3-migrate-import.js,
+   para los tres tipos de RouteItem que pueden llegar a fusionarse. */
+const FUENTE_FIELDS = [
+  'notes', 'web', 'video', 'tip', 'hours', 'price', 'yen', 'dur', 'region', 'categoria',
+  'hotelArea', 'address', 'hotelPhone', 'bookingRef', 'flight', 'arr', 'airline', 'terminal', 'note'
+];
+function fuenteFromItem(it){
+  const f = { id: it.id, procedencia: it.procedencia, nombre: it.nombre };
+  FUENTE_FIELDS.forEach(function(k){ if (it[k] != null && it[k] !== '') f[k] = it[k]; });
+  return f;
+}
+
 /* Union-find clásico por id, sin dependencias externas. */
 function makeUnionFind(ids){
   const parent = new Map(ids.map(id => [id, id]));
@@ -109,8 +128,9 @@ function groupCanonical(items, twinGroups, opts){
 
     const procedencias = [...new Set(memberItems.map(it => it.procedencia))].sort();
     const idsOriginales = memberItems.map(it => it.id);
+    const fuentes = memberItems.map(fuenteFromItem);
 
-    result.push(Object.assign({}, winningItem, { id: canonicalId, procedencias, idsOriginales }));
+    result.push(Object.assign({}, winningItem, { id: canonicalId, procedencias, idsOriginales, fuentes }));
     merges.push({ canonicalId, idsOriginales, procedencias, estado: winningItem.estado });
   }
 
@@ -171,14 +191,21 @@ function applyManualMerges(items, aprobadas){
 
     const procedencias = new Set(canonical.procedencias || [canonical.procedencia]);
     const idsOriginales = new Set(canonical.idsOriginales || [canonical.id]);
+    // Igual que en groupCanonical: cada miembro absorbido aporta su propia
+    // `fuentes[]` (o, si es un ítem suelto sin fusión previa, se construye la
+    // suya con fuenteFromItem) -- por id, para no duplicar si dos reglas
+    // manuales tocan el mismo id en corridas sucesivas (idempotente).
+    const fuentesMap = new Map((canonical.fuentes || [fuenteFromItem(canonical)]).map(f => [f.id, f]));
     for (const it of absorbedItems) {
       (it.procedencias || [it.procedencia]).forEach(p => procedencias.add(p));
       (it.idsOriginales || [it.id]).forEach(i => idsOriginales.add(i));
+      (it.fuentes || [fuenteFromItem(it)]).forEach(f => fuentesMap.set(f.id, f));
       consumed.add(it.id);
     }
     byId.set(canonical.id, Object.assign({}, canonical, {
       procedencias: [...procedencias].sort(),
-      idsOriginales: [...idsOriginales].sort()
+      idsOriginales: [...idsOriginales].sort(),
+      fuentes: [...fuentesMap.values()]
     }));
     aplicadas.push({ canonicalId: canonical.id, absorbidos: absorbedOk });
   }
@@ -194,6 +221,6 @@ if (typeof module !== 'undefined') {
   module.exports = {
     normalizeNameForTwins, groupCanonical, residualDuplicates,
     isRejectedPair, filterRejected, applyManualMerges,
-    ESTADO_PRIORITY, DEFAULT_PROCEDENCIA_PRIORITY
+    ESTADO_PRIORITY, DEFAULT_PROCEDENCIA_PRIORITY, FUENTE_FIELDS, fuenteFromItem
   };
 }

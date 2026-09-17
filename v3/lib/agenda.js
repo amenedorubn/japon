@@ -37,6 +37,13 @@ function iconoEstado(item){
 /* Conteo HONESTO por día, para el informe pedido (Bloque 3): nunca infiere
    ni inventa — cuenta exactamente lo que falta en los datos reales.
    - sinHora / sinDuracion: solo entre paradas ('lugar'), no trayectos.
+   - duracionOrientativa (Fase 5b, 2026-09-16): paradas cuya duración NO
+     viene de RUTA_DAYS (la Ruta real) sino del `dur` típico del catálogo
+     (tools/v3-migrate-import.js lo marca con `duracionOrientativa:true` al
+     construir el ítem) -- tienen fin calculado, así que NO cuentan como
+     "sin duración", pero tampoco son un dato tan firme como uno real: se
+     cuentan aparte para que la UI las marque "orientativa" en vez de
+     mezclarlas sin avisar.
    - desplazamientosSinDefinir: trayectos de ese día sin duración
      estructurada (TRANSPORT de v2 no da hora de fin — ver
      v3/lib/trayectos.js; ninguno la tiene hoy, y este conteo lo refleja tal
@@ -48,6 +55,7 @@ function contarSinDatos(itemsDelDia){
   return {
     sinHora: paradas.filter(it => !horaDe(it)).length,
     sinDuracion: paradas.filter(it => duracionMinutos(it) == null).length,
+    duracionOrientativa: paradas.filter(it => it.duracionOrientativa === true).length,
     desplazamientosSinDefinir: trayectos.filter(it => duracionMinutos(it) == null).length
   };
 }

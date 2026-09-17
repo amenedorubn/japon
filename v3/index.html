@@ -123,6 +123,12 @@
   /* --- Reservas (Fase 5) --- */
   .reservar-box{margin-top:8px; display:flex; flex-direction:column; gap:6px; max-width:100%;}
   .nota-input{font:inherit; font-size:.82rem; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); max-width:100%;}
+  /* Fase 5b, punto 3: mismo lenguaje visual que .dia-chip del menú (píldora
+     tappable, estado activo con el acento de la app) adaptado a una fila
+     que envuelve en vez de una lista vertical. */
+  .filtro-reservas{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 16px;}
+  .filtro-chip{font:inherit; font-size:.82rem; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; white-space:nowrap;}
+  .filtro-chip.activo{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;}
 
   /* --- Más: filtros + lista de Ideas (Fase 5) --- */
   .filtros{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px;}
@@ -144,6 +150,29 @@
   .phrases-table{width:100%; border-collapse:collapse; font-size:.88rem;}
   .phrases-table td{padding:6px 4px; border-bottom:1px dashed var(--line); overflow-wrap:anywhere; vertical-align:top;}
   .phrases-table td.romaji{color:var(--muted); font-size:.8rem;}
+
+  /* --- Ficha de detalle (Fase 5b): hoja inferior, un único sitio para toda
+     la app (Ruta/Reservas/Ideas/Pendientes) --- */
+  .titulo-ficha{cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px;}
+  #fichaOverlay{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:2500; opacity:0; pointer-events:none; transition:opacity .2s;}
+  #fichaOverlay.abierto{opacity:1; pointer-events:auto;}
+  #fichaSheet{
+    position:fixed; left:0; right:0; bottom:0; max-height:82vh; overflow-y:auto;
+    background:var(--card); z-index:2501; border-radius:16px 16px 0 0;
+    box-shadow:0 -4px 24px rgba(0,0,0,.25);
+    transform:translateY(100%); transition:transform .25s ease;
+    padding:16px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  #fichaSheet.abierto{transform:translateY(0);}
+  #btnCerrarFicha{position:sticky; top:0; float:right; background:var(--card); border:none; font-size:1.1rem; line-height:1; cursor:pointer; color:var(--muted); padding:6px 8px; border-radius:8px;}
+  .ficha h2{margin:4px 0 6px; font-size:1.15rem; padding-right:34px; overflow-wrap:anywhere;}
+  .ficha .badges{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; clear:both;}
+  .ficha .campo{margin:10px 0;}
+  .ficha .campo b{display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); margin-bottom:2px;}
+  .ficha .campo p{margin:0; font-size:.9rem; overflow-wrap:anywhere;}
+  .ficha .enlaces{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;}
+  .ficha .fuente-bloque{border-top:1px dashed var(--line); margin-top:14px; padding-top:10px;}
+  .ficha .fuente-bloque h4{margin:0 0 4px; font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;}
 </style>
 </head>
 <body>
@@ -169,6 +198,14 @@
 
   <main id="main"><p class="sub" style="padding:16px;">Cargando…</p></main>
   <div id="toastHost"></div>
+
+  <!-- Fase 5b, punto 2: ficha de detalle, hoja inferior compartida por Ruta,
+       Reservas, Ideas y Pendientes (un solo sitio que pintar/probar). -->
+  <div id="fichaOverlay"></div>
+  <div id="fichaSheet" class="ficha">
+    <button id="btnCerrarFicha" aria-label="Cerrar ficha">✕</button>
+    <div id="fichaContenido"></div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="./lib/timezone.js"></script>
@@ -405,7 +442,11 @@
             '<div class="hora-jst">' + formatFechaCorta(jstW[0]) + ' JST</div>';
         }
       }
-      return '<div class="card"><div class="card-left"><h3>' + esc(titulo) + '</h3>' + tramosHTML + badge + reglaHTML + recomendacionHTML +
+      // Fase 5b, punto 2: el título abre la ficha completa -- solo para un
+      // ítem suelto (un grupo de tramos, esGrupo, no tiene un único ítem al
+      // que apuntar sin ambigüedad).
+      var tituloHTML = esGrupo ? esc(titulo) : ('<span class="titulo-ficha" data-ficha="' + esc(entry.itemId) + '">' + esc(titulo) + '</span>');
+      return '<div class="card"><div class="card-left"><h3>' + tituloHTML + '</h3>' + tramosHTML + badge + reglaHTML + recomendacionHTML +
         '<div class="actions">' + linkHTML + accionHTML + rutaHTML + '</div>' + reservarHTML +
         '</div><div class="card-right">' + rightHTML + '</div></div>';
     }
@@ -424,6 +465,154 @@
           var card = btn.closest('.card');
           var input = card ? card.querySelector('.nota-input') : null;
           marcarReservado(itemId, accionId, input ? input.value.trim() : '');
+        });
+      });
+      // Fase 5b, punto 2: cualquier elemento marcado con data-ficha (bloque
+      // de un día, título de una tarjeta de Pendientes/Reservas, fila de
+      // Ideas...) abre la misma ficha de detalle completa.
+      container.querySelectorAll('[data-ficha]').forEach(function(el){
+        el.addEventListener('click', function(e){
+          e.stopPropagation();
+          abrirFicha(el.getAttribute('data-ficha'));
+        });
+      });
+    }
+
+    // ================================================================
+    // Ficha de detalle (Fase 5b, punto 2): TODOS los datos conservados de un
+    // ítem, sin importar desde qué pantalla se abrió. Campos vacíos no se
+    // muestran. Las procedencias fusionadas (fuentes[], v3/lib/twins.js)
+    // aportan su propio bloque debajo con lo que tengan DISTINTO del
+    // ganador -- si dos fuentes se contradicen (precio/horario distinto),
+    // se ven las dos, con su procedencia, nunca se elige una a ciegas.
+    // ================================================================
+    var PROCEDENCIA_LABELS_FICHA = { ours: 'Nuestra', dani: 'Dani', maria: 'María', instagram: 'Instagram', ai: 'IA' };
+    var ESTADO_BADGES_FICHA = { idea: '🧭 Idea', propuesta: '📝 Propuesta', confirmado: '✅ Confirmado' };
+    var CAMPO_LABELS_FICHA = { notes: 'Descripción', tip: 'Tip', hours: 'Horario', price: 'Precio', yen: 'Precio (¥)', dur: 'Duración (min)', region: 'Región' };
+
+    function campoHTML(label, valor){
+      if (valor == null || valor === '') return '';
+      return '<div class="campo"><b>' + esc(label) + '</b><p>' + esc(valor) + '</p></div>';
+    }
+    function mapsUrl(ubicacion){
+      return ubicacion ? 'https://www.google.com/maps/search/?api=1&query=' + ubicacion.lat + ',' + ubicacion.lng : null;
+    }
+    // Campos de una fuente fusionada que NO coinciden con el ganador (o que
+    // el ganador ni siquiera tiene) -- eso es justo lo que aporta de más.
+    function camposDistintos(fuente, item){
+      var campos = ['notes', 'tip', 'hours', 'price', 'yen', 'dur', 'region'];
+      var out = [];
+      campos.forEach(function(c){
+        var v = fuente[c];
+        if (v == null || v === '') return;
+        if (item[c] !== v) out.push({ campo: c, valor: v });
+      });
+      return out;
+    }
+
+    function fichaHTML(item){
+      var partes = [];
+      partes.push('<h2>' + esc(item.nombre) + '</h2>');
+
+      var badges = ['<span class="badge">' + (ESTADO_BADGES_FICHA[item.estado] || esc(item.estado)) + '</span>'];
+      (item.procedencias || [item.procedencia]).forEach(function(p){
+        badges.push('<span class="badge">' + esc(PROCEDENCIA_LABELS_FICHA[p] || p) + '</span>');
+      });
+      if (item.categoria) badges.push('<span class="badge">' + esc(CATEGORIA_LABELS[item.categoria] || item.categoria) + '</span>');
+      if (item.ciudad) badges.push('<span class="badge">' + esc(item.ciudad) + '</span>');
+      partes.push('<div class="badges">' + badges.join('') + '</div>');
+
+      partes.push(campoHTML('Descripción', item.notes));
+      partes.push(campoHTML('Nota de la Ruta', item.nota));
+      partes.push(campoHTML('Horario', item.hours));
+      partes.push(campoHTML('Precio', item.price || (item.yen != null ? '¥' + item.yen : null)));
+      partes.push(campoHTML('Duración' + (item.duracionOrientativa ? ' (orientativa, del catálogo -- no de la Ruta)' : ''),
+        item.dur != null ? item.dur + ' min' : null));
+      partes.push(campoHTML('Tip', item.tip));
+      if (item.region && item.region !== item.ciudad) partes.push(campoHTML('Región', item.region));
+
+      // Alojamiento
+      partes.push(campoHTML('Franja de check-in', item.franjaCheckIn ? (item.franjaCheckIn.desde + '–' + item.franjaCheckIn.hasta + (item.franjaCheckIn.confirmada ? '' : ' (por confirmar)')) : null));
+      partes.push(campoHTML('Llegada estimada', item.llegadaEstimadaTexto));
+      partes.push(campoHTML('Zona del hotel', item.hotelArea));
+      partes.push(campoHTML('Dirección', item.address));
+      partes.push(campoHTML('Teléfono', item.hotelPhone));
+      partes.push(campoHTML('Referencia de reserva', item.bookingRef));
+      partes.push(campoHTML('Nota de la reserva', item.notaReserva));
+
+      // Vuelo
+      partes.push(campoHTML('Vuelo', item.flight));
+      partes.push(campoHTML('Aerolínea', item.airline));
+      partes.push(campoHTML('Terminal', item.terminal));
+      partes.push(campoHTML('Hora de llegada', item.arr));
+      partes.push(campoHTML('Nota del vuelo', item.note));
+
+      var enlaces = [];
+      if (item.web) enlaces.push('<a class="btn" href="' + esc(item.web) + '" target="_blank" rel="noopener">🌐 Web</a>');
+      if (item.video) enlaces.push('<a class="btn" href="' + esc(item.video) + '" target="_blank" rel="noopener">📷 Instagram</a>');
+      var maps = mapsUrl(item.ubicacion);
+      if (maps) enlaces.push('<a class="btn" href="' + esc(maps) + '" target="_blank" rel="noopener">📍 Google Maps</a>');
+      if (enlaces.length) partes.push('<div class="enlaces">' + enlaces.join('') + '</div>');
+
+      // Acciones pendientes (reservas) -- reutiliza detalleAccionHTML tal
+      // cual (mismo dato, misma cuenta atrás que Pendientes/Reservas).
+      (item.acciones || []).forEach(function(accion){
+        if (!accion.necesaria) return;
+        partes.push('<div class="detalle abierto">' + detalleAccionHTML(item.id, accion) + '</div>');
+      });
+
+      // Fuentes fusionadas: un bloque por cada procedencia distinta del
+      // ganador, solo con lo que aporte DISTINTO (prioridad nº1 de
+      // PROJECT.md es no perder el dato, no repetirlo tres veces igual).
+      if (Array.isArray(item.fuentes) && item.fuentes.length > 1) {
+        item.fuentes.forEach(function(f){
+          if (f.id === item.id) return;
+          var distintos = camposDistintos(f, item);
+          var enlacesF = [];
+          if (f.web && f.web !== item.web) enlacesF.push('<a class="btn" href="' + esc(f.web) + '" target="_blank" rel="noopener">🌐 Web</a>');
+          if (f.video && f.video !== item.video) enlacesF.push('<a class="btn" href="' + esc(f.video) + '" target="_blank" rel="noopener">📷 Instagram</a>');
+          if (!distintos.length && !enlacesF.length) return;
+          var bloque = '<div class="fuente-bloque"><h4>' + esc(PROCEDENCIA_LABELS_FICHA[f.procedencia] || f.procedencia) +
+            ' aporta (' + esc(f.nombre) + ')</h4>';
+          distintos.forEach(function(d){ bloque += campoHTML(CAMPO_LABELS_FICHA[d.campo] || d.campo, d.valor); });
+          if (enlacesF.length) bloque += '<div class="enlaces">' + enlacesF.join('') + '</div>';
+          bloque += '</div>';
+          partes.push(bloque);
+        });
+      }
+
+      return partes.filter(Boolean).join('');
+    }
+
+    function abrirFicha(itemId){
+      var item = itemsConOverrides().find(function(it){ return it.id === itemId; });
+      if (!item) return;
+      document.getElementById('fichaContenido').innerHTML = fichaHTML(item);
+      document.getElementById('fichaOverlay').classList.add('abierto');
+      document.getElementById('fichaSheet').classList.add('abierto');
+      wireFichaActions(itemId);
+    }
+    function cerrarFicha(){
+      document.getElementById('fichaOverlay').classList.remove('abierto');
+      document.getElementById('fichaSheet').classList.remove('abierto');
+    }
+    document.getElementById('fichaOverlay').addEventListener('click', cerrarFicha);
+    document.getElementById('btnCerrarFicha').addEventListener('click', cerrarFicha);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarFicha(); });
+
+    // El botón "Marcar como hecho" de detalleAccionHTML vive dentro de la
+    // ficha (no de #main): se cablea aparte y, tras marcar, se refresca la
+    // ficha Y la pantalla de debajo (Pendientes/Reservas cambian de sección
+    // al momento).
+    function wireFichaActions(itemId){
+      var cont = document.getElementById('fichaContenido');
+      cont.querySelectorAll('[data-marcar-item]').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var id = btn.getAttribute('data-marcar-item'), accionId = btn.getAttribute('data-marcar-accion');
+          if (btn.getAttribute('data-marcar-hecho') === 'true') marcarHechoPar(id, accionId); else deshacerPar(id, accionId);
+          mostrarPantalla(pantallaActualId);
+          abrirFicha(itemId);
         });
       });
     }
@@ -470,7 +659,9 @@
     // ================================================================
     function modoIcono(item){
       if (item.tipo === 'vuelo') return '✈️';
-      if (item.nota && /bus/i.test(item.nota)) return '🚌';
+      // Fase 5b: mismo criterio que grupoReserva del importador, reutilizado
+      // en vez de duplicar la detección "bus" por nota.
+      if (item.grupoReserva === 'buses' || (item.nota && /bus/i.test(item.nota))) return '🚌';
       return '🚆';
     }
 
@@ -534,11 +725,13 @@
           detalleHTML += '<p>Llegada estimada al hotel: ' + esc(hotelHoy.llegadaEstimadaTexto) + '</p>';
         }
       }
-      var notaHTML = (esHoyCheckin && hotelHoy.nota) ? '<p>' + esc(hotelHoy.nota) + '</p>' : '';
+      // Fase 5b: `notes` (campo real de la reserva), no `nota` -- ese campo ya
+      // no existe en los ítems de hotel (ver tools/v3-migrate-import.js).
+      var notaHTML = (esHoyCheckin && hotelHoy.notes) ? '<p>' + esc(hotelHoy.notes) + '</p>' : '';
       var avisoHTML = (esHoyCheckin && hotelHoy.avisoLlegada) ? ' <span class="badge warn">⚠️ revisar llegada/franja</span>' : '';
       var huecoHTML = (esHoyCheckin && hotelHoy.huecoAntesCheckin) ? bloqueHueco(hotelHoy.huecoAntesCheckin) : '';
       return huecoHTML + '<div class="bloque hito"><div class="franja">' + (esHoyCheckin ? (hora ? '≈ ' + hora : 'sin hora') : '') + '</div>' +
-        '<div class="cuerpo"><h3>🏨 ' + esc(hotelHoy.nombre) + '</h3>' + detalleHTML + notaHTML +
+        '<div class="cuerpo"><h3>🏨 <span class="titulo-ficha" data-ficha="' + esc(hotelHoy.id) + '">' + esc(hotelHoy.nombre) + '</span></h3>' + detalleHTML + notaHTML +
         '<span class="badge">✅ confirmado</span>' + avisoHTML + '</div></div>';
     }
 
@@ -548,6 +741,10 @@
     function detalleAccionHTML(itemId, accion){
       var partes = [];
       if (accion.reglaApertura) partes.push('<p class="regla">' + esc(accion.reglaApertura) + '</p>');
+      // Fase 5b: mismo arreglo que cardHTML -- `recomendacion` es un campo
+      // distinto de `reglaApertura` (p.ej. la pregunta de maletas de Kioto,
+      // nivel 4 a propósito) y también hay que pintarlo aquí.
+      if (accion.recomendacion) partes.push('<p class="regla">' + esc(accion.recomendacion) + '</p>');
       var nivel = precisionLevel(accion);
       if (nivel === 1 || nivel === 2) {
         var utc = accionAbreEnUtc(accion);
@@ -574,17 +771,21 @@
       var esTransporte = item.tipo === 'trayecto' || item.tipo === 'vuelo';
       var hora = horaDe(item);
       var dur = duracionMinutos(item);
+      // Fase 5b, punto 4: una duración calculada con el `dur` del catálogo
+      // (no de RUTA_DAYS) se marca "orientativa", nunca como dato cierto.
+      var durHTML = dur != null
+        ? (item.duracionOrientativa ? '~' + dur + ' min (orientativa)' : dur + ' min')
+        : 'sin duración';
       var icono = iconoEstado(item);
-      var accion = (item.acciones || [])[0];
-      var detalleId = 'detalle-' + index;
       var tituloExtra = esTransporte ? (modoIcono(item) + ' ' + item.nombre) : ('<span class="num">' + numParada + '</span>' + item.nombre);
-      return '<div class="bloque' + (esTransporte ? ' transporte' : '') + (accion ? ' clicable' : '') + '"' +
-        (accion ? ' data-detalle="' + detalleId + '"' : '') + '>' +
-        '<div class="franja">' + (hora || (esTransporte ? '' : 'sin hora')) + '<span class="dur">' + (dur != null ? dur + ' min' : 'sin duración') + '</span></div>' +
+      // Fase 5b, punto 2: tocar CUALQUIER parada abre su ficha completa (ya
+      // no un acordeón que solo enseñaba la acción de reserva -- la ficha
+      // incluye eso y todo lo demás).
+      return '<div class="bloque' + (esTransporte ? ' transporte' : '') + ' clicable" data-ficha="' + esc(item.id) + '">' +
+        '<div class="franja">' + (hora || (esTransporte ? '' : 'sin hora')) + '<span class="dur">' + durHTML + '</span></div>' +
         '<div class="cuerpo"><h3>' + tituloExtra + '</h3>' +
         (item.nota ? '<p>' + esc(item.nota) + '</p>' : '') +
         '<span class="badge' + (icono === '🎫' ? ' tag' : '') + '">' + icono + ' ' + (icono === '🎫' ? 'requiere reserva' : (item.estado === 'confirmado' ? 'confirmado' : 'propuesta')) + '</span>' +
-        (accion ? '<div class="detalle" id="' + detalleId + '">' + detalleAccionHTML(item.id, accion) + '</div>' : '') +
         '</div></div>';
     }
 
@@ -631,7 +832,8 @@
       var notaHTML = '';
       if (conteo.sinHora || conteo.sinDuracion || desplazamientosSinDefinir) {
         notaHTML = '<div class="nota-final">Este día: ' + conteo.sinHora + ' actividad(es) sin hora, ' +
-          conteo.sinDuracion + ' sin duración, ' + desplazamientosSinDefinir + ' desplazamiento(s) sin definir.</div>';
+          conteo.sinDuracion + ' sin duración, ' + conteo.duracionOrientativa + ' con duración orientativa, ' +
+          desplazamientosSinDefinir + ' desplazamiento(s) sin definir.</div>';
       }
 
       main.innerHTML =
@@ -641,20 +843,7 @@
         '<div class="agenda">' + salidaHTML + (bloquesHTML || (salidaHTML || llegadaHTML ? '' : '<p class="empty">Sin paradas este día.</p>')) + llegadaHTML + '</div>' +
         notaHTML;
 
-      main.querySelectorAll('[data-detalle]').forEach(function(el){
-        el.addEventListener('click', function(e){
-          if (e.target.closest('[data-marcar-item]')) return;
-          document.getElementById(el.getAttribute('data-detalle')).classList.toggle('abierto');
-        });
-      });
-      main.querySelectorAll('[data-marcar-item]').forEach(function(btn){
-        btn.addEventListener('click', function(e){
-          e.stopPropagation();
-          var itemId = btn.getAttribute('data-marcar-item'), accionId = btn.getAttribute('data-marcar-accion');
-          if (btn.getAttribute('data-marcar-hecho') === 'true') marcarHechoPar(itemId, accionId); else deshacerPar(itemId, accionId);
-          renderDiaScreen(fecha);
-        });
-      });
+      wireCardActions(main);
 
       // Mapa (corrección 2026-09-16): pin 0 = salida (hotel de anoche, o el
       // aeropuerto el 9-abr), pines numerados = paradas reales en el MISMO
@@ -715,10 +904,20 @@
       var manualHTML = item.estadoManual
         ? '<span class="badge">🖊️ marcado a mano</span> <button class="link" data-deshacer-reservado="' + esc(item.id) + '" data-deshacer-accion="' + esc(item.accionReservadaId || '') + '">Deshacer</button>'
         : '';
-      return '<div class="card"><div class="card-left"><h3>' + icono + ' ' + esc(item.nombre) + '</h3>' + notaHTML +
+      return '<div class="card"><div class="card-left"><h3>' + icono + ' <span class="titulo-ficha" data-ficha="' + esc(item.id) + '">' + esc(item.nombre) + '</span></h3>' + notaHTML +
         '<span class="badge">✅ confirmado</span> ' + manualHTML +
         '<div class="actions">' + rutaHTML + '</div></div></div>';
     }
+
+    // Fase 5b, punto 3: filtro de Reservas por tipo de reserva. Clasificado
+    // en el importador (grupoReserva, tools/v3-migrate-import.js) -- aquí
+    // solo se pinta y se filtra, nunca se reclasifica a mano.
+    var reservasFiltro = 'todo';
+    var GRUPO_RESERVA_LABELS = {
+      vuelos: '✈️ Vuelos', hoteles: '🏨 Hoteles', trenes: '🚆 Trenes', buses: '🚌 Buses',
+      experiencias: '🎟️ Experiencias', comidas: '🍜 Comidas'
+    };
+    var GRUPO_RESERVA_ORDEN = ['vuelos', 'hoteles', 'trenes', 'buses', 'experiencias', 'comidas'];
 
     function renderReservasScreen(){
       if (!DATA) { renderSinDatos(); return; }
@@ -726,30 +925,54 @@
       var byId = {};
       items.forEach(function(it){ byId[it.id] = it; });
 
-      var confirmados = items.filter(function(it){ return it.estado === 'confirmado'; })
+      var confirmadosTodos = items.filter(function(it){ return it.estado === 'confirmado'; })
         .sort(function(a, b){ var fa = fechaDe(a) || '', fb = fechaDe(b) || ''; return fa < fb ? -1 : (fa > fb ? 1 : 0); });
 
       var view = pendientesView(items, Date.now());
       entryRegistry = [];
-      var porReservar = registerEntries(agruparPorApertura(view.conFecha).concat(view.reservarYa));
-      var vigilar = registerEntries(view.vigilar);
+      var porReservarTodos = registerEntries(agruparPorApertura(view.conFecha).concat(view.reservarYa));
+      var vigilarTodos = registerEntries(view.vigilar);
 
-      var html = '';
+      // Contador por categoría (punto 3): sobre TODO lo que participa en
+      // Reservas, sin filtrar todavía -- así el desplegable siempre muestra
+      // cuánto hay de cada tipo, no solo lo visible ahora mismo.
+      var conteoPorGrupo = {};
+      var sumarGrupo = function(grupo){ if (grupo) conteoPorGrupo[grupo] = (conteoPorGrupo[grupo] || 0) + 1; };
+      confirmadosTodos.forEach(function(it){ sumarGrupo(it.grupoReserva); });
+      porReservarTodos.concat(vigilarTodos).forEach(function(e){ var it = byId[e.itemId]; if (it) sumarGrupo(it.grupoReserva); });
+
+      var coincide = function(grupo){ return reservasFiltro === 'todo' || grupo === reservasFiltro; };
+      var confirmados = confirmadosTodos.filter(function(it){ return coincide(it.grupoReserva); });
+      var porReservar = porReservarTodos.filter(function(e){ var it = byId[e.itemId]; return it && coincide(it.grupoReserva); });
+      var vigilar = vigilarTodos.filter(function(e){ var it = byId[e.itemId]; return it && coincide(it.grupoReserva); });
+
+      var totalTodo = confirmadosTodos.length + porReservarTodos.length + vigilarTodos.length;
+      var chips = ['<button class="filtro-chip' + (reservasFiltro === 'todo' ? ' activo' : '') + '" data-filtro-reserva="todo">Todo (' + totalTodo + ')</button>'];
+      GRUPO_RESERVA_ORDEN.forEach(function(grupo){
+        var n = conteoPorGrupo[grupo] || 0;
+        chips.push('<button class="filtro-chip' + (reservasFiltro === grupo ? ' activo' : '') + '" data-filtro-reserva="' + grupo + '">' +
+          esc(GRUPO_RESERVA_LABELS[grupo]) + ' (' + n + ')</button>');
+      });
+
+      var html = '<div class="filtro-reservas">' + chips.join('') + '</div>';
       html += '<section><h2>✅ Confirmado (' + confirmados.length + ')</h2>' +
-        (confirmados.length ? confirmados.map(function(it){ return confirmadoCardHTML(it, fechaDe(it)); }).join('') : '<p class="empty">Nada confirmado todavía.</p>') +
+        (confirmados.length ? confirmados.map(function(it){ return confirmadoCardHTML(it, fechaDe(it)); }).join('') : '<p class="empty">Nada confirmado con este filtro.</p>') +
         '</section>';
       html += '<section><h2>🎫 Por reservar (' + porReservar.length + ')</h2>' +
-        (porReservar.length ? porReservar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]), mostrarReservar: true }); }).join('') : '<p class="empty">Nada por reservar.</p>') +
+        (porReservar.length ? porReservar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]), mostrarReservar: true }); }).join('') : '<p class="empty">Nada por reservar con este filtro.</p>') +
         '</section>';
-      if (vigilar.length) {
+      if (vigilarTodos.length) {
         html += '<section><h2>👀 Vigilar apertura (' + vigilar.length + ')</h2>' +
-          vigilar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]) }); }).join('') +
+          (vigilar.length ? vigilar.map(function(e){ return cardHTML(e, { fechaRuta: fechaDe(byId[e.itemId]) }); }).join('') : '<p class="empty">Nada con este filtro.</p>') +
           '</section>';
       }
       main.innerHTML = html;
       main.querySelectorAll('button[data-idx]').forEach(function(btn){ btn.addEventListener('click', function(){ marcarHecho(entryRegistry[Number(btn.getAttribute('data-idx'))]); }); });
       main.querySelectorAll('button[data-deshacer-reservado]').forEach(function(btn){
         btn.addEventListener('click', function(){ deshacerReservado(btn.getAttribute('data-deshacer-reservado'), btn.getAttribute('data-deshacer-accion')); });
+      });
+      main.querySelectorAll('button[data-filtro-reserva]').forEach(function(btn){
+        btn.addEventListener('click', function(){ reservasFiltro = btn.getAttribute('data-filtro-reserva'); renderReservasScreen(); });
       });
       wireCardActions(main);
     }
@@ -799,7 +1022,7 @@
     function ideaRowHTML(it){
       var cat = CATEGORIA_LABELS[it.categoria] || (it.categoria || 'Sin categoría');
       var proc = procedenciasDe(it).map(function(p){ return PROCEDENCIA_LABELS[p] || p; }).join(' + ');
-      return '<div class="idea-row"><span class="idea-nombre">' + esc(it.nombre) + '</span>' +
+      return '<div class="idea-row clicable" data-ficha="' + esc(it.id) + '"><span class="idea-nombre">' + esc(it.nombre) + '</span>' +
         '<span class="idea-meta">' + esc(cat) + (it.ciudad ? ' · ' + esc(it.ciudad) : '') + ' · ' + esc(proc) + '</span></div>';
     }
 
@@ -843,6 +1066,7 @@
       document.getElementById('filtroProcedencia').addEventListener('change', function(e){ masFiltro.procedencia = e.target.value; renderMasScreen(); });
       document.getElementById('filtroCategoria').addEventListener('change', function(e){ masFiltro.categoria = e.target.value; renderMasScreen(); });
       document.getElementById('filtroCiudad').addEventListener('change', function(e){ masFiltro.ciudad = e.target.value; renderMasScreen(); });
+      wireCardActions(main);
     }
 
     // ================================================================

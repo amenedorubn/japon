@@ -34,15 +34,17 @@ check('iconoEstado: 🟡 para propuesta sin pendientes', iconoEstado(parada({ es
     parada({ id: 'a', fechaHora: { inicio: '2027-04-12T09:00', fin: '2027-04-12T09:20' } }), // hora+duración OK
     parada({ id: 'b', fechaHora: { inicio: '2027-04-12', fin: null } }), // sin hora (y por tanto sin duración)
     parada({ id: 'c', fechaHora: { inicio: '2027-04-12T10:00', fin: null } }), // con hora, sin duración
+    parada({ id: 'd', duracionOrientativa: true, fechaHora: { inicio: '2027-04-12T11:00', fin: '2027-04-12T12:00' } }), // duración orientativa (Fase 5b)
     parada({ id: 'trayecto-1', tipo: 'trayecto', fechaHora: { inicio: '2027-04-12', fin: null } }) // trayecto sin duración
   ];
   const conteo = contarSinDatos(dia);
   check('contarSinDatos: sinHora cuenta solo paradas sin hora (1, no el trayecto)', conteo.sinHora === 1);
-  check('contarSinDatos: sinDuracion cuenta paradas sin fin (b y c = 2)', conteo.sinDuracion === 2);
+  check('contarSinDatos: sinDuracion cuenta paradas sin fin (b y c = 2, NO d -- esa sí tiene fin)', conteo.sinDuracion === 2);
+  check('contarSinDatos: duracionOrientativa cuenta solo d (1)', conteo.duracionOrientativa === 1);
   check('contarSinDatos: desplazamientosSinDefinir cuenta trayectos sin duración (1)', conteo.desplazamientosSinDefinir === 1);
 }
 check('contarSinDatos: un día vacío da todo a 0, no revienta',
-  JSON.stringify(contarSinDatos([])) === JSON.stringify({ sinHora: 0, sinDuracion: 0, desplazamientosSinDefinir: 0 }));
+  JSON.stringify(contarSinDatos([])) === JSON.stringify({ sinHora: 0, sinDuracion: 0, duracionOrientativa: 0, desplazamientosSinDefinir: 0 }));
 
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);
