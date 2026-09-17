@@ -145,5 +145,30 @@ if (faltantes.length) {
   if (filtrados.length) filtrados.forEach(f => console.log('  FUGA: ' + f));
 }
 
+// Privacidad, punto 3 del encargo 2026-09-17: v3 no debe versionar NUNCA un
+// enlace a una carpeta de Drive/Dropbox (confirmaciones de reserva) ni,
+// llegado el caso, un dato de reserva con pinta de tal (referencia con
+// dígitos+letras, o precio en €) -- por patrón, no solo por el valor
+// concreto de HOY, para detectar uno nuevo que aparezca mañana. Alcance
+// EXACTO pedido: solo `v3/` y `tools/` (no todo HANDOFF-V3.md/tests-v3
+// como el chequeo de arriba, que es más amplio a propósito).
+{
+  const { execSync } = require('child_process');
+  let archivosV3Tools = [];
+  try {
+    archivosV3Tools = execSync('git ls-files', { cwd: root, encoding: 'utf8' }).split('\n')
+      .filter(f => f && (f === 'v3' || f.startsWith('v3/') || f.startsWith('tools/')));
+  } catch (e) { /* sin git disponible: se omite */ }
+  const PATRON_ENLACE_PRIVADO = /drive\.google\.com|dropbox\.com/i;
+  const fugasEnlace = [];
+  archivosV3Tools.forEach(file => {
+    let contenido;
+    try { contenido = fs.readFileSync(path.join(root, file), 'utf8'); } catch (e) { return; }
+    if (PATRON_ENLACE_PRIVADO.test(contenido)) fugasEnlace.push(file);
+  });
+  check(`privacidad: ningún enlace a Drive/Dropbox en v3/ ni tools/ (${archivosV3Tools.length} ficheros comprobados)`, fugasEnlace.length === 0);
+  if (fugasEnlace.length) fugasEnlace.forEach(f => console.log('  FUGA: enlace privado en ' + f));
+}
+
 console.log(fail ? '\n' + fail + ' FALLO(S)' : '\nALL PASS');
 process.exit(fail ? 1 : 0);

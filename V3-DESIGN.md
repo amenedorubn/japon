@@ -413,6 +413,17 @@ Estado con icono+texto siempre (nunca solo color, ya es requisito explícito): �
 7. **Modo oscuro real + offline (SW de producción, no el de desarrollo actual) + pulido visual**
    con las Skills de diseño del proyecto. ~2–3 días.
 8. **Gate de paridad con datos reales + pruebas de los 3 móviles + corte final.** ~1–2 días.
+   **Tarea añadida (2026-09-17, hallazgo de auditoría de privacidad de la Fase 5b):** antes del
+   corte, eliminar de los ficheros VERSIONADOS de v2.1 raíz (`index.html`, `index-pre-source.html`,
+   `PROJECT.md`, y los ficheros de Dani bajo `tools/`/`import/`/`tests/`) los precios de nuestros 9
+   hoteles, el `bookingRef`/dirección/teléfono de las reservas (nuestras y las del viaje pasado de
+   Dani) y el enlace a la carpeta de Google Drive de confirmaciones que hoy vive en `index.html`
+   raíz (el usuario ya restringió el acceso a esa carpeta desde Drive el 2026-09-17, mientras tanto
+   el enlace se queda donde está) — todo eso pasa a vivir SOLO en Firebase (privado, ya con Auth
+   desplegado en la Fase 6), nunca en un fichero público de GitHub Pages. **Sin reescribir
+   historial de git** (los commits antiguos seguirían teniendo esos valores; el objetivo es que
+   HEAD deje de tenerlos, no borrar el pasado). Detalle de qué fichero/commit introdujo cada dato,
+   ver el hallazgo de la sesión que cerró la Fase 5b (2026-09-17).
 
 Total aproximado: 2–3 semanas de trabajo efectivo, sin contar el tiempo de tu revisión entre fases
 (cada fase termina en su propio commit y espera luz verde, igual que en v2).
