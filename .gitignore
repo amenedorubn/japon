@@ -20,3 +20,9 @@ import/v3-duplicates-report.json
 # datos de su anfitriona. tools/maria-xlsx-import.js lo lee en local y hornea
 # SOLO lo publicable (fechas, ciudades, traslados, actividades, hoteles+mapa).
 planningjapon.xlsx
+
+# Reglas RTDB exportadas/preparadas a mano al desplegar la Fase 6
+# (2026-09-17): son un volcado de trabajo de la consola de Firebase, no la
+# fuente versionada (esa es database.rules.json). Nunca se comitean.
+reglas-publicadas.json
+reglas-para-publicar.json

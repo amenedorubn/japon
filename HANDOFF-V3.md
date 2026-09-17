@@ -4,9 +4,77 @@ Traspaso de sesión (poca cuota restante, se abre chat nuevo). Léelo entero ant
 
 ## 1. Estado actual
 
-**Último commit:** `7e8dca3` — "v3: Fase 5 - Reservas (3 grupos + marcar como reservado) y Mas (Ideas + Guia)" (pusheado a `origin/main`).
+**Último commit:** por hacer en esta sesión — fix de `v3/sw.js` (filtro de esquema en el
+`fetch` listener, ver §3). Antes de eso, `a3dc65e` — "v3: Fase 6 - login Google + sync Firebase
+(viaje-japon-v3), sin desplegar reglas" (pusheado a `origin/main`).
+
+**Fase 6 DESPLEGADA (2026-09-17, fuera de git — consola de Firebase):** el usuario publicó
+`reglas-para-publicar.json` (el diff de §5/V3-DESIGN.md §H aplicado tal cual sobre las reglas
+reales exportadas de la consola, comparadas antes byte a byte con `database.rules.json` del
+repo — idénticas, sin sorpresas) y sembró `proyectos/viaje-japon-v3/state` (349 items, incluidos
+los campos privados — price/bookingRef/address/hotelPhone — ya en esta siembra, corrección 2 del
+usuario, no esperan a la Fase 8) desde su propia sesión autenticada, siguiendo los pasos que se
+le dieron en el chat (regenerar `import/v3-migrated-preview.json`, servir local, login, pegar en
+la consola del navegador). v2.1 sigue funcionando. v3 carga datos reales con login. Dominios
+autorizados de Auth confirmados por el usuario (`amenedorubn.github.io` y `localhost`, ya
+estaban). **Pendiente: el usuario todavía no ha reportado el resultado de la prueba con 2
+dispositivos (sync en vivo, modo avión, Deshacer) — no dar la Fase 6 por verificada de extremo a
+extremo hasta que llegue ese resultado.**
 
 Historial reciente relevante (más nuevo primero):
+- *(sin commitear todavía)* — fix `v3/sw.js`: el listener `fetch` intentaba `cache.put()` con
+  peticiones `chrome-extension://` (error real visto por el usuario al recargar con alguna
+  extensión de Chrome instalada: "Request scheme 'chrome-extension' is unsupported") — ahora
+  `esCacheable(url)` filtra a solo `http/https` del propio origen o `unpkg.com` (la única CDN que
+  usa v3 hoy, Leaflet); lo demás se ignora del todo (sin `respondWith`, red directa, mismo patrón
+  ya usado para `/import/`). `sw.js` raíz de v2.1 sin tocar.
+- `a3dc65e` — **Fase 6 (código): login Google + sync Firebase.** Puerta de acceso reutiliza el
+  nodo de aprobación de v2.1 (`proyectos/viaje-japon/access`, solo lectura, sin nodo `access`
+  propio de v3 — decisión ya cerrada en V3-DESIGN.md §H). Nuevo `v3/lib/sync.js` (puro, testeado
+  sin Firebase real): `fusionInicialHecho`/`fusionInicialEstado` (fusión "hecho gana" de UN SOLO
+  USO por móvil, flag `jp27v3:migrado` — corrección 1 del usuario: después de esa fusión, Firebase
+  manda solo y Deshacer hace un `remove` real, nunca puede resucitar desde caché local vieja) y
+  `encolarEscritura`/`quitarDeCola` (cola de escrituras offline por RUTA, persistida en
+  localStorage ANTES de intentar la red — corrección 3: sobrevive a cerrar la app en modo avión,
+  se vacía sola al reconectar vía `.info/connected`). `marcarHechoPar`/`deshacerPar`/
+  `marcarReservado`/`deshacerReservado` reescritos para pasar por esa cola; `itemsConOverrides()`
+  lee de `overridesEnMemoria` (reflejo en vivo), ya no de `localStorage` directo. **Bug real
+  encontrado probando con un mock de Firebase** (documentado, no inventado): el primer snapshot
+  del listener en vivo podía llegar antes de que las escrituras de la fusión inicial se
+  confirmasen, pisándola con datos viejos — arreglado ignorando ese primer snapshot justo tras
+  migrar (`ignorarPrimerSnapshotHecho`/`Estado`). NO se desplegó ninguna regla ni se sembró ningún
+  dato en ese commit (eso lo hizo el usuario después, ver arriba). Diff de reglas mostrado dos
+  veces (al proponerlo y justo antes de desplegar), sin cambios entre una vez y otra.
+- `387a4b6` — auditoría de reservas de comida: de 22 RouteItem de categoría 'comida' en la Ruta,
+  solo K36 (Kioto) y Kitan Hibiki (Osaka) recomiendan reserva con fuente OFICIAL verificada
+  (ninguna publica ventana de antelación → acción Pendientes nivel 4 "cuando puedas"); el resto
+  son mercados/zonas de puestos (no aplica) o sitios sin fuente oficial clara ("sin confirmar", no
+  inventado). La cena de cumpleaños del 19-abr en Hiroshima nunca tuvo restaurante en los datos
+  reales (solo una nota condicional en el CHECKLIST/BOOKINGS de v2.1, sin pid) — Okonomimura (el
+  plan que sí está en `RUTA_DAYS` ese día, con nota propia que ya dice "CENA DE CUMPLEAÑOS") se
+  queda intacto; se añadió un ítem sintético curado a mano (`decision-cena-cumple-19abr`, sin
+  ubicación, nunca se hace pasar por una parada real) con una acción sin fecha "decidir".
+- `7f58ad5` — docs + privacidad: `V3-DESIGN.md` Fase 8 suma la tarea de sacar de los ficheros
+  versionados de v2.1 raíz (precios de hoteles, bookingRef, direcciones, teléfonos, el enlace de
+  Drive) y moverlos a Firebase, sin reescribir historial de git. Nuevo gate en
+  `tests/test-v3-field-parity.js`: falla si aparece un enlace a `drive.google.com`/`dropbox.com`
+  en cualquier fichero versionado bajo `v3/` o `tools/` (por patrón, no solo por el valor de hoy).
+- `2a3397f` — **Fase 5b cerrada**: paridad de campos (auditoría → arreglo). `notes/web/video/tip/
+  hours/price/yen/dur/region` (lugares) + `hotelArea/address/hotelPhone/bookingRef` (hoteles) +
+  `flight/arr/airline/terminal/note` (vuelos) copiados sin renombrar — v2.1 (`foldCurated`) ya los
+  tenía en `state.places`/`FLIGHTS`, era un bug de mapeo del importador, no falta de datos en la
+  fuente. `v3/lib/twins.js`: `groupCanonical`/`applyManualMerges` ahora acumulan `fuentes[]` con
+  TODOS los campos de cada procedencia fusionada (antes solo sobrevivía el id de la no ganadora).
+  Ficha de detalle nueva en `v3/index.html` (hoja inferior, un solo sitio reutilizado desde Ruta/
+  Reservas/Ideas/Pendientes vía `data-ficha`): descripción, horario, precio, tip, enlaces (web/
+  Instagram/Google Maps) como botones, y un bloque por procedencia fusionada con lo que aporte
+  DISTINTO de la ganadora (contradicciones se muestran las dos, nunca se elige una a ciegas).
+  `duracionOrientativa` cuando RUTA_DAYS no trae `dur` pero el catálogo sí (marcada, nunca dato
+  cierto). Filtro de Reservas por 6 categorías (`grupoReserva`, clasificado en el importador) +
+  contador. Nuevo test permanente `tests/test-v3-field-parity.js` (gate con `live.json`, mismo
+  patrón que el 8c): 1519+19 valores comprobados, 0 faltan; incluye chequeo de que
+  `bookingRef`/`price`/`hotelPhone`/`address` de hoteles reales no aparezcan en ningún fichero
+  versionado de la superficie v3.
 - `7e8dca3` — **Fase 5 cerrada** (Reservas + Más). Reservas: 3 grupos —
   ✅ Confirmado (13: 9 hoteles + 4 vuelos), 🎫 Por reservar (reutiliza `pendientesView` tal
   cual, sin lógica propia), 👀 Vigilar apertura — cada tarjeta con enlace "Ver en la Ruta →
@@ -45,7 +113,7 @@ Historial reciente relevante (más nuevo primero):
 - `45c8bb0` — **Bloque 2**: mapa solo vive dentro de la pantalla de un día, menú siempre por encima (z-index).
 - `3abd3b8` — **Bloque 1**: fix de v2.1 (único cambio autorizado en `index.html` raíz — CARTO exigía API key, cambio a Esri).
 
-**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa/check-in real) — cerrada en `f6b3234` · Fase 5 (Reservas + Más) — **cerrada en `7e8dca3`, probada en el móvil real**.
+**Fases completadas:** Fase 0 (freeze v2.1, `/v3/` placeholder) · Fase 1 (modelo de datos/timezone) · Fase 2 (importador + dedupe 3 niveles) · Fase 3 (Pendientes) · Fase 4 (Ruta: bases/trayectos/mapa/check-in real) — cerrada en `f6b3234` · Fase 5 (Reservas + Más) — cerrada en `7e8dca3` · Fase 5b (paridad de campos + ficha de detalle + filtro Reservas + auditoría de comidas) — cerrada en `2a3397f`/`387a4b6` · **Fase 6 (login + sync Firebase) — código en `a3dc65e`, DESPLEGADA y sembrada por el usuario el 2026-09-17 (reglas publicadas, 349 items, v2.1 sigue funcionando), pendiente confirmar la prueba con 2 dispositivos.**
 
 **URLs:**
 - GitHub Pages (producción, v2.1): `https://amenedorubn.github.io/japon/`
@@ -75,7 +143,7 @@ Imprime la IP de Wi-Fi al arrancar; desde el móvil: `http://<esa-ip>:8734/v3/in
 - **Nunca añadas el trailer `Co-Authored-By` a ningún commit** (regla explícita del usuario, repetida varias veces esta sesión). Verificar el mensaje del commit antes de hacer push si hay dudas.
 - **v2.1 (`index.html` y `sw.js` de la raíz del repo) es intocable salvo autorización explícita**, y aun así "cambio mínimo": el único tocado hasta ahora fue el Bloque 1 (URL de tiles del mapa, CARTO→Esri, porque CARTO empezó a exigir API key en producción). Verificar siempre con `git diff --stat -- index.html sw.js` que sigue vacío antes de cada commit de v3.
 - **El repo es PÚBLICO (GitHub Pages).** Nunca versionar datos reales de la reserva/viaje: `live.json`, `import/v3-migrated-preview.json` e `import/v3-duplicates-report.json` están en `.gitignore` a propósito. `import/v3-manual-merges.json` SÍ se versiona (son solo decisiones de fusión, no datos privados).
-- **`database.rules.json`**: cualquier cambio se muestra como diff y NO se despliega sin OK explícito (hay uno documentado-pero-no-aplicado en `V3-DESIGN.md` para la futura Fase 6).
+- **`database.rules.json`**: cualquier cambio se muestra como diff y NO se despliega sin OK explícito. El diff de la Fase 6 (`viaje-japon-v3`, en `V3-DESIGN.md` §H) ya está publicado en Firebase desde el 2026-09-17 — si hiciera falta TOCARLO de nuevo (no solo repetirlo), sigue la misma regla: mostrar el diff nuevo y esperar OK antes de desplegar.
 - **Tests + smoke HTTP obligatorios antes de cada commit** (ver arriba). Si algo toca plantillas/lógica compartida, actualizar los tests en el MISMO commit.
 - Localstorage de v3 SIEMPRE con prefijo `jp27v3:` (nunca tocar `localStorage` directo fuera de `v3/lib/storage.js` — hay un test estático, `test-v3-storage-guard.js`, que lo vigila).
 - No inventar horas, duraciones, tramos ni datos de reserva que no estén documentados: si falta el dato, se deja "sin hora"/"sin definir" explícitamente en vez de aproximar sin decirlo.
@@ -91,55 +159,36 @@ resueltos: 16-abr usa el bloque "Hueco + maletas" (no la opción B), el aviso �
 unificada (franja sin confirmar / llegada antes de apertura / margen al cierre <1h — Nikkō no lo
 lleva), y los huecos locales (Nikkō→Kinugawa, Fukuoka) cuentan como "desplazamiento sin definir".
 
-## 4. Tarea en curso: Fase 5b — recuperar la ficha de detalle (antes de la Fase 6)
+## 4. Tarea en curso: confirmar la Fase 6 con la prueba de 2 dispositivos
 
-**Hallazgo del usuario probando el móvil (2026-09-16):** v3 perdió la ficha de detalle de v2.1
-— antes, tocar cualquier sitio abría TODOS sus datos (descripción, horario, precio, tips,
-enlaces, y el link de Instagram en los que vienen de Insta). En v3 hoy eso no existe. Prioridad
-nº 1 de PROJECT.md es no perder ningún dato — esto es una regresión real, no una mejora
-opcional.
+**Todo lo de código y despliegue de la Fase 6 está hecho** (reglas publicadas, 349 items
+sembrados, login funcionando, v2.1 intacto — ver §1). Lo único que falta es que el usuario
+reporte el resultado real de la prueba con 2 móviles/navegadores que se le pidió:
 
-**Estado: PASO 1 (auditoría) en curso — pasos 2 y 3 esperan el OK del usuario a la auditoría,
-NO IMPLEMENTAR SIN CONFIRMAR.**
+1. Móvil A: marcar algo como hecho o reservado, con sesión iniciada.
+2. Móvil B (otra cuenta aprobada): confirmar que aparece marcado sin recargar a mano.
+3. Móvil A: modo avión → marcar otra cosa → cerrar del todo la app → reabrir sin quitar el avión
+   (debe seguir viéndose marcado localmente) → quitar el avión → esperar unos segundos →
+   comprobar en el móvil B que ha llegado.
+4. Deshacer algo en el móvil A → confirmar que desaparece también en el B.
 
-Tres pasos, en este orden:
-1. **Auditoría de paridad de campos** (solo diagnóstico): tabla de TODOS los campos que
-   existen en v2.1 (state.places + catálogos horneados maria/dani/insta/ai/ours, más
-   hoteles/vuelos/trayectos) frente a lo que hoy copia/muestra v3 — campo · ejemplo · cuántos
-   ítems lo tienen · ¿se copia? · ¿se muestra? Marcar en rojo lo que se pierde (enlaces
-   Instagram/web/Maps, notas, descripción, precio, horario, tips, valoración, procedencia
-   detallada…).
-2. **Ficha de detalle** (tras el OK a la auditoría): al tocar cualquier elemento en Ruta,
-   Reservas, Ideas o Pendientes se abre una ficha con TODOS los datos conservados —
-   descripción, notas, horario, precio, enlaces (Instagram/web/Google Maps) como botones,
-   TODAS las procedencias fusionadas (cada una con su enlace original), estado y reservas.
-   Campos vacíos no se muestran. Enlaces privados de confirmación nunca en archivos
-   versionados (mismo invariante que `confirmUrl` de v2.1).
-3. **Filtro en Reservas**: desplegable (mismo estilo que los días del menú) con Todo · ✈️
-   Vuelos · 🏨 Hoteles · 🚆 Trenes · 🚌 Buses · 🎟️ Experiencias · 🍜 Comidas (reservas de
-   restaurante), clasificado en el importador — si algún ítem no encaja limpio en una
-   categoría, se avisa al usuario en vez de forzarlo. Contador por categoría. Pendiente de
-   comprobar en los datos reales de v2.1 si existe una reserva de cena en Hiroshima
-   (sospecha del usuario, sin confirmar todavía) — si no aparece como reserva real, se dice
-   así, no se inventa.
+**Si el resultado no llegó a tiempo de leer esto:** no lo asumas ni lo inventes — pregúntalo
+antes de dar la Fase 6 por completamente verificada. Lo que SÍ está verificado (con un mock de
+Firebase en Chrome, ver commit `a3dc65e`): el SDK real carga y llega a la pantalla de login, la
+fusión única al migrar, que Deshacer no puede resucitar tras migrar, y que la cola de escrituras
+offline persiste y se vacía sola al reconectar. Lo que NO se ha podido probar sin acceso real:
+login de verdad y sync entre dos dispositivos reales.
 
-**Siguiente paso literal cuando retomes:** si la tabla de auditoría del paso 1 ya se mandó en
-esta sesión y sigue sin respuesta del usuario, esperar su OK antes de tocar código de los
-pasos 2 y 3. Si esta es una sesión nueva sin esa respuesta visible, hay que regenerar la
-auditoría (no asumir que sigue vigente).
+**Si el resultado es positivo:** Fase 6 queda cerrada del todo; siguiente en la lista es la
+Fase 7 (§5). **Si algo falla:** la reversión de reglas está documentada (Firebase Console →
+Realtime Database → Reglas → pestaña Historial → Restaurar la versión anterior a este cambio;
+también existe una copia exacta de las reglas de antes en el `reglas-publicadas.json` local del
+usuario, gitignored, no en el repo).
 
 ## 5. Pendiente después (backlog de fases, sin empezar)
 
-- **Fase 6** — Auth (Google Sign-In + aprobación) + sincronización Firebase entre los 3
-  móviles, DESPUÉS de cerrar la Fase 5b. El usuario ya pidió el resumen en 5 líneas de rigor
-  antes de tocar código (qué pasa de local a Firebase, cómo se migran las marcas locales ya
-  hechas sin perderlas, qué pasa si dos móviles editan lo mismo a la vez, cómo se publica en
-  GitHub Pages sin meter datos privados en el repo, y si el diff de reglas guardado en
-  `V3-DESIGN.md` sigue igual o cambia) — pendiente de responder tras cerrar la Fase 5b.
-  Recordar: mostrar el diff de `database.rules.json` y pedir OK explícito antes de desplegar
-  nada en la consola de Firebase.
 - **Fase 7** — Pulido visual: modo oscuro real (hoy el mapa sale claro en dark mode, aceptado "por ahora" en el Bloque 1), soporte offline completo (cache strategy de `v3/sw.js` sigue en modo dev network-first, pensado para cuando v3 esté más maduro pasar a algo más parecido al cache-first de v2.1).
-- **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática).
+- **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática). Incluye ya (añadido 2026-09-17, ver `V3-DESIGN.md`) sacar de los ficheros versionados de v2.1 raíz los precios de hoteles, bookingRef, direcciones, teléfonos y el enlace de Drive de confirmaciones, moviéndolos a Firebase — sin reescribir historial de git.
 
 ---
 *Generado como traspaso de sesión — sin cuota para seguir en esta conversación. El siguiente chat debe leer este archivo primero.*

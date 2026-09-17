@@ -34,10 +34,24 @@ self.addEventListener('activate', e => {
    probar los cambios de esta misma fase). Con red primero se ve al
    instante y solo cae a caché sin conexión — que es justo lo que este SW
    de desarrollo necesita demostrar, no más. */
+// Solo http/https del propio origen o de una CDN permitida son cacheables
+// (bug real, 2026-09-17: la Cache API rechaza cualquier otro esquema --
+// "Request scheme 'chrome-extension' is unsupported" -- al recargar con
+// alguna extensión de Chrome instalada, el fetch de sus propios recursos
+// pasaba por este listener igual que cualquier petición de la página).
+// Lo que no cumple esto se IGNORA del todo (sin respondWith): la red lo
+// sirve directamente, como si este SW no existiera para esa petición.
+const CDNS_PERMITIDAS = ['unpkg.com'];
+function esCacheable(url){
+  if(url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  return url.origin === self.location.origin || CDNS_PERMITIDAS.includes(url.hostname);
+}
 self.addEventListener('fetch', e => {
   const req = e.request;
   if(req.method !== 'GET') return;
-  if(new URL(req.url).pathname.includes('/import/')) return; // deja pasar, sin respondWith: red directa
+  const url = new URL(req.url);
+  if(!esCacheable(url)) return; // deja pasar, sin respondWith: red directa
+  if(url.pathname.includes('/import/')) return; // deja pasar, sin respondWith: red directa
   e.respondWith(caches.open(CACHE).then(async cache => {
     try {
       const res = await fetch(req);
