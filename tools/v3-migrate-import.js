@@ -651,8 +651,29 @@ const residual = rawResidual.map(d => {
 const paraRevisionManual = residual.filter(d => d.estadoA !== 'idea' || d.estadoB !== 'idea');
 const soloEntreIdeas = residual.length - paraRevisionManual.length;
 
-const existing = v3JsonPath ? JSON.parse(fs.readFileSync(v3JsonPath, 'utf8')) : [];
+// Fase 6 (2026-09-18): acepta las DOS formas de volcado del nodo v3 --
+// un array plano de RouteItem (formato viejo, Fase 2), o el export
+// completo de `proyectos/viaje-japon-v3/state` tal cual lo da la consola
+// de Firebase (⋮ → Export JSON), que trae items/dias/guia/hechoOverrides/
+// estadoOverrides juntos. Con la forma completa, además de fusionar los
+// items (mergeV3State, Decisión B: conserva notas/hecho/estadoManual de
+// cada ítem y nunca borra uno solo-en-v3) se detectan los overrides que
+// quedarían HUÉRFANOS -- una marca de "hecho" o "reservado" en Firebase
+// cuyo itemId ya no existiría tras esta actualización (p.ej. porque el
+// dedup agrupó ese sitio de otra forma). No se borra nada aquí: solo se
+// avisa, para decidir a mano antes de subir el resultado.
+const existingRaw = v3JsonPath ? JSON.parse(fs.readFileSync(v3JsonPath, 'utf8')) : [];
+const existingEsVolcadoCompleto = !Array.isArray(existingRaw);
+const existing = existingEsVolcadoCompleto ? (existingRaw.items || []) : existingRaw;
+const existingHechoOverrides = existingEsVolcadoCompleto ? (existingRaw.hechoOverrides || {}) : {};
+const existingEstadoOverrides = existingEsVolcadoCompleto ? (existingRaw.estadoOverrides || {}) : {};
 const { items: merged, stats } = mergeV3State(existing, canonical);
+
+const mergedIds = new Set(merged.map(it => it.id));
+const overridesHuerfanos = {
+  hecho: Object.keys(existingHechoOverrides).filter(clave => !mergedIds.has(clave.split('::')[0])),
+  estado: Object.keys(existingEstadoOverrides).filter(clave => !mergedIds.has(clave))
+};
 
 const outDir = path.join(__dirname, '..', 'import');
 fs.mkdirSync(outDir, { recursive: true });
@@ -684,6 +705,15 @@ console.log(`Nivel 3 — candidatos sueltos con al menos un lado propuesta/confi
 console.log(`Candidatos dudosos que quedan SOLO entre ideas (no se muestran, no bloquean nada): ${soloEntreIdeas}`);
 console.log(`Fusión con v3 ${v3JsonPath ? 'existente (' + v3JsonPath + ')' : '(nodo vacío, siembra)'}: ` +
   `${stats.nuevos} nuevos, ${stats.actualizados} actualizados, ${stats.soloEnV3Conservados} conservados solo-en-v3`);
+if (existingEsVolcadoCompleto) {
+  const totalHuerfanos = overridesHuerfanos.hecho.length + overridesHuerfanos.estado.length;
+  console.log(`Overrides que quedarían HUÉRFANOS si subes este resultado (hechoOverrides/estadoOverrides sin ítem que los reciba): ${totalHuerfanos}`);
+  if (totalHuerfanos) {
+    console.log('  ⚠️  NO se suben tal cual estos datos en modo vista previa -- revisa antes de actualizar Firebase:');
+    overridesHuerfanos.hecho.forEach(clave => console.log('  - hechoOverrides/' + clave + ' (item "' + clave.split('::')[0] + '" ya no existe con ese id)'));
+    overridesHuerfanos.estado.forEach(clave => console.log('  - estadoOverrides/' + clave + ' (item "' + clave + '" ya no existe con ese id)'));
+  }
+}
 console.log(`Trayectos (Fase 4, TRANSPORT como RouteItem): ${trayectoItems.length} filas, ` +
   `${trayectoItems.filter(t => t.acciones.length).length} con acción de reserva investigada`);
 console.log(`Incoherencias ciudad/base (Fase 4, punto 1): ${incoherenciasCiudad.length}` +

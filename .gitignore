@@ -26,3 +26,9 @@ planningjapon.xlsx
 # fuente versionada (esa es database.rules.json). Nunca se comitean.
 reglas-publicadas.json
 reglas-para-publicar.json
+
+# Volcado local de proyectos/viaje-japon-v3/state (camino seguro de
+# actualización, HANDOFF-V3.md §2): lleva datos reales de reserva
+# (price/bookingRef/...) y las marcas hecho/estadoManual de los 3
+# viajeros. Nunca se versiona -- mismo motivo que live.json.
+v3-actual*.json

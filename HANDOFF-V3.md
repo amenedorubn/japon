@@ -4,25 +4,32 @@ Traspaso de sesión (poca cuota restante, se abre chat nuevo). Léelo entero ant
 
 ## 1. Estado actual
 
-**Último commit:** por hacer en esta sesión — fix de `v3/sw.js` (filtro de esquema en el
-`fetch` listener, ver §3). Antes de eso, `a3dc65e` — "v3: Fase 6 - login Google + sync Firebase
-(viaje-japon-v3), sin desplegar reglas" (pusheado a `origin/main`).
+**Último commit:** ver historial abajo (sesión 2026-09-18: fix de orfandad de overrides en el
+importador + documentación del camino seguro de actualización). Antes, `0a785ff` — fix de
+`v3/sw.js` (filtro de esquema en el `fetch` listener). Antes, `a3dc65e` — "v3: Fase 6 - login
+Google + sync Firebase (viaje-japon-v3), sin desplegar reglas".
 
-**Fase 6 DESPLEGADA (2026-09-17, fuera de git — consola de Firebase):** el usuario publicó
-`reglas-para-publicar.json` (el diff de §5/V3-DESIGN.md §H aplicado tal cual sobre las reglas
-reales exportadas de la consola, comparadas antes byte a byte con `database.rules.json` del
-repo — idénticas, sin sorpresas) y sembró `proyectos/viaje-japon-v3/state` (349 items, incluidos
-los campos privados — price/bookingRef/address/hotelPhone — ya en esta siembra, corrección 2 del
-usuario, no esperan a la Fase 8) desde su propia sesión autenticada, siguiendo los pasos que se
-le dieron en el chat (regenerar `import/v3-migrated-preview.json`, servir local, login, pegar en
-la consola del navegador). v2.1 sigue funcionando. v3 carga datos reales con login. Dominios
-autorizados de Auth confirmados por el usuario (`amenedorubn.github.io` y `localhost`, ya
-estaban). **Pendiente: el usuario todavía no ha reportado el resultado de la prueba con 2
-dispositivos (sync en vivo, modo avión, Deshacer) — no dar la Fase 6 por verificada de extremo a
-extremo hasta que llegue ese resultado.**
+**Fase 6 CERRADA DEL TODO (2026-09-17/18):** reglas publicadas (diff de V3-DESIGN.md §H,
+comparado antes byte a byte con lo que ya había en la consola — idénticas), `proyectos/viaje-
+japon-v3/state` sembrado (349 items, con los campos privados ya dentro — price/bookingRef/
+address/hotelPhone — corrección 2 del usuario, no esperan a la Fase 8), dominios de Auth
+confirmados (`amenedorubn.github.io` y `localhost`, ya estaban), **y la prueba con 2
+dispositivos dio OK: sync en tiempo real, offline con modo avión + cierre de la app, y Deshacer
+propagado correctamente al otro dispositivo.** v2.1 sigue funcionando sin notar nada.
 
 Historial reciente relevante (más nuevo primero):
-- *(sin commitear todavía)* — fix `v3/sw.js`: el listener `fetch` intentaba `cache.put()` con
+- *(sin commitear todavía)* — **camino seguro de actualización del catálogo** (encargo del
+  usuario tras la siembra manual con `set()`: "documenta que NUNCA se repita ese bloque con
+  datos ya en uso"). `tools/v3-migrate-import.js` acepta ahora, como 3er argumento, el export
+  COMPLETO de `proyectos/viaje-japon-v3/state` desde la consola de Firebase (⋮ → Export JSON;
+  antes solo aceptaba un array plano de items, formato viejo de la Fase 2) y detecta overrides
+  HUÉRFANOS: una entrada de `hechoOverrides`/`estadoOverrides` cuyo itemId ya no existiría tras
+  la actualización (p.ej. el dedup agrupó ese sitio de otra forma) — se avisa por consola, nunca
+  se borra nada solo. El resto (Decisión B, `v3/lib/merge.js`, ya existía desde la Fase 2, sin
+  tocar) sigue igual: conserva `notas`/`hecho`/`estadoManual` de cada ítem y nunca borra un ítem
+  que solo exista en v3. Procedimiento completo en §2. `v3-actual*.json` (el volcado local que
+  usa este camino) añadido a `.gitignore` — lleva datos de reserva reales, igual que `live.json`.
+- `0a785ff` — fix `v3/sw.js`: el listener `fetch` intentaba `cache.put()` con
   peticiones `chrome-extension://` (error real visto por el usuario al recargar con alguna
   extensión de Chrome instalada: "Request scheme 'chrome-extension' is unsupported") — ahora
   `esCacheable(url)` filtra a solo `http/https` del propio origen o `unpkg.com` (la única CDN que
@@ -147,6 +154,26 @@ Imprime la IP de Wi-Fi al arrancar; desde el móvil: `http://<esa-ip>:8734/v3/in
 - **Tests + smoke HTTP obligatorios antes de cada commit** (ver arriba). Si algo toca plantillas/lógica compartida, actualizar los tests en el MISMO commit.
 - Localstorage de v3 SIEMPRE con prefijo `jp27v3:` (nunca tocar `localStorage` directo fuera de `v3/lib/storage.js` — hay un test estático, `test-v3-storage-guard.js`, que lo vigila).
 - No inventar horas, duraciones, tramos ni datos de reserva que no estén documentados: si falta el dato, se deja "sin hora"/"sin definir" explícitamente en vez de aproximar sin decirlo.
+- **NUNCA repitas el bloque de siembra cruda de la Fase 6** (`fbDbM.set(..., '/state/items', datos.items)` a pelo, sobrescribiendo el array entero) contra un `proyectos/viaje-japon-v3` que ya tenga uso real (hecho/reservado marcado por los 3 viajeros). Esa siembra fue correcta la primera vez porque el nodo estaba vacío; repetirla después borraría de un plumazo todo lo que la gente haya marcado desde entonces, aunque `hechoOverrides`/`estadoOverrides` en sí no se toquen (quedarían huérfanos, apuntando a ids que ya no existen). Para cualquier actualización del catálogo después de la primera siembra, usa el camino seguro de abajo.
+
+**Camino seguro para actualizar el catálogo tras la primera siembra** (reimportar desde un `live.json` nuevo sin perder hecho/notas/estadoManual/ítems-solo-v3):
+1. Exporta el estado actual de v3 desde la consola del navegador (con sesión iniciada en v3, ver la variable `V3_PATH` ya cargada en la página):
+   ```js
+   const actual = {
+     items: (await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/items'))).val(),
+     hechoOverrides: (await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'))).val(),
+     estadoOverrides: (await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/estadoOverrides'))).val()
+   };
+   copy(JSON.stringify(actual)); // Chrome: lo deja en el portapapeles
+   ```
+   Pega el resultado en un fichero `v3-actual.json` en la raíz del repo (gitignored, nunca se comitea).
+2. `node tools/v3-migrate-import.js live.json v3-actual.json` — fusiona (Decisión B, `v3/lib/merge.js`: el importador manda en lo derivado de v2, `v3-actual.json` manda en notas/hecho/estadoManual, nunca borra un ítem solo-en-v3) y **detecta overrides huérfanos** (una marca de hecho/reservado cuyo item ya no existiría) — nunca escribe en Firebase, solo `import/v3-migrated-preview.json`.
+3. **Revisa antes de subir nada:** lee los contadores impresos (nuevos/actualizados/conservados-solo-en-v3) y, sobre todo, la lista de "Overrides que quedarían HUÉRFANOS" si la hay — si aparece alguno, decide a mano (¿el sitio cambió de id de verdad, o es un fallo del dedup que hay que corregir en `import/v3-manual-merges.json` primero?) antes de seguir.
+4. Solo entonces, sube el resultado ya fusionado (nunca el import crudo) — y **solo `state/items`** (y `dias`/`guia` si de verdad cambiaron; nunca toques `hechoOverrides`/`estadoOverrides` en este paso, el merge ya los tuvo en cuenta):
+   ```js
+   const datos = await (await fetch('../import/v3-migrated-preview.json')).json();
+   await fbDbM.set(fbDbM.ref(fbDb, V3_PATH + '/state/items'), datos.items);
+   ```
 
 ## 3. Check-in real de los 9 días con cambio de hotel — CERRADO (commit `f6b3234`)
 
@@ -159,31 +186,26 @@ resueltos: 16-abr usa el bloque "Hueco + maletas" (no la opción B), el aviso �
 unificada (franja sin confirmar / llegada antes de apertura / margen al cierre <1h — Nikkō no lo
 lleva), y los huecos locales (Nikkō→Kinugawa, Fukuoka) cuentan como "desplazamiento sin definir".
 
-## 4. Tarea en curso: confirmar la Fase 6 con la prueba de 2 dispositivos
+## 4. Tarea en curso: plan de la Fase 7 (pulido visual + oscuro + offline + PWA)
 
-**Todo lo de código y despliegue de la Fase 6 está hecho** (reglas publicadas, 349 items
-sembrados, login funcionando, v2.1 intacto — ver §1). Lo único que falta es que el usuario
-reporte el resultado real de la prueba con 2 móviles/navegadores que se le pidió:
+**Fase 6 CERRADA DEL TODO** (código, reglas, siembra, y la prueba con 2 dispositivos OK — ver
+§1). Reversión si algo fallara más adelante: Firebase Console → Realtime Database → Reglas →
+pestaña Historial → Restaurar la versión anterior; también hay una copia exacta de las reglas de
+antes en el `reglas-publicadas.json` local del usuario (gitignored, no en el repo).
 
-1. Móvil A: marcar algo como hecho o reservado, con sesión iniciada.
-2. Móvil B (otra cuenta aprobada): confirmar que aparece marcado sin recargar a mano.
-3. Móvil A: modo avión → marcar otra cosa → cerrar del todo la app → reabrir sin quitar el avión
-   (debe seguir viéndose marcado localmente) → quitar el avión → esperar unos segundos →
-   comprobar en el móvil B que ha llegado.
-4. Deshacer algo en el móvil A → confirmar que desaparece también en el B.
+**Nota sin cerrar del todo:** el usuario reportó DOS VECES el mismo error de `v3/sw.js`
+("chrome-extension"...) — la segunda vez, DESPUÉS de que el fix ya estuviera pusheado
+(`0a785ff`). El código actual (ver el propio `v3/sw.js`) ya filtra correctamente ese caso
+(verificado a mano con casos de prueba). Lo más probable es que la segunda vez viniera de un
+service worker viejo todavía activo (no se actualizó solo, o el dispositivo de prueba no había
+recargado tras el deploy) — pero si vuelve a pasar CON el commit `0a785ff` o posterior ya
+desplegado y confirmado, es un bug real distinto que hay que investigar de cero, no dar por
+resuelto a ciegas.
 
-**Si el resultado no llegó a tiempo de leer esto:** no lo asumas ni lo inventes — pregúntalo
-antes de dar la Fase 6 por completamente verificada. Lo que SÍ está verificado (con un mock de
-Firebase en Chrome, ver commit `a3dc65e`): el SDK real carga y llega a la pantalla de login, la
-fusión única al migrar, que Deshacer no puede resucitar tras migrar, y que la cola de escrituras
-offline persiste y se vacía sola al reconectar. Lo que NO se ha podido probar sin acceso real:
-login de verdad y sync entre dos dispositivos reales.
-
-**Si el resultado es positivo:** Fase 6 queda cerrada del todo; siguiente en la lista es la
-Fase 7 (§5). **Si algo falla:** la reversión de reglas está documentada (Firebase Console →
-Realtime Database → Reglas → pestaña Historial → Restaurar la versión anterior a este cambio;
-también existe una copia exacta de las reglas de antes en el `reglas-publicadas.json` local del
-usuario, gitignored, no en el repo).
+**Siguiente paso literal cuando retomes:** el plan de la Fase 7 en 5 líneas (visual vs. v2.1,
+modo oscuro, offline completo, instalación PWA, estimación) ya se mandó — esperar el OK del
+usuario punto por punto antes de tocar código. Si esta es una sesión nueva sin esa respuesta
+visible, hay que regenerar el plan (no asumir que sigue vigente).
 
 ## 5. Pendiente después (backlog de fases, sin empezar)
 
