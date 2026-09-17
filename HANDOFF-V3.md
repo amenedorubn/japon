@@ -186,31 +186,81 @@ resueltos: 16-abr usa el bloque "Hueco + maletas" (no la opción B), el aviso �
 unificada (franja sin confirmar / llegada antes de apertura / margen al cierre <1h — Nikkō no lo
 lleva), y los huecos locales (Nikkō→Kinugawa, Fukuoka) cuentan como "desplazamiento sin definir".
 
-## 4. Tarea en curso: plan de la Fase 7 (pulido visual + oscuro + offline + PWA)
+## 4. Tarea en curso: Fase 7 implementada, ESPERANDO CONFIRMACIÓN DE PUSH
 
 **Fase 6 CERRADA DEL TODO** (código, reglas, siembra, y la prueba con 2 dispositivos OK — ver
 §1). Reversión si algo fallara más adelante: Firebase Console → Realtime Database → Reglas →
 pestaña Historial → Restaurar la versión anterior; también hay una copia exacta de las reglas de
 antes en el `reglas-publicadas.json` local del usuario (gitignored, no en el repo).
 
-**Nota sin cerrar del todo:** el usuario reportó DOS VECES el mismo error de `v3/sw.js`
-("chrome-extension"...) — la segunda vez, DESPUÉS de que el fix ya estuviera pusheado
-(`0a785ff`). El código actual (ver el propio `v3/sw.js`) ya filtra correctamente ese caso
-(verificado a mano con casos de prueba). Lo más probable es que la segunda vez viniera de un
-service worker viejo todavía activo (no se actualizó solo, o el dispositivo de prueba no había
-recargado tras el deploy) — pero si vuelve a pasar CON el commit `0a785ff` o posterior ya
-desplegado y confirmado, es un bug real distinto que hay que investigar de cero, no dar por
-resuelto a ciegas.
+**Nota sin cerrar del todo (de la Fase 6, sigue abierta):** el usuario reportó DOS VECES el mismo
+error de `v3/sw.js` ("chrome-extension"...) — la segunda vez, DESPUÉS de que el fix ya estuviera
+pusheado (`0a785ff`). El código actual ya filtra correctamente ese caso (verificado a mano). Lo
+más probable es un service worker viejo todavía activo, pero si vuelve a pasar CON el commit
+`0a785ff` o posterior ya desplegado y confirmado, es un bug real distinto a investigar de cero.
 
-**Siguiente paso literal cuando retomes:** el plan de la Fase 7 en 5 líneas (visual vs. v2.1,
-modo oscuro, offline completo, instalación PWA, estimación) ya se mandó — esperar el OK del
-usuario punto por punto antes de tocar código. Si esta es una sesión nueva sin esa respuesta
-visible, hay que regenerar el plan (no asumir que sigue vigente).
+**Fase 7 (pulido visual + oscuro + offline + PWA) — implementada 2026-09-17, sin commitear:**
+
+1. **Paleta y tipografía calcadas de v2.1**: tokens `--bg/--card/--ink/--muted/--line/--accent/
+   --warn/--ok` + `--shadow`/`--radius` + fuentes Inter/Noto Serif JP (Google Fonts, igual que
+   v2.1) en `v3/index.html`. `--warn`/`--ok` son nombres propios de v3 (v2.1 no los tiene, usa
+   `--gold`/`--green`) pero con los mismos valores de color — no se ha tocado la API interna de
+   v2.1. Serif aplicada con moderación: `header h1`, `.dia-header .fecha`, `.auth-card h1`,
+   `.auth-logo` (mismo criterio de uso que v2.1, decorativo, no todo el body).
+2. **Modo oscuro real**: mismo mecanismo que v2.1 — script en `<head>` fija `data-theme` ANTES de
+   pintar leyendo `jp27v3:theme` (storage.js, no localStorage directo: lo exige
+   `test-v3-storage-guard.js`) con fallback a `prefers-color-scheme`. Interruptor manual nuevo en
+   el pie del menú ("🌓 Tema"). Filtro de Leaflet en oscuro (`brightness(.9) saturate(.9)`) igual
+   que v2.1 — YA NO es la limitación aceptada "por ahora" que anotaba el Bloque 1.
+3. **Offline completo**: `arrancarAppV3()`/`resolverAcceso()` reescritos con una rama offline —
+   si `navigator.onLine` es falso (o un `fbDbM.get()` falla pese a decir que hay red), usa
+   `dataCache`/`hechoOverridesCache`/`estadoOverridesCache` (localStorage) en vez de tumbar la
+   app. El acceso aprobado también se cachea (`accessApproved`) para poder saltarse la
+   comprobación de red en un arranque en frío sin conexión. Las escuchas en vivo
+   (`hechoOverrides`/`estadoOverrides`/`.info/connected`) se registran SIEMPRE, incluso sin red,
+   para ponerse al día solas si vuelve la conexión a media sesión. `v3/sw.js` gana caché
+   size-limited de teselas del mapa (`jp27v3-teselas`, tope 300) y permite `fonts.googleapis.com`/
+   `fonts.gstatic.com`/`www.gstatic.com` como CDN cacheable (paridad con `RUNTIME_HOSTS` de v2.1).
+   Aviso "📵 Mapa no disponible sin conexión" cuando falta una tesela sin cachear y no hay red
+   (Leaflet `tileerror`).
+4. **Cerrar sesión**: botón nuevo en el menú, borra `dataCache`/`hechoOverridesCache`/
+   `estadoOverridesCache`/`colaEscrituras` (datos privados de reserva) antes de `signOut()`. Si
+   hay escrituras sin sincronizar, confirma con el usuario antes de perderlas. `migrado` y
+   `accessApproved` NO se borran (no son datos de viaje, son banderas del dispositivo).
+5. **Indicador de estado**: barra discreta bajo la cabecera, "sin conexión · cambios pendientes:
+   N", solo visible cuando hay algo que avisar.
+6. **PWA**: `v3/manifest.json` nuevo (estático, no blob dinámico como v2.1) con `start_url`/
+   `scope`/`id` = `/japon/v3/` — a propósito distintos de v2.1, para que instalar v3 no lo
+   sustituya. Iconos nuevos `v3/icon-any.png`/`v3/icon-maskable.png` (512×512, generados con
+   Canvas+captura de pantalla+PIL en esta sesión): icono de v2.1 + insignia "v3". Nota añadida en
+   `V3-DESIGN.md` (Fase 8): unificar el icono con el de v2.1 cuando v3 sustituya a v2.1 de verdad.
+
+**Bug real encontrado y arreglado durante la verificación en Chrome:** cargar `lib/storage.js`
+dos veces (una nueva en `<head>` para el script de tema, y la que ya existía cerca del final)
+revienta con `SyntaxError: Identifier 'PREFIX' has already been declared` — la carga duplicada
+del final se quitó, dejando solo la de `<head>`.
+
+**Verificado en Chrome (mock de datos, sin Firebase real) a 360px:** paleta clara y oscura,
+interruptor de tema (persiste entre recargas), menú con "Tema"/"Cerrar sesión", indicador
+"sin conexión · cambios pendientes: N", arranque en frío 100% offline (con `accessApproved` +
+cachés ya pobladas) renderizando Pendientes y un día de Ruta sin tocar red, `limpiarCacheLocalPrivada()`
+borra exactamente lo esperado y deja `migrado` intacto, `manifest.json`/iconos sirven 200 con el
+`start_url`/`scope`/`id` correctos. **No verificado** (no se puede simular con estas herramientas):
+instalación real como PWA en un dispositivo y que v2.1 ya instalada siga abriendo v2.1 — pendiente
+de que el usuario lo confirme en su móvil (checklist en el mensaje de cierre de la fase).
+
+**Suite completa (`node tests/run-all.js`): TODAS LAS SUITES PASAN**, sin tocar `index.html`/
+`sw.js` raíz de v2.1.
+
+**Siguiente paso literal cuando retomes:** el usuario ya vio el resumen y la checklist de prueba
+en el móvil; en cuanto confirme, `git add`/`commit`/`push` de `v3/index.html`, `v3/sw.js`,
+`v3/manifest.json`, `v3/icon-any.png`, `v3/icon-maskable.png`, `V3-DESIGN.md`. NO pushear sin esa
+confirmación explícita (regla de toda la sesión).
 
 ## 5. Pendiente después (backlog de fases, sin empezar)
 
-- **Fase 7** — Pulido visual: modo oscuro real (hoy el mapa sale claro en dark mode, aceptado "por ahora" en el Bloque 1), soporte offline completo (cache strategy de `v3/sw.js` sigue en modo dev network-first, pensado para cuando v3 esté más maduro pasar a algo más parecido al cache-first de v2.1).
-- **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática). Incluye ya (añadido 2026-09-17, ver `V3-DESIGN.md`) sacar de los ficheros versionados de v2.1 raíz los precios de hoteles, bookingRef, direcciones, teléfonos y el enlace de Drive de confirmaciones, moviéndolos a Firebase — sin reescribir historial de git.
+- **Fase 7** — Implementada 2026-09-17 (ver §4), pendiente solo de confirmación de push.
+- **Fase 8** — Corte: el día que v3 sustituya a v2.1 como app principal (decisión del usuario, no automática). Incluye ya (añadido 2026-09-17, ver `V3-DESIGN.md`) sacar de los ficheros versionados de v2.1 raíz los precios de hoteles, bookingRef, direcciones, teléfonos y el enlace de Drive de confirmaciones, moviéndolos a Firebase — sin reescribir historial de git — y unificar el icono PWA de v3 con el de v2.1 (quitar la insignia "v3").
 
 ---
 *Generado como traspaso de sesión — sin cuota para seguir en esta conversación. El siguiente chat debe leer este archivo primero.*

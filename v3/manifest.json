@@ -1,0 +1,16 @@
+{
+  "name": "Japón 27 · v3",
+  "short_name": "Japón 27 v3",
+  "description": "Japón 2027 · v3 (en construcción) — reconstrucción modular con sync Firebase.",
+  "start_url": "/japon/v3/",
+  "scope": "/japon/v3/",
+  "id": "/japon/v3/",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#f6f4ee",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-any.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

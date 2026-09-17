@@ -8,7 +8,12 @@
 ================================================================ */
 'use strict';
 const CACHE = 'jp27v3-dev';
-const SHELL = ['./', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js', './lib/bases.js', './lib/agenda.js'];
+// Fase 7: caché de teselas del mapa, aparte del shell -- limite propio
+// (MAX_TESELAS) para que "cachear lo ya visto" no crezca sin fin.
+const CACHE_TESELAS = 'jp27v3-teselas';
+const MAX_TESELAS = 300; // ronda los pocos MB: limite razonable para offline
+const SHELL = ['./', './lib/timezone.js', './lib/model.js', './lib/storage.js', './lib/hecho-overrides.js', './lib/bases.js', './lib/agenda.js',
+  './manifest.json', './icon-any.png', './icon-maskable.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,7 +22,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys
-      .filter(k => k.startsWith('jp27v3-') && k !== CACHE)
+      .filter(k => k.startsWith('jp27v3-') && k !== CACHE && k !== CACHE_TESELAS)
       .map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
@@ -41,15 +46,39 @@ self.addEventListener('activate', e => {
 // pasaba por este listener igual que cualquier petición de la página).
 // Lo que no cumple esto se IGNORA del todo (sin respondWith): la red lo
 // sirve directamente, como si este SW no existiera para esa petición.
-const CDNS_PERMITIDAS = ['unpkg.com'];
+// fonts.g*/www.gstatic.com: mismo criterio que RUNTIME_HOSTS de v2.1 --
+// hoja/ficheros de letra y módulos de Firebase, estáticos y versionados.
+const CDNS_PERMITIDAS = ['unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
+const HOST_TESELAS = 'server.arcgisonline.com';
 function esCacheable(url){
   if(url.protocol !== 'http:' && url.protocol !== 'https:') return false;
   return url.origin === self.location.origin || CDNS_PERMITIDAS.includes(url.hostname);
 }
+
+/* Teselas del mapa (Fase 7): cache-first con límite. Una tesela ya vista se
+   sirve al instante sin red; una nueva se pide, se guarda y, si se supera
+   MAX_TESELAS, se descarta la más antigua (FIFO simple, no hace falta LRU
+   exacto para un límite "razonable"). Sin red y sin tesela en caché, el
+   fetch falla y Leaflet dispara 'tileerror' -- la UI lo usa para el aviso
+   "Mapa no disponible sin conexión" en vez de dejar la casilla gris. */
+async function sirveTesela(req){
+  const cache = await caches.open(CACHE_TESELAS);
+  const hit = await cache.match(req);
+  if(hit) return hit;
+  const res = await fetch(req);
+  if(res && res.status === 200){
+    const keys = await cache.keys();
+    if(keys.length >= MAX_TESELAS) await cache.delete(keys[0]);
+    cache.put(req, res.clone());
+  }
+  return res;
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if(req.method !== 'GET') return;
   const url = new URL(req.url);
+  if(url.hostname === HOST_TESELAS){ e.respondWith(sirveTesela(req)); return; }
   if(!esCacheable(url)) return; // deja pasar, sin respondWith: red directa
   if(url.pathname.includes('/import/')) return; // deja pasar, sin respondWith: red directa
   e.respondWith(caches.open(CACHE).then(async cache => {

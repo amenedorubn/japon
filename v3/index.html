@@ -5,21 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>Japón 2027 · v3 (en construcción)</title>
+<!-- Fase 7: manifest y start_url/scope propios de v3 (/japon/v3/), a
+     propósito DISTINTOS de los de v2.1 -- instalar v3 no debe sustituir ni
+     redirigir a la app ya instalada. Icono con la marca "v3" visible
+     mientras conviven; V3-DESIGN.md anota unificarlo con el de v2.1 en la
+     Fase 8. -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#f6f4ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Japón 27 · v3">
+<link rel="apple-touch-icon" href="./icon-any.png">
+<script src="./lib/storage.js"></script>
+<script>
+(function(){
+  // Tema antes de pintar (mismo mecanismo que v2.1, clave propia de v3 --
+  // jp27v3:theme -- para no pisar japon27_theme, PROJECT.md §12.8). Pasa por
+  // el wrapper de storage.js, no por localStorage directo: lo exige
+  // tests/test-v3-storage-guard.js, así que storage.js se carga aquí antes
+  // que nada más.
+  try{
+    var storage = makeStorage(window.localStorage);
+    var saved = storage.get('theme');
+    var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  }catch(e){ document.documentElement.setAttribute('data-theme', 'light'); }
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@600;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root{
-    --bg:#f7f5f0; --card:#ffffff; --ink:#1c1a17; --muted:#6b675f;
-    --line:#e3ded3; --accent:#b23a2e; --warn:#a9670d; --ok:#3a7d44;
+    /* Fase 7: paleta calcada de v2.1 (index.html raíz) para unificar el
+       sistema visual entre ambas apps mientras coexisten. */
+    --bg:#f6f4ee; --card:#fffefb; --ink:#26221a; --muted:#6d6557;
+    --line:#e7e2d4; --accent:#bf3823; --warn:#a07310; --ok:#38724f;
+    --shadow:0 1px 2px rgba(46,36,16,.05),0 6px 20px rgba(46,36,16,.06);
+    --radius:16px; --radius-s:10px;
+    --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --serif:'Noto Serif JP',serif;
     --menu-bg:#1c1a17; --menu-ink:#efece5; --menu-muted:#a49d8d; --menu-active:#e2685a;
   }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#15130f; --card:#211e19; --ink:#efece5; --muted:#a49d8d;
-      --line:#3a352c; --accent:#e2685a; --warn:#e0a03c; --ok:#6fbf7a;
-    }
+  /* Mismo mecanismo que v2.1: data-theme lo fija el script de <head> ANTES
+     de pintar (guardado, o preferencia de sistema si no hay nada guardado
+     todavía) -- sin depender solo de @media, para que el interruptor manual
+     del menú pueda anular la preferencia de sistema. */
+  :root[data-theme="dark"]{
+    --bg:#131217; --card:#1c1b22; --ink:#ece7db; --muted:#a49d8e;
+    --line:#2e2c37; --accent:#cf4530; --warn:#d3a53a; --ok:#72b18e;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.3);
   }
+  :root[data-theme="dark"] .leaflet-container{filter:brightness(.9) saturate(.9);}
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font);}
 
   header{
     display:flex; align-items:center; gap:10px; padding:14px 16px;
@@ -27,7 +67,7 @@
   }
   #btnMenu{font-size:1.3rem; line-height:1; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:8px; color:var(--ink);}
   #btnMenu:hover{background:var(--line);}
-  header h1{font-size:1rem; margin:0;}
+  header h1{font-size:1rem; margin:0; font-family:var(--serif); font-weight:700;}
   header .sub{font-size:.76rem; color:var(--muted); margin:0;}
 
   /* Bloque 2 (2026-09-16): el menú SIEMPRE por encima del mapa (Leaflet usa
@@ -63,7 +103,7 @@
   section > h2{font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px 4px;}
 
   /* --- Pendientes --- */
-  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:8px; display:flex; align-items:stretch; overflow:hidden;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:8px; display:flex; align-items:stretch; overflow:hidden;}
   .card-left{flex:3 1 0; min-width:0; padding:10px 12px;}
   .card-right{flex:1 1 0; min-width:72px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; border-left:1px solid var(--line);}
   .card h3{margin:0 0 4px; font-size:.95rem; overflow-wrap:anywhere;}
@@ -94,7 +134,7 @@
 
   /* --- Día (Ruta) --- */
   .dia-header{padding:16px 4px 12px; border-bottom:1px solid var(--line); margin-bottom:14px;}
-  .dia-header .fecha{font-size:1.3rem; font-weight:700; margin:0;}
+  .dia-header .fecha{font-size:1.3rem; font-weight:700; margin:0; font-family:var(--serif);}
   .dia-header .base{font-size:.88rem; color:var(--muted); margin:4px 0 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
   /* Bloque 2: el mapa vive DENTRO del contenido del día, en flujo normal
      (nada de fixed/sticky), y se destruye por completo al salir de aquí. */
@@ -177,14 +217,32 @@
   /* --- Fase 6: puerta de acceso --- */
   #authGate{min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px 16px;}
   .auth-card{max-width:340px; width:100%; text-align:center;}
-  .auth-logo{font-size:2.4rem; margin-bottom:6px;}
-  .auth-card h1{font-size:1.25rem; margin:0 0 22px;}
+  .auth-logo{font-size:2.4rem; margin-bottom:6px; font-family:var(--serif); color:var(--accent);}
+  .auth-card h1{font-size:1.25rem; margin:0 0 22px; font-family:var(--serif);}
   .auth-google{display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px 16px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); font:inherit; font-size:.92rem; cursor:pointer;}
   .auth-google svg{width:20px; height:20px; flex-shrink:0;}
   .auth-error{color:var(--accent); font-size:.82rem; margin-top:12px;}
   .auth-status-msg{font-size:.9rem; color:var(--muted); line-height:1.5;}
   .auth-actions{display:flex; gap:8px; justify-content:center; margin-top:16px; flex-wrap:wrap;}
   .btn.ghost{background:transparent;}
+
+  /* --- Fase 7: pie del menú (tema + cerrar sesión) --- */
+  #menu .menu-pie{border-top:1px solid #3a352c; margin-top:12px; padding-top:4px;}
+  #menu .menu-pie button{
+    width:100%; text-align:left; background:none; border:none; color:var(--menu-muted);
+    font:inherit; font-size:.88rem; padding:12px 20px; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  #menu .menu-pie button:hover{background:#2a271f; color:var(--menu-ink);}
+
+  /* --- Fase 7: indicador discreto de estado (offline / cambios sin
+       sincronizar) -- oculto por defecto, visible solo cuando hay algo que
+       avisar. --- */
+  #estadoConexion{font-size:.74rem; color:var(--muted); background:var(--card); text-align:center; padding:5px 10px; border-bottom:1px solid var(--line);}
+  #estadoConexion[hidden]{display:none;}
+
+  /* --- Fase 7: mapa offline -- si no hay red y falta alguna tesela sin
+       cachear, aviso claro en vez de cuadrícula gris. --- */
+  .mapa-offline-aviso{background:var(--card); border:1px solid var(--warn); color:var(--warn); border-radius:var(--radius-s); padding:8px 12px; font-size:.8rem; margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -208,6 +266,7 @@
         <p class="sub">v3 · en construcción</p>
       </div>
     </header>
+    <div id="estadoConexion" hidden></div>
 
     <div id="overlay"></div>
     <nav id="menu">
@@ -219,6 +278,10 @@
       </div>
       <div class="seccion"><button id="btnReservas">Reservas</button></div>
       <div class="seccion"><button id="btnMas">Más</button></div>
+      <div class="seccion menu-pie">
+        <button id="btnTema" type="button">🌓 Tema <span id="temaActual"></span></button>
+        <button id="btnCerrarSesion" type="button">🚪 Cerrar sesión</button>
+      </div>
     </nav>
 
     <main id="main"><p class="sub" style="padding:16px;">Cargando…</p></main>
@@ -236,7 +299,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="./lib/timezone.js"></script>
   <script src="./lib/model.js"></script>
-  <script src="./lib/storage.js"></script>
+  <!-- storage.js ya se cargó en <head> (lo necesita el script de tema
+       antes de pintar); cargarlo dos veces revienta con "Identifier
+       'PREFIX' has already been declared" (bug real, encontrado en Chrome
+       al verificar la Fase 7). -->
   <script src="./lib/hecho-overrides.js"></script>
   <script src="./lib/estado-overrides.js"></script>
   <script src="./lib/bases.js"></script>
@@ -275,6 +341,67 @@
     function cerrarMenu(){ overlay.classList.remove('abierto'); menu.classList.remove('abierto'); }
     btnMenu.addEventListener('click', abrirMenu);
     overlay.addEventListener('click', cerrarMenu);
+
+    // ================================================================
+    // Fase 7: tema claro/oscuro (interruptor manual, además del valor de
+    // sistema que ya fija el script de <head> antes de pintar).
+    // ================================================================
+    var btnTema = document.getElementById('btnTema');
+    var temaActualEl = document.getElementById('temaActual');
+    function temaActual(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    function actualizarBotonTema(){ temaActualEl.textContent = temaActual() === 'dark' ? '(oscuro)' : '(claro)'; }
+    btnTema.addEventListener('click', function(){
+      var nuevo = temaActual() === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nuevo);
+      storage.set('theme', nuevo);
+      actualizarBotonTema();
+    });
+    actualizarBotonTema();
+
+    // ================================================================
+    // Fase 7: indicador discreto de estado -- offline y/o escrituras en cola
+    // sin confirmar por Firebase todavía (colaEscrituras, definida más abajo
+    // junto al resto de la lógica de sync).
+    // ================================================================
+    var estadoConexionEl = document.getElementById('estadoConexion');
+    function actualizarEstadoConexion(){
+      var offline = !navigator.onLine;
+      var pendientes = colaEscrituras.length;
+      if (!offline && !pendientes) { estadoConexionEl.hidden = true; return; }
+      var partes = [];
+      if (offline) partes.push('sin conexión');
+      if (pendientes) partes.push('cambios pendientes: ' + pendientes);
+      estadoConexionEl.textContent = partes.join(' · ');
+      estadoConexionEl.hidden = false;
+    }
+    window.addEventListener('online', actualizarEstadoConexion);
+    window.addEventListener('offline', actualizarEstadoConexion);
+
+    // ================================================================
+    // Fase 7: cerrar sesión -- borra la caché local de datos privados
+    // (items/dias/guia con precio/localizador/teléfono, y las marcas
+    // hecho/estadoManual de reservas) antes de salir. `migrado` y
+    // `accessApproved` NO se tocan: no son datos de viaje, son banderas de
+    // este dispositivo que siguen siendo válidas si vuelve a entrar la
+    // misma cuenta.
+    // ================================================================
+    var btnCerrarSesion = document.getElementById('btnCerrarSesion');
+    function limpiarCacheLocalPrivada(){
+      storage.remove('dataCache');
+      storage.remove('hechoOverridesCache');
+      storage.remove('estadoOverridesCache');
+      storage.remove('colaEscrituras');
+      colaEscrituras = [];
+      overridesEnMemoria = { hecho: {}, estado: {} };
+      DATA = null; HOTELES = [];
+    }
+    btnCerrarSesion.addEventListener('click', function(){
+      if (colaEscrituras.length && !confirm('Hay ' + colaEscrituras.length + ' cambio(s) sin sincronizar. ' +
+        'Si cierras sesión ahora se perderán. ¿Cerrar sesión igualmente?')) return;
+      limpiarCacheLocalPrivada();
+      cerrarMenu();
+      fbAuthM.signOut(fbAuth);
+    });
 
     function construirMenuDias(dias, hoteles){
       var grupos = [], actual = null;
@@ -891,9 +1018,25 @@
         if (it.ubicacion) conNumero.push({ num: n, item: it });
       });
       mapa = L.map('mapaDia', { zoomControl: false });
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      var capaTeselas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19, attribution: '&copy; Esri'
       }).addTo(mapa);
+      // Fase 7: las teselas ya vistas quedan cacheadas por el service worker
+      // (jp27v3-teselas, límite razonable) y se sirven igual sin red. Si
+      // falta alguna (zona nunca visitada con red) y no hay conexión, aviso
+      // claro en vez de dejar la cuadrícula gris sin explicación.
+      if (!navigator.onLine) {
+        var avisoMapaMostrado = false;
+        capaTeselas.on('tileerror', function(){
+          if (avisoMapaMostrado) return;
+          avisoMapaMostrado = true;
+          var mapaEl = document.getElementById('mapaDia');
+          var aviso = document.createElement('div');
+          aviso.className = 'mapa-offline-aviso';
+          aviso.textContent = '📵 Mapa no disponible sin conexión (solo se ven las zonas ya visitadas con red).';
+          mapaEl.parentNode.insertBefore(aviso, mapaEl);
+        });
+      }
       var pinHito = function(html, color){
         return L.divIcon({ className: '', html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color + ';color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid white;">' + html + '</div>', iconSize: [22, 22], iconAnchor: [11, 11] });
       };
@@ -1178,13 +1321,21 @@
       currentUser = user;
       if (!user) { renderAuthGate('signin', null); return; }
       renderAuthGate('connecting', user);
-      try {
-        var snap = await fbDbM.get(fbDbM.ref(fbDb, V2_ACCESS_PATH + '/users/' + user.uid + '/status'));
-        if (snap.val() === 'approved') { await arrancarAppV3(); }
-        else { renderAuthGate('sin-acceso', user); }
-      } catch (e) {
-        renderAuthGate('error', user);
+      if (navigator.onLine) {
+        try {
+          var snap = await fbDbM.get(fbDbM.ref(fbDb, V2_ACCESS_PATH + '/users/' + user.uid + '/status'));
+          if (snap.val() === 'approved') { storage.set('accessApproved', '1'); await arrancarAppV3(); }
+          else { renderAuthGate('sin-acceso', user); }
+          return;
+        } catch (e) { /* sin red pese a navigator.onLine: sigue abajo */ }
       }
+      // Fase 7 (arranque en frío sin red): Auth recuerda la sesión offline
+      // (browserLocalPersistence), pero comprobar el nodo access/ necesita
+      // red. Solo se entra igualmente si ESTE dispositivo ya confirmó el
+      // acceso aprobado alguna vez con éxito -- si nunca lo confirmó, no hay
+      // forma segura de saltarse la comprobación.
+      if (storage.get('accessApproved') === '1') { await arrancarAppV3(); return; }
+      renderAuthGate('error', user);
     }
 
     async function initAuthV3(){
@@ -1219,60 +1370,97 @@
         op.then(function(){
           colaEscrituras = quitarDeCola(colaEscrituras, entrada.ruta);
           storage.setJSON('colaEscrituras', colaEscrituras);
+          actualizarEstadoConexion();
         }).catch(function(){ /* sigue en la cola; se reintenta al reconectar */ });
       });
     }
     function escribirRemoto(ruta, valor){
       colaEscrituras = encolarEscritura(colaEscrituras, ruta, valor);
       storage.setJSON('colaEscrituras', colaEscrituras);
+      actualizarEstadoConexion();
       intentarVaciarCola();
     }
 
     async function arrancarAppV3(){
       try {
-        var itemsSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/items'));
-        var items = itemsSnap.val();
-        if (!items) { renderSinDatos(); return; }
-        var diasSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/dias'));
-        var guiaSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/guia'));
-        DATA = { items: items, dias: diasSnap.val() || [], guia: guiaSnap.val() || null };
+        // Fase 7: completo offline -- arranque en frío sin red usa la caché
+        // local (dataCache/hechoOverridesCache/estadoOverridesCache) tal
+        // cual quedó en la última visita con red de ESTE dispositivo. Si un
+        // fetch falla pese a navigator.onLine (red intermitente), se cae al
+        // mismo camino de caché en vez de dejar la app en blanco.
+        var offline = !navigator.onLine;
+        if (!offline) {
+          try {
+            var itemsSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/items'));
+            var items = itemsSnap.val();
+            if (items) {
+              var diasSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/dias'));
+              var guiaSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/guia'));
+              DATA = { items: items, dias: diasSnap.val() || [], guia: guiaSnap.val() || null };
+              storage.setJSON('dataCache', DATA);
+            } else {
+              DATA = null;
+            }
+          } catch (e) { offline = true; }
+        }
+        if (offline || !DATA) {
+          var cache = storage.getJSON('dataCache', null);
+          if (cache && cache.items) DATA = cache;
+        }
+        if (!DATA) { renderSinDatos(); return; }
         HOTELES = DATA.items.filter(function(it){ return it.tipo === 'alojamiento' && it.estado === 'confirmado'; });
 
-        var hechoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'));
-        var estadoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/estadoOverrides'));
-        var hechoRemoto = hechoRemotoSnap.val() || {};
-        var estadoRemoto = estadoRemotoSnap.val() || {};
+        var hechoRemoto = null, estadoRemoto = null;
+        if (!offline) {
+          try {
+            var hechoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'));
+            var estadoRemotoSnap = await fbDbM.get(fbDbM.ref(fbDb, V3_PATH + '/state/estadoOverrides'));
+            hechoRemoto = hechoRemotoSnap.val() || {};
+            estadoRemoto = estadoRemotoSnap.val() || {};
+          } catch (e) { offline = true; }
+        }
 
         // Corrección 1, 2026-09-17: fusión "hecho gana" SOLO la primera vez
-        // que ESTE móvil se conecta tras la Fase 6 (flag jp27v3:migrado).
-        // Después, Firebase manda solo -- Deshacer borra la clave remota de
-        // verdad, nunca resucita desde una caché local vieja.
-        var seAcabaDeMigrar = storage.get('migrado') !== '1';
-        if (seAcabaDeMigrar) {
-          var hechoLocalViejo = storage.getJSON('hechoOverrides', {});
-          var estadoLocalViejo = storage.getJSON('estadoOverrides', {});
-          var hechoFundido = fusionInicialHecho(hechoLocalViejo, hechoRemoto);
-          var estadoFundido = fusionInicialEstado(estadoLocalViejo, estadoRemoto);
-          Object.keys(hechoFundido).forEach(function(clave){ if (hechoFundido[clave] === true) escribirRemoto('hechoOverrides/' + clave, true); });
-          Object.keys(estadoFundido).forEach(function(clave){ escribirRemoto('estadoOverrides/' + clave, estadoFundido[clave]); });
-          storage.set('migrado', '1');
-          overridesEnMemoria.hecho = hechoFundido;
-          overridesEnMemoria.estado = estadoFundido;
+        // que ESTE móvil se conecta tras la Fase 6 (flag jp27v3:migrado), y
+        // solo con red (necesita lo remoto de verdad para fusionar). Después,
+        // Firebase manda solo -- Deshacer borra la clave remota de verdad,
+        // nunca resucita desde una caché local vieja.
+        var seAcabaDeMigrar = false;
+        if (!offline) {
+          seAcabaDeMigrar = storage.get('migrado') !== '1';
+          if (seAcabaDeMigrar) {
+            var hechoLocalViejo = storage.getJSON('hechoOverrides', {});
+            var estadoLocalViejo = storage.getJSON('estadoOverrides', {});
+            var hechoFundido = fusionInicialHecho(hechoLocalViejo, hechoRemoto);
+            var estadoFundido = fusionInicialEstado(estadoLocalViejo, estadoRemoto);
+            Object.keys(hechoFundido).forEach(function(clave){ if (hechoFundido[clave] === true) escribirRemoto('hechoOverrides/' + clave, true); });
+            Object.keys(estadoFundido).forEach(function(clave){ escribirRemoto('estadoOverrides/' + clave, estadoFundido[clave]); });
+            storage.set('migrado', '1');
+            overridesEnMemoria.hecho = hechoFundido;
+            overridesEnMemoria.estado = estadoFundido;
+          } else {
+            overridesEnMemoria.hecho = hechoRemoto;
+            overridesEnMemoria.estado = estadoRemoto;
+          }
+          storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
+          storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
         } else {
-          overridesEnMemoria.hecho = hechoRemoto;
-          overridesEnMemoria.estado = estadoRemoto;
+          // Sin red: usa lo último sincronizado en este dispositivo. La
+          // migración de corrección 1 se queda pendiente (storage.get('migrado')
+          // sigue sin valer '1') hasta la próxima vez que haya conexión.
+          overridesEnMemoria.hecho = storage.getJSON('hechoOverridesCache', {});
+          overridesEnMemoria.estado = storage.getJSON('estadoOverridesCache', {});
         }
-        storage.setJSON('hechoOverridesCache', overridesEnMemoria.hecho);
-        storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
 
-        // A partir de aquí, en vivo: si otro móvil marca/deshace algo, este
-        // se entera sin recargar. Ojo (bug real, encontrado al probarlo con
-        // un mock): justo tras migrar, las escrituras de la fusión pueden
-        // seguir en vuelo -- si el primer snapshot de este listener llega
-        // ANTES de que el servidor las confirme, pisaría con datos viejos
-        // la fusión que se acaba de calcular en memoria. Se ignora solo ESE
-        // primer snapshot cuando venimos de migrar; a partir del segundo,
-        // en vivo normal.
+        // Escuchas en vivo -- se registran SIEMPRE, incluso arrancando sin
+        // red: no fallan (esperan a que haya conexión) y así, si vuelve la
+        // red a media sesión, la app se pone al día sola sin recargar.
+        // Ojo (bug real, encontrado al probarlo con un mock): justo tras
+        // migrar, las escrituras de la fusión pueden seguir en vuelo -- si
+        // el primer snapshot de este listener llega ANTES de que el
+        // servidor las confirme, pisaría con datos viejos la fusión que se
+        // acaba de calcular en memoria. Se ignora solo ESE primer snapshot
+        // cuando venimos de migrar; a partir del segundo, en vivo normal.
         var ignorarPrimerSnapshotHecho = seAcabaDeMigrar, ignorarPrimerSnapshotEstado = seAcabaDeMigrar;
         fbDbM.onValue(fbDbM.ref(fbDb, V3_PATH + '/state/hechoOverrides'), function(snap){
           if (ignorarPrimerSnapshotHecho) { ignorarPrimerSnapshotHecho = false; return; }
@@ -1286,13 +1474,18 @@
           storage.setJSON('estadoOverridesCache', overridesEnMemoria.estado);
           if (pantallaActualId) mostrarPantalla(pantallaActualId);
         });
-        // Reconexión real (RTDB, estándar): vacía la cola offline sola.
-        fbDbM.onValue(fbDbM.ref(fbDb, '.info/connected'), function(snap){ if (snap.val()) intentarVaciarCola(); });
+        // Reconexión real (RTDB, estándar): vacía la cola offline sola y
+        // refresca el indicador de estado.
+        fbDbM.onValue(fbDbM.ref(fbDb, '.info/connected'), function(snap){
+          actualizarEstadoConexion();
+          if (snap.val()) intentarVaciarCola();
+        });
 
         document.getElementById('authGate').style.display = 'none';
         document.getElementById('appRoot').style.display = '';
         renderMenuDias();
         mostrarPantalla('pendientes');
+        actualizarEstadoConexion();
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js', { scope: './' });
       } catch (e) {
         renderAuthGate('error', currentUser);

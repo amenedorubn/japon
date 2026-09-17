@@ -424,6 +424,12 @@ Estado con icono+texto siempre (nunca solo color, ya es requisito explícito): �
    historial de git** (los commits antiguos seguirían teniendo esos valores; el objetivo es que
    HEAD deje de tenerlos, no borrar el pasado). Detalle de qué fichero/commit introdujo cada dato,
    ver el hallazgo de la sesión que cerró la Fase 5b (2026-09-17).
+   **Tarea añadida (2026-09-17, decisión de la Fase 7):** el icono PWA de v3 (`v3/icon-any.png`,
+   `v3/icon-maskable.png`, `v3/manifest.json`) lleva a propósito la marca "v3" visible mientras
+   v2.1 y v3 conviven instaladas en el mismo dispositivo (icono de v2.1 + insignia "v3"). En esta
+   fase, cuando v3 sustituya a v2.1 de verdad, **unificar el icono** con el de v2.1 (quitar la
+   insignia, mismo SVG/PNG base en ambas apps) — y decidir entonces si el `manifest.json` de v3
+   pasa a ser el único, o si v2.1 se retira del todo.
 
 Total aproximado: 2–3 semanas de trabajo efectivo, sin contar el tiempo de tu revisión entre fases
 (cada fase termina en su propio commit y espera luz verde, igual que en v2).
